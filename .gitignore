@@ -1,0 +1,17 @@
+# environment and tooling
+.venv/
+__pycache__/
+.claude/
+logs/
+
+# raw pull (about 1 GB) and the per-pitch prediction table.
+# Recreate with `python data_pull.py` and `python run_pipeline.py`.
+statcast_pitch_level_2025_2026.csv
+per_pitch_predictions.csv
+
+# intermediates written by the pipeline
+pitcher_pitchtype_season.csv
+pitcher_season_covariates.csv
+driver_features.csv
+
+.pytest_cache/

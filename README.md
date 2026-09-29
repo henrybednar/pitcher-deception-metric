@@ -1,0 +1,126 @@
+# Deception+
+
+Deception+ is a pitcher metric built from scratch on Statcast pitch-level data for 2025 and 2026. It compares what happened on each pitch with what a model expects from the pitch itself, the batter, the catcher, the count, the park, and pitcher-batter handedness. A pitcher's score is how far their results land above or below that expectation. 100 is the qualified-pitcher average and 10 points is one standard deviation, the same scale as Stuff+.
+
+The gap between result and expectation is not proven to be deception. It is whatever the model does not explain. Pitch sequencing, tunneling, spin mirroring, tempo, and arm slot were each tested as explanations and none accounts for it.
+
+## Outputs
+
+- `deception_dashboard.html` has the charts, the validation table, the method, and an audit log of the leaks and bugs found along the way.
+- `deception_leaderboard.html` is a sortable table of every scored pitcher-season with 95% intervals and a starter or reliever filter.
+
+Open both from the same folder so their links work. Both pages are built from `templates/`, and every figure in their text comes from `site_stats.json`, so a pipeline rerun cannot leave them out of date.
+
+## Run it
+
+Python 3.11.
+
+```
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\python run_pipeline.py
+```
+
+The pipeline starts from the raw files listed in `RAW_INPUTS` in `run_pipeline.py`. A full run takes about 11 minutes on a 24-thread machine and needs about 1.3 GB of free disk. `python run_pipeline.py --list` shows the steps, `--from STEP` and `--only STEP` run part of it, and each step logs to `logs/`.
+
+`--pull` runs `data_pull.py` first. It fetches whatever Savant has that day, so the data cutoff and every downstream number move with it. `fangraphs_stuff_manual.tsv` was pasted from FanGraphs by hand because scripted access is blocked. It is used only for the Stuff+ axis on the dashboard and the leaderboard column, never in scoring.
+
+Tests: `pip install -r requirements-dev.txt`, then `pytest`.
+
+## Pipeline
+
+| Step | What it does |
+|---|---|
+| `merge_data` | Joins the raw files into pitcher-season covariate tables |
+| `driver_features` | Season-level candidate explanations: tunnel differential, spin mirror, release consistency, tempo |
+| `build_pitch_table` | Per-pitch features, targets and the half assignment |
+| `fit_full_model` | Whiff, chase, ground ball and weak contact models: stuff, pitch physics, location, batter and catcher tendencies (built inside each fold), count, park, platoon |
+| `fit_swing_alignment` | Timing, horizontal alignment and whiff miss distance against each hitter's ideal contact point |
+| `fit_timing_direction` | Signed timing model on stuff and location only, a readout kept out of the score |
+| `fit_called_strike` | Called strike model (tested, not scored) |
+| `reliability_and_ci` | Shrinkage, bootstrap intervals, split-half reliability, the composite, player names and the FanGraphs Stuff+ columns |
+| `add_timing_direction` | Signed timing readout with intervals |
+| `driver_analysis` | What explains each residual, season level |
+| `predictive_validity` | Does a 2025 score predict 2026? |
+| `sequencing_driver_analysis` | Does the previous pitch explain the residual, pitch level |
+| `export_data`, `build_pages` | JSON, text figures and the two HTML pages |
+
+## Components
+
+| Component | Measures | In Deception+ |
+|---|---|---|
+| Whiff | Swings that miss | Yes |
+| Chase | Swings at pitches outside the zone | Yes |
+| Ground ball | Ground balls among balls in play | No, shown as its own readout |
+| Weak contact | Balls in play under 85 mph | Yes |
+| Timing | Gap between contact depth and the hitter's ideal depth, early or late, on contact swings | Yes |
+| Whiff miss distance | Ball-to-barrel distance on a miss, log scale | Yes |
+| Called strike | Takes called strikes | No, dropped (validation table only) |
+| Horizontal alignment | Gap between horizontal reach and the hitter's ideal, tied up or flail, on contact swings | No, validation table only |
+
+Every component is an out-of-fold gradient-boosted residual per pitch type, shrunk toward 100 with empirical Bayes. Folds are grouped by pitcher, and batter and catcher tendencies leave out every pitch from the pitcher being scored. The composite weights members by league-wide split-half reliability and by the pitcher's sample size.
+
+Bat-tracking components need each hitter's ideal contact point, which the pitch-level export does not include. `swing_alignment.py` estimates it from the hitter's hardest-hit balls after adjusting exit velocity for bat speed and pitch speed.
+
+## Decisions
+
+Statistics below were measured on 2025-26 data through September 27, 2026 (the completed 2026 regular season), after the fixes listed under "Fixes".
+
+- Deception+ has 5 members: whiff, chase, weak contact, timing and whiff miss distance. Composite split-half reliability is 0.749 and year-over-year correlation is 0.606.
+- Timing measures distance from the hitter's ideal contact depth, early or late, on swings that made contact. Against Savant's on-time share it correlates -0.57. Previous-pitch features are in no model's expectation. Sequencing is the pitcher's choice, so it is tested as an explanation instead.
+- Whiff miss distance is a member. Dropping it lowers reliability from 0.749 to 0.718 and year-over-year correlation from 0.594 to 0.573.
+- Ground ball was taken out of the composite and is shown as its own readout. Its talent is nearly uncorrelated with the other members (index correlations of at most 0.17), and a pitcher's 2025 Deception+ correlates -0.04 with their 2026 ground-ball index, and so it is a separate skill. With it in, reliability is 0.722 and year-over-year correlation 0.561. Among qualified pitcher-seasons two moved by more than 10 points: Tyler Rogers in 2026 (93 to 81) and Clayton Kershaw in 2025 (93 to 82). Add `gb` to `COMPOSITE_OUTCOMES` in `reliability_and_ci.py` to reverse it.
+- Horizontal alignment is modeled and tested but appears only in the dashboard's validation table. It fails the forecast gate (p = 0.14, R² gain -0.0005), its year-over-year correlation is 0.10, and adding it lowers composite reliability from 0.749 to 0.727 and year-over-year correlation from 0.594 to 0.549. The pitch-level reach measure is distance from the body, not Savant's barrel offset, and location explains about 78% of it.
+- Called strike was dropped from the composite and from the metric views at the user's request, and the corrected numbers support that. It is stable within a season (reliability 0.60) but its year-over-year correlation is 0.09 and it fails the forecast (p = 0.09), a gap that umpire, catcher or park effects would produce. Adding it back lowers composite reliability from 0.749 to 0.713 and year-over-year correlation from 0.594 to 0.559. Add `calledstrike` to `COMPOSITE_OUTCOMES` to reverse it.
+- Reweighting and multivariate shrinkage were tested and not adopted. Fit on 2025 and scored on 2026, eigenvector weights changed year-over-year correlation by -0.014 [-0.058, +0.028], and multivariate shrinkage did not improve any component's forecast significantly. Dropping the sample-size term from the composite weights gave the same reliability and year-over-year correlation (0.745 and 0.580, tested before the model changes below), so the weights are unchanged.
+
+## Fixes
+
+- Pitches with no model prediction (unclassified pitch types, knuckleballs, eephus, position players, about 1.4%) were counted in each pitcher's sample and actual total but not in the expected total. That biased residuals and depressed reliability: whiff 0.664 to 0.679, chase 0.293 to 0.599, called strike 0.210 to 0.651. Only pitches with a prediction are counted now.
+- Timing was scored on all swings, and on a whiff the bat-ball intercept is a closest-approach point that sits far from the ideal (14.0 in against 7.3 on contact). Timing correlated 0.39 with whiff rate. On contact swings that is 0.04, and the whiff-timing index correlation fell from 0.49 to 0.22.
+- Batter and catcher tendencies were built once over all data, so training rows carried outcomes from held-out pitchers (out-of-fold AUC 0.010 too high in a whiff test on four-seamers). They are now built inside each fold from training pitchers.
+- One infinite value in a fitted column would have poisoned every timing score. Non-finite values and impossible tracking reads are cleared before any feature is built, about 140 of 1.4 million rows. Balls in play with no exit velocity (about 1%) were counted as not weak contact and are now excluded.
+- The scale was not centered: qualified Deception+ averaged 102.1. Shrinkage now targets the grand mean and Deception+ is centered on the qualified population.
+- Intervals are the wider of the game-cluster bootstrap and an analytic posterior interval. A saturated sample (30 whiffs out of 30) used to get a zero-width interval and pitcher-seasons under 3 games got none.
+- The sampling-variance floor of 1e-9 gave pitcher-seasons with a predicted rate of exactly 0 or 1 a weight near a billion in the between-pitcher variance estimate. Each pitch's Bernoulli variance is now taken with its predicted rate clipped to 0.01-0.99.
+- Binary sampling variance used the pitcher-season's average predicted rate, p(1-p)/n, as if every pitch had that rate. The pitch-level sum of p(1-p) is smaller when predictions vary, and the pooled formula overstated it by about 1.3 times for whiff, 1.5 times for chase, 1.2 times for weak contact and 4.8 times for called strike. That pinned called strike's between-pitcher variance at its floor and collapsed its index (year-over-year 0.02, now 0.11). Variance is now summed pitch by pitch.
+- The design effect was a median of per-pitcher ratios floored at 1, so it read 1.00 for every binary outcome. Short samples bias that median low, and the pooled variance was too large besides. It is now a game-weighted ratio with the bootstrap's (g-1)/g bias undone, and runs from 1.01 to 1.16 (whiff 1.14).
+- The DerSimonian-Laird between-pitcher variance was driven by a few extreme pitcher-seasons: on whiff, 21 had standardized misses beyond 4, and in a stress test five saturated 30-pitch samples raised the estimate 16-fold. It is now a Paule-Mandel estimate with standardized misses capped at 4 (`estimate_true_var`). Component indexes for the composite members moved by under 1 point on average and Deception+ by 0.33 points (rank correlation 0.999, top-25 overlap 24 of 25).
+- Pitches missing a core tracking value (spin, extension, effective speed, movement, approach angles, release point or plate location) are left out of scoring, about 0.3% of pitches. The missingness is informative: swings with no effective speed whiff 10% of the time against 23% for the rest, and a tree model sends a rarely seen missing value down an arbitrary branch. Pitches whose value a range check had cleared got expected whiff rates off by up to 13 points. Arm angle is exempt, since it is missing on 2% of pitches and the model learns from that.
+- Zone bounds now have range checks, and a plate height with a zero, negative or missing zone gets NaN. None occur in the current data.
+- Timing's model no longer controls for the previous pitch, which no other component's did. Sequencing is the pitcher's choice, so `sequencing_driver_analysis.py` tests it as an explanation, now with the shared pair features including tunnel separation (R² at most 0.002). In isolation the control was worth 0.37% of squared error.
+- Knuckle curves (about 3,500 rows for ground ball, weak contact and whiff miss) had a model with no skill: log loss 0.694 against 0.693 for a constant. They now share the curveball model with pitch type as a feature. That improves knuckle-curve log loss by 0.025 (ground ball) and 0.034 (weak contact) and squared error by 0.063 (whiff miss), and helps curveballs slightly.
+- Pitch physics features (late break, drag, extension gain, share of flight time at the decision point; `physics_features.py`) join the stuff features. On four-seamers they lowered whiff log loss by 0.0005 (interval 0.0002 to 0.0008) and timing squared error by 0.11%.
+- The index divisor is a winsorized standard deviation, so a few extreme pitcher-seasons cannot stretch the scale (five saturated samples tripled the plain SD in a stress test; in real data the plain SD is inflated by less than 2%). A component whose pitcher-seasons do not differ by more than sampling noise (Cochran's Q, p above 0.05) scores 100 for everyone. Before, a component with no talent still got an index spread of 10 in 47% of 300 simulated cases.
+- Tested and left alone: raising the iteration cap from 300 to 800 (whiff log loss +0.00005 with an interval that includes zero, weak contact and timing unchanged) and dropping the sample-size term from the composite weights.
+- Net effect of this round on the composite (measured before the September 27 re-pull below): split-half reliability 0.745 to 0.756 and year-over-year correlation 0.580 to 0.613. Deception+ rank correlation with the previous run was 0.977, top-25 overlap 21 of 25, and 51 qualified pitcher-seasons moved by more than 4 points.
+
+- Re-pulling after the 2026 season ended (cutoff moved from September 12 to September 27) added about 4% more pitches and moved composite reliability from 0.756 to 0.749 and year-over-year correlation from 0.613 to 0.594. Deception+ rank correlation with the run just before this pull is 0.976, top-25 overlap 21 of 25. `pybaseball`'s own cache keys on each call's arguments, not on when it ran, so a re-pull with an unchanged date range silently returned the prior pull's stale result until `data_pull.py` was changed to clear the cache directory first.
+- `game_type` is now checked at ingestion and postseason and spring-training pitches are dropped (postseason was 2.9-3.9% of 2025, spring training up to 3.9%). That removed 46,090 rows (3.1%) and 199 pitcher-seasons whose entire sample was non-regular-season, mostly low-workload rookies.
+- Season is now a feature in every full-tier model. Without a way to see which year a pitch came from, the model read the leaguewide gap between 2025 and 2026 as pitcher skill: whiff residual ran +1.16 points in 2025 and -0.83 in 2026 before this change, +0.44 and -0.06 after.
+- `l2_regularization` moved from 1.0 to 3.0 after a hyperparameter sweep on held-out pitchers found it beats the old value by 2.66e-4 log loss with a 95% interval entirely above zero. The population-level effect on Deception+ is a wash.
+- Timing under-predicted actual deviation by 0.24 inches at the low end of its predicted range (the other nine deciles were within 0.08 inches). A post-hoc, out-of-fold isotonic recalibration fixed it: the worst-decile residual is now 0.02 inches, and the calibration gap across the whole predicted range is -0.0155 to +0.0207 inches, down from -0.075 to +0.192.
+- Between-pitcher variance (tau2) was estimated from every pitcher-season row, so a pitcher with data in both 2025 and 2026 counted their own talent twice. About 650 pitchers have both seasons. Collapsing each pitcher to one n-weighted point before tau2 is estimated dropped it by about 9% for both whiff and timing.
+- Net effect of this round (`game_type` filter, season as a feature, `l2_regularization=3.0`, timing recalibration, and the tau2 fix, measured together against the last checkpoint above): composite split-half reliability held at 0.749 and year-over-year correlation rose from 0.594 to 0.606.
+
+Numbers from before these fixes are not comparable.
+
+## Reproducibility
+
+- Before the fixes above, a clean rebuild from the raw files matched the previous outputs exactly on every column of `pitcher_season.csv`, `per_pitch_predictions.csv` and the report files.
+- The full pipeline has been run from the raw files seven times as it changed, the last two from a fresh pull. The latest run took 13.2 minutes. Removing the unused model tiers and covariates reproduced the previous outputs to machine precision, and later changes moved the numbers as described under Fixes.
+- The bootstrap seed does not matter. On an earlier composite, five seeds gave the same reliability to three decimals, identical top-25 membership, and no Deception+ score moved by more than 0.12 points.
+- Model seeds are fixed at 42.
+- `pytest` runs 76 unit tests covering the swing-alignment reference, input hygiene, previous-pitch features, pitch physics, fold-honest tendencies, the season filter and season-as-a-feature (including that it absorbs a population-level calibration gap, not just a single held-out row), pitch-level variance, the between-pitcher variance estimator and its repeated-pitcher collapse, the design effect, shrinkage, the timing recalibration, the index scale, the composite weights, intervals, the row-alignment check and the model-fitting loop.
+
+## Known limits
+
+- No control for role, fatigue, or times through the order. Relievers average higher than starters.
+- Two completed regular seasons (2025 and 2026). A season fixed effect absorbs the level shift between them, but two seasons isn't enough to say whether deception talent trends over time.
+- Vertical swing alignment (over or under) is not in the pitch-level export, and bat speed, swing length and attack angle are not scored.
+- Weak contact is the noisiest member, with reliability near 0.31.
+- About 1.7% of pitches are not scored: unclassified pitch types, knuckleballs, eephus and other pitch types that share no model, pitcher-seasons averaging under 75 mph, and pitches missing core tracking values.
+
+## Sources
+
+Pitch data comes from Baseball Savant (Statcast). Stuff+ comes from FanGraphs. This project is independent and not affiliated with MLB, Baseball Savant, or FanGraphs.

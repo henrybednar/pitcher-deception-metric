@@ -1,0 +1,197 @@
+"""
+Pitcher Deception Project: the "full" model tier
+================================================
+Every scored outcome (whiff, chase, ground ball, weak contact, and the bat-tracking and called-strike
+outcomes in the fit_* steps after this one) is scored against a "full" expectation: stuff + location
++ opponent + context, so confounds that vary by opponent or context do not leak into the pitcher's
+residual.
+  - the batter's same-season tendency for that exact outcome, plus "stand" (handedness):
+    opponent quality and platoon.
+  - the catcher's same-season tendency for that exact outcome. Framing is the obvious catcher
+    confound, but game-calling could plausibly leak into whiff and chase too, so there is no
+    principled reason to control for the catcher on one outcome and not the others.
+  - balls and strikes (count state), home_team (park identity) and same_hand (pitcher and
+    batter on the same side).
+
+The Deception+ residual is actual minus the "full" expectation. reliability_and_ci.py's
+game_level_table() defaults to the "full" suffix.
+
+GROUPKFOLD, not plain KFold: 85%+ of four-seam fastballs come from pitchers who threw in BOTH
+2025 and 2026. A plain shuffled KFold lets a pitcher's own pitches land in both train and test,
+so the model can learn "pitches shaped exactly like Pitcher X's get extra whiffs" from that
+pitcher's other-season pitches, which suppresses the measured residual in proportion to how
+distinctive and stable the pitcher's stuff is. GroupKFold guarantees no pitcher ever splits.
+
+The batter and catcher tendencies are built INSIDE each fold from training pitchers only (see
+tendencies.py for the two leaks that closes).
+
+Squared-error loss is the default for regression targets: the timing-miss target's skew is 0.24
+(near-symmetric) and it is physically bounded (about 72 in), so no heavy tail. Re-check the skew
+before reusing fit_tier on a heavy-tailed target.
+"""
+
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
+from sklearn.isotonic import IsotonicRegression
+from sklearn.metrics import r2_score, roc_auc_score
+from sklearn.model_selection import GroupKFold
+
+from build_pitch_table import PITCH_LEVEL_FILE, load_pitch_data, read_aligned_predictions, save_predictions
+from physics_features import PHYSICS_FEATURES
+from tendencies import build_totals, tendency_for_rows
+
+MIN_N_FOR_MODEL = 5000
+STUFF_FEATURES = [
+    "release_speed", "release_spin_rate", "ivb_in", "arm_side_break_in",
+    "vaa", "haa", "release_extension", "effective_speed", "arm_angle",
+    "release_pos_z", "release_pos_x_armside", "p_throws",
+] + PHYSICS_FEATURES
+LOCATION_FEATURES = ["plate_x_armside", "plate_z_norm"]
+OUTCOMES = {
+    "whiff": dict(subset="is_swing", target="is_whiff", kind="classify"),
+    "chase": dict(subset="not_in_zone", target="is_swing", kind="classify"),
+    "gb": dict(subset="is_bip", target="is_gb", kind="classify"),
+    "weak": dict(subset="is_bip", target="is_weak", kind="classify"),
+}
+CONTEXT_FEATURES = ["stand", "balls", "strikes", "home_team", "same_hand", "season"]
+# season is a fixed effect, not a talent signal: the 2025-26 pull carries a real leaguewide
+# calibration gap between the two years (e.g. whiff actual-minus-expected +1.2 points in 2025,
+# -0.8 in 2026, before this feature existed), and without a way to see which season a pitch is
+# from, the model can't help but read that gap as pitcher skill. Adding it lets the model absorb
+# the level shift instead.
+CATEGORICAL = ["p_throws", "stand", "home_team", "pitch_type", "season"]
+# A pitch type with too few rows for its own model shares a similar type's model, with pitch_type as a
+# feature. Knuckle curves alone (about 3.5k rows for ground ball, weak contact and whiff miss) had no
+# skill, log loss 0.694 against 0.693 for a constant. With curveballs they gain 0.025, 0.034 and 0.063
+# (log loss, log loss, squared error), and curveballs gain a little too.
+POOLED_WITH = {"KC": "CU"}
+TENDENCY_KEYS = {"batter_tendency": "batter", "catcher_tendency": "fielder_2"}
+
+
+def add_same_hand(df: pd.DataFrame) -> pd.DataFrame:
+    """Explicit platoon-matchup feature (p_throws == stand). p_throws and stand were already both
+    features, so the model could in principle learn the platoon interaction, but it was not
+    reliably finding it: same_hand alone carried more permutation importance than p_throws and
+    stand combined, and adding it explicitly raised AUC (0.748 to 0.750 on four-seamers). Without
+    it, genuine platoon effects were partly leaking into the residual as pitcher-specific deception."""
+    df["same_hand"] = (df["p_throws"].astype(str) == df["stand"].astype(str)).astype(int)
+    return df
+
+
+def prepare_context(df: pd.DataFrame) -> pd.DataFrame:
+    """Columns the full tier reads beyond load_pitch_data's."""
+    df["not_in_zone"] = ~df["is_in_zone"]
+    df["stand"] = df["stand"].astype("category")
+    df["home_team"] = df["home_team"].astype("category")
+    return add_same_hand(df)
+
+
+def make_model(kind: str, feature_cols: list[str]):
+    # l2_regularization=3.0: a hyperparameter sweep (four-seam whiff, held-out pitchers) found this
+    # beats the old 1.0 by +2.66e-4 logloss with a 95% CI entirely above zero ([+0.36, +4.66]e-4).
+    # learning_rate and max_leaf_nodes were swept too and are already at their local optimum.
+    cls = HistGradientBoostingClassifier if kind == "classify" else HistGradientBoostingRegressor
+    return cls(
+        max_iter=300, max_leaf_nodes=31, learning_rate=0.05, l2_regularization=3.0,
+        early_stopping=True, validation_fraction=0.1, n_iter_no_change=20,
+        categorical_features=[c for c in CATEGORICAL if c in feature_cols], random_state=42,
+    )
+
+
+def fit_oof(sub: pd.DataFrame, y: np.ndarray, groups: np.ndarray, feature_cols: list[str], kind: str,
+            totals: dict[str, pd.DataFrame] | None = None, n_splits: int = 5) -> np.ndarray:
+    """Out-of-fold predictions grouped by pitcher. With totals, the batter and catcher tendencies
+    are rebuilt inside every fold."""
+    oof = np.full(len(sub), np.nan)
+    # A fixed category set for season, decided once from the whole subset rather than per fold: a
+    # fold's train and test splits must agree on which code means which year, and casting on `sub`
+    # itself (instead of this copy) would risk changing how groupby("season") elsewhere in the
+    # pipeline behaves on the shared, uncopied dataframe.
+    season_dtype = pd.CategoricalDtype(sorted(sub["season"].unique())) if "season" in feature_cols else None
+    for train_idx, test_idx in GroupKFold(n_splits=n_splits).split(sub, y, groups=groups):
+        train_pitchers = np.unique(groups[train_idx])
+        train_rows, test_rows = sub.iloc[train_idx], sub.iloc[test_idx]
+        X_train, X_test = train_rows[feature_cols].copy(), test_rows[feature_cols].copy()
+        if season_dtype is not None:
+            X_train["season"] = X_train["season"].astype(season_dtype)
+            X_test["season"] = X_test["season"].astype(season_dtype)
+        for name, tendency_totals in (totals or {}).items():
+            key_col = TENDENCY_KEYS[name]
+            X_train[name] = tendency_for_rows(train_rows, tendency_totals, key_col, train_pitchers, leave_out_own=True)
+            X_test[name] = tendency_for_rows(test_rows, tendency_totals, key_col, train_pitchers, leave_out_own=False)
+        model = make_model(kind, feature_cols).fit(X_train, y[train_idx])
+        oof[test_idx] = model.predict_proba(X_test)[:, 1] if kind == "classify" else model.predict(X_test)
+    return oof
+
+
+def fit_tier(df: pd.DataFrame, out_col: str, target_col: str, subset_mask: pd.Series, kind: str,
+             feature_cols: list[str], with_tendencies: bool = True) -> None:
+    """Writes out_col for every scored pitch type. Rare types join POOLED_WITH's model, or else share an OTHER model."""
+    df[out_col] = np.nan
+    outcome_rows = subset_mask & df["pitch_type"].notna()
+    totals = ({name: build_totals(df, outcome_rows, key_col, target_col) for name, key_col in TENDENCY_KEYS.items()}
+              if with_tendencies else None)
+
+    counts = df.loc[outcome_rows, "pitch_type"].value_counts()
+    model_types = {t: [t] for t in counts.index if counts[t] >= MIN_N_FOR_MODEL}
+    other = []
+    for t in (t for t in counts.index if t not in model_types):
+        if POOLED_WITH.get(t) in model_types:
+            model_types[POOLED_WITH[t]].append(t)
+        else:
+            other.append(t)
+    if other and counts[other].sum() >= MIN_N_FOR_MODEL // 2:
+        model_types["OTHER"] = other
+
+    for home, types in model_types.items():
+        mask = outcome_rows & df["pitch_type"].isin(types)
+        name = "+".join(types) if home != "OTHER" else "OTHER(" + "+".join(types) + ")"
+        sub = df[mask]
+        cols = feature_cols
+        if len(types) > 1:
+            sub = sub.assign(pitch_type=sub["pitch_type"].astype("category"))
+            cols = feature_cols + ["pitch_type"]
+        y = sub[target_col].to_numpy(float)
+        pred = fit_oof(sub, y, sub["pitcher"].to_numpy(), cols, kind, totals)
+        df.loc[mask, out_col] = pred
+        score = f"AUC={roc_auc_score(y, pred):.3f}" if kind == "classify" else f"R2={r2_score(y, pred):.3f}"
+        print(f"  {out_col}/{name}: n={mask.sum():,}, {score}", flush=True)
+
+
+def fit_full_outcome(df: pd.DataFrame, label: str, target_col: str, subset_mask: pd.Series, kind: str,
+                     extra_features: list[str] | None = None) -> None:
+    """Writes {label}_expected_full."""
+    feature_cols = STUFF_FEATURES + LOCATION_FEATURES + (extra_features or []) + CONTEXT_FEATURES
+    fit_tier(df, f"{label}_expected_full", target_col, subset_mask, kind, feature_cols)
+
+
+def recalibrate_oof_isotonic(sub: pd.DataFrame, target_col: str, expected_col: str, n_splits: int = 5) -> np.ndarray:
+    """Post-hoc monotonic recalibration of an out-of-fold continuous prediction: at the low end of
+    timing's predicted range, actual deviation ran 0.24 in above what the model expected (the other
+    9 deciles were within 0.08 in) — a real, if modest, miscalibration a squared-error regressor can
+    leave at the tails. This is a second, independent out-of-fold step, grouped by pitcher exactly
+    like the underlying model, so a pitcher's own actual outcomes never inform the curve used to
+    recalibrate their own prediction."""
+    groups = sub["pitcher"].to_numpy()
+    x = sub[expected_col].to_numpy()
+    y = sub[target_col].to_numpy()
+    out = np.full(len(sub), np.nan)
+    for train_idx, test_idx in GroupKFold(n_splits=n_splits).split(sub, y, groups=groups):
+        iso = IsotonicRegression(out_of_bounds="clip")
+        iso.fit(x[train_idx], y[train_idx])
+        out[test_idx] = iso.predict(x[test_idx])
+    return out
+
+
+if __name__ == "__main__":
+    print("loading full pitch-level data...", flush=True)
+    df = prepare_context(load_pitch_data(PITCH_LEVEL_FILE))
+    existing = read_aligned_predictions(df)
+
+    new_cols = []
+    for label, spec in OUTCOMES.items():
+        print(f"\n=== {label.upper()} (full tier: stuff+location+opponent+catcher+context) ===", flush=True)
+        fit_full_outcome(df, label, spec["target"], df[spec["subset"]], spec["kind"])
+        new_cols.append(f"{label}_expected_full")
+    save_predictions(existing, df, new_cols)

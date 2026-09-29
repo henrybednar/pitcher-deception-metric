@@ -1,0 +1,162 @@
+"""
+Pitcher Deception Project: run the whole pipeline in order
+==========================================================
+    python run_pipeline.py              run every step from the raw files
+    python run_pipeline.py --list       show the steps and what each one writes
+    python run_pipeline.py --from fit_full_model
+    python run_pipeline.py --only build_pages
+    python run_pipeline.py --pull       run data_pull.py first (network, slow)
+
+Each step runs as its own process with this directory as the working
+directory. Output is echoed and saved to logs/<step>.log. The run stops at the
+first step that fails or does not write the files it should.
+
+The raw files (see RAW_INPUTS) are not rebuilt unless you pass --pull. A pull
+fetches whatever Savant has today, so the data cutoff and every downstream
+number move with it.
+"""
+
+import argparse
+import os
+import subprocess
+import sys
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+LOG_DIR = ROOT / "logs"
+
+RAW_INPUTS = [
+    "statcast_pitch_level_2025_2026.csv",
+    "outcome_rates_by_pitcher_pitchtype_2025_2026.csv",
+    "swing_timing_by_pitcher_2025_2026.csv",
+    "arm_angle_by_pitcher_2025_2026.csv",
+    "pitch_tempo_by_pitcher_2025_2026.csv",
+    "fangraphs_stuff_manual.tsv",
+]
+
+
+@dataclass(frozen=True)
+class Step:
+    name: str
+    scripts: tuple[str, ...]
+    outputs: tuple[str, ...]
+    note: str
+
+
+PULL_STEP = Step("data_pull", ("data_pull.py",), tuple(RAW_INPUTS[:-1]), "download raw Statcast and leaderboard files")
+
+STEPS = [
+    Step("merge_data", ("merge_data.py",),
+         ("pitcher_pitchtype_season.csv", "pitcher_season_covariates.csv"),
+         "join raw files into pitcher-level covariate tables"),
+    Step("driver_features", ("driver_features.py",),
+         ("driver_features.csv",),
+         "season-level candidate driver features"),
+    Step("build_pitch_table", ("build_pitch_table.py",),
+         ("per_pitch_predictions.csv",), "per-pitch features, targets and half assignment"),
+    Step("fit_full_model", ("fit_full_model.py",), ("per_pitch_predictions.csv",),
+         "whiff, chase, ground ball, weak contact: stuff, location, batter, catcher, count, park, platoon"),
+    Step("fit_swing_alignment", ("fit_swing_alignment.py",), ("per_pitch_predictions.csv",),
+         "timing, horizontal alignment and whiff miss distance against each hitter's ideal contact point"),
+    Step("fit_timing_direction", ("fit_timing_direction.py",), ("per_pitch_predictions.csv",),
+         "signed timing model, stuff+location baseline (readout, not scored)"),
+    Step("fit_called_strike", ("fit_called_strike.py",), ("per_pitch_predictions.csv",),
+         "called strike model (validation table only)"),
+    Step("reliability_and_ci", ("reliability_and_ci.py",),
+         ("pitcher_season.csv", "reliability_report.csv"),
+         "shrinkage, bootstrap intervals, composite, split-half reliability, player names and Stuff+"),
+    Step("add_timing_direction", ("add_timing_direction.py",), ("pitcher_season.csv", "reliability_report.csv"),
+         "signed timing diagnostic with intervals"),
+    Step("driver_analysis", ("driver_analysis.py",), ("driver_analysis.json",),
+         "what explains each residual? (season level)"),
+    Step("predictive_validity", ("predictive_validity.py",), ("predictive_validity_report.csv",),
+         "does a 2025 score predict the 2026 outcome rate?"),
+    Step("sequencing_driver_analysis", ("sequencing_driver_analysis.py",), ("sequencing_driver_report.json",),
+         "does the previous pitch explain the residual? (pitch level)"),
+    Step("export_data", ("export_artifact_data.py", "export_site_stats.py", "export_leaderboard_data.py"),
+         ("artifact_data.json", "site_stats.json", "leaderboard_data.json"),
+         "JSON and stats consumed by the pages"),
+    Step("build_pages", ("build_artifact.py", "build_leaderboard.py"),
+         ("deception_dashboard.html", "deception_leaderboard.html"),
+         "standalone HTML pages (add --artifact to a build script for the Claude artifact fragment)"),
+]
+
+
+def check_raw_inputs() -> list[str]:
+    return [name for name in RAW_INPUTS if not (ROOT / name).exists()]
+
+
+def run_script(script: str, log) -> int:
+    proc = subprocess.Popen(
+        [sys.executable, "-u", script], cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8", errors="replace", env={**os.environ, "PYTHONUTF8": "1"},
+    )
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        sys.stdout.write(line)
+        log.write(line)
+    return proc.wait()
+
+
+def run_step(step: Step) -> None:
+    LOG_DIR.mkdir(exist_ok=True)
+    started = time.time()
+    print(f"\n=== {step.name}: {step.note}", flush=True)
+    with open(LOG_DIR / f"{step.name}.log", "w", encoding="utf-8") as log:
+        for script in step.scripts:
+            code = run_script(script, log)
+            if code != 0:
+                raise SystemExit(f"{script} exited with code {code}. See logs/{step.name}.log")
+    missing = [o for o in step.outputs if not (ROOT / o).exists()]
+    if missing:
+        raise SystemExit(f"{step.name} finished but did not write: {missing}")
+    print(f"=== {step.name} done in {(time.time() - started) / 60:.1f} min", flush=True)
+
+
+def select_steps(args: argparse.Namespace) -> list[Step]:
+    names = [s.name for s in STEPS]
+    if args.only:
+        if args.only not in names:
+            raise SystemExit(f"unknown step {args.only!r}. Choices: {names}")
+        return [s for s in STEPS if s.name == args.only]
+    if args.start:
+        if args.start not in names:
+            raise SystemExit(f"unknown step {args.start!r}. Choices: {names}")
+        return STEPS[names.index(args.start):]
+    return list(STEPS)
+
+
+def main() -> None:
+    # player names in the raw data include replacement characters that a cp1252 console cannot print
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--list", action="store_true", help="show the steps and exit")
+    parser.add_argument("--from", dest="start", help="start at this step")
+    parser.add_argument("--only", help="run just this step")
+    parser.add_argument("--pull", action="store_true", help="run data_pull.py first (network)")
+    args = parser.parse_args()
+
+    if args.list:
+        for i, step in enumerate(STEPS, 1):
+            print(f"{i:2d}. {step.name:28s} {step.note}")
+            print(f"    writes: {', '.join(step.outputs)}")
+        return
+
+    steps = select_steps(args)
+    if args.pull:
+        steps = [PULL_STEP] + steps
+    if not args.pull:
+        missing = check_raw_inputs()
+        if missing:
+            raise SystemExit(f"missing raw input files: {missing}. Run with --pull to download them.")
+
+    began = time.time()
+    for step in steps:
+        run_step(step)
+    print(f"\nPipeline finished in {(time.time() - began) / 60:.1f} min.")
+
+
+if __name__ == "__main__":
+    main()

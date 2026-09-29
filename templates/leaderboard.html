@@ -1,0 +1,295 @@
+__HEAD__
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+.lbroot {
+  color-scheme: light;
+  --bg: #f2f5f8;
+  --surface: #ffffff;
+  --surface-2: #eaeff3;
+  --border: #d8e0e7;
+  --border-strong: #b9c5cf;
+  --text-primary: #141b22;
+  --text-secondary: #55636f;
+  --text-muted: #85929c;
+  --accent: #b96f16;
+  --accent-ink: #ffffff;
+  --good: #e34948;
+  --good-ink: #791f1f;
+  --bad: #2a78d6;
+  --bad-ink: #0c447c;
+  --row-hover: #eef2f6;
+  --font-display: "Oswald", system-ui, sans-serif;
+  --font-body: "Source Sans 3", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text-primary);
+  display: block;
+  width: 100%;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .lbroot {
+    color-scheme: dark;
+    --bg: #10151c;
+    --surface: #171e27;
+    --surface-2: #1e2833;
+    --border: #2a3542;
+    --border-strong: #3b4956;
+    --text-primary: #eef1f4;
+    --text-secondary: #a4b0bc;
+    --text-muted: #798591;
+    --accent: #e8a33d;
+    --accent-ink: #2c1c02;
+    --good: #e66767;
+    --good-ink: #fcebeb;
+    --bad: #3987e5;
+    --bad-ink: #cde2fb;
+    --row-hover: #1c2530;
+  }
+}
+:root[data-theme="dark"] .lbroot {
+  color-scheme: dark;
+  --bg: #10151c;
+  --surface: #171e27;
+  --surface-2: #1e2833;
+  --border: #2a3542;
+  --border-strong: #3b4956;
+  --text-primary: #eef1f4;
+  --text-secondary: #a4b0bc;
+  --text-muted: #798591;
+  --accent: #e8a33d;
+  --accent-ink: #2c1c02;
+  --good: #e66767;
+  --good-ink: #fcebeb;
+  --bad: #3987e5;
+  --bad-ink: #cde2fb;
+  --row-hover: #1c2530;
+}
+.lbroot * { box-sizing: border-box; }
+.lbroot p { margin: 0; }
+.lbroot h1, .lbroot h2 { font-family: var(--font-display); font-weight: 500; margin: 0; color: var(--text-primary); }
+.lb-wrap { max-width: 1120px; margin: 0 auto; padding: 1.25rem 1.25rem 3rem; display: flex; flex-direction: column; gap: 1rem; }
+.lb-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.75rem; border-bottom: 0.5px solid var(--border); padding-bottom: 1rem; }
+.lb-head h1 { font-size: 22px; }
+.lb-eyebrow { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); }
+.lb-sub { font-size: 13px; color: var(--text-secondary); max-width: 60ch; }
+.lb-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.lb-controls input[type="text"] { min-width: 180px; }
+.lb-controls select { min-width: 100px; }
+.lb-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); cursor: pointer; user-select: none; }
+.lb-check input { width: 15px; height: 15px; cursor: pointer; }
+.lb-count { font-size: 12.5px; color: var(--text-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.lb-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--text-muted); align-items: center; }
+.lb-legend .swatch { display: inline-flex; align-items: center; gap: 5px; }
+.lb-legend i { width: 28px; height: 9px; border-radius: 3px; display: inline-block; }
+.lb-table-wrap { overflow-x: auto; background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; }
+table.lb-table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 1100px; }
+table.lb-table th, table.lb-table td { padding: 7px 10px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.lb-table th:first-child, table.lb-table td:first-child { text-align: left; padding-left: 14px; }
+table.lb-table th:nth-child(2), table.lb-table td:nth-child(2) { text-align: left; }
+table.lb-table th:nth-child(4), table.lb-table td:nth-child(4) { text-align: center; }
+table.lb-table thead th {
+  position: sticky; top: 0; background: var(--surface-2); color: var(--text-secondary);
+  font-family: var(--font-body); font-weight: 500; font-size: 11.5px; letter-spacing: 0.02em;
+  text-transform: uppercase; cursor: pointer; border-bottom: 0.5px solid var(--border-strong); user-select: none;
+}
+table.lb-table thead th:hover { color: var(--text-primary); }
+table.lb-table thead th.sorted { color: var(--accent); }
+table.lb-table tbody tr { border-bottom: 0.5px solid var(--border); }
+table.lb-table tbody tr:hover { background: var(--row-hover); }
+table.lb-table td.name { font-weight: 500; }
+table.lb-table td.mono { font-family: var(--font-mono); }
+table.lb-table td.composite { font-family: var(--font-mono); font-weight: 500; font-size: 14px; }
+table.lb-table td.unqualified { opacity: 0.55; }
+.lb-badge { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); margin-left: 4px; }
+.lb-link { color: var(--accent); text-decoration: underline; white-space: nowrap; }
+.lb-note { font-size: 13px; color: var(--text-secondary); line-height: 1.6; background: var(--surface); border: 0.5px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; max-width: 90ch; }
+.lb-footnote { font-size: 12.5px; color: var(--text-muted); line-height: 1.65; display: flex; flex-direction: column; gap: 0.6rem; max-width: 90ch; }
+.lb-footnote p { margin: 0; }
+table.lb-table td.role { color: var(--text-secondary); font-size: 12px; }
+@media (max-width: 480px) {
+  .lb-controls { flex-direction: column; align-items: stretch; }
+  .lb-count { margin-left: 0; }
+}
+</style>
+<div class="lbroot">
+<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Sortable, searchable leaderboard of Deception+ scores and its component indexes for every scored pitcher-season, 2025-2026.</h2>
+<div class="lb-wrap">
+
+  <div class="lb-head">
+    <div>
+      <p class="lb-eyebrow">2025-26 &middot; Deception+ &middot; data through {{DATA_THROUGH}}</p>
+      <h1>Deception+ leaderboard</h1>
+      <p class="lb-sub">Click a column to sort. Hover an index for its sample size and 95% interval. Rows below the minimum sample for one or more components are dimmed and hidden by default. <a class="lb-link" href="__DASHBOARD_URL__">&larr; Dashboard and method</a></p>
+    </div>
+  </div>
+
+  <p class="lb-note">Qualified relievers average {{RP_MEAN}} against {{SP_MEAN}} for starters, and the model has no control for role, fatigue, or times through the order. Use the role filter to compare like with like.</p>
+
+  <div class="lb-controls">
+    <input type="text" id="searchBox" placeholder="Search player" aria-label="Search player">
+    <select id="seasonFilter" aria-label="Season">
+      <option value="all">All seasons</option>
+      <option value="2025">2025</option>
+      <option value="2026">2026</option>
+    </select>
+    <select id="roleFilter" aria-label="Role">
+      <option value="all">All roles</option>
+      <option value="SP">Starters</option>
+      <option value="RP">Relievers</option>
+      <option value="MR">Mixed</option>
+    </select>
+    <label class="lb-check"><input type="checkbox" id="qualifiedOnly" checked> Qualified only</label>
+    <span class="lb-count" id="rowCount"></span>
+  </div>
+
+  <div class="lb-legend">
+    <span class="swatch"><i style="background:var(--good)"></i>Above average</span>
+    <span class="swatch"><i style="background:linear-gradient(90deg,var(--good),transparent 50%,var(--bad))"></i>100 = average</span>
+    <span class="swatch"><i style="background:var(--bad)"></i>Below average</span>
+  </div>
+
+  <div class="lb-table-wrap">
+    <table class="lb-table" id="lbTable">
+      <thead>
+        <tr>
+          <th style="text-align:left; cursor:default;">#</th>
+          <th data-key="name" style="text-align:left;">Player</th>
+          <th data-key="season">Season</th>
+          <th data-key="role" style="text-align:center;">Role</th>
+          <th data-key="deception_plus">Deception+</th>
+          <th data-key="whiff_index">Whiff</th>
+          <th data-key="chase_index">Chase</th>
+          <th data-key="gb_index" title="Scored and shown, not part of Deception+">Ground ball*</th>
+          <th data-key="weak_index">Weak contact</th>
+          <th data-key="timing_index">Timing</th>
+          <th data-key="whiffmiss_index">Whiff miss</th>
+          <th data-key="timing_bias_inches">Timing dir</th>
+          <th data-key="stuff_plus">Stuff+</th>
+        </tr>
+      </thead>
+      <tbody id="lbBody"></tbody>
+    </table>
+  </div>
+
+  <div class="lb-footnote">
+    <p>Each index is the pitcher's actual rate minus the rate a model expects from the pitch (velocity, spin, movement, location), the batter, the catcher, the count, the park, and pitcher-batter handedness. Small samples are shrunk toward the average. 100 is the average scored pitcher-season for each index and the average qualified pitcher-season for Deception+, and 10 points is one standard deviation. Deception+ is a reliability-weighted average of {{N_COMPOSITE}} components: whiff, chase, weak contact, timing and whiff miss distance.</p>
+    <p>Timing is the gap between where the bat met the ball and the hitter's estimated ideal contact depth, so early and late contact both count. It is scored on swings that made contact. Whiff miss distance is Statcast's distance between ball and barrel at closest approach on swings and misses. *Ground ball is scored and shown but is not part of Deception+, because it is a different skill from the other components (its index correlates at most {{GB_CORR_MAX}} with them). Timing dir is the signed timing gap in inches against a stuff-and-location baseline: positive means contact farther out front than the hitter's ideal (earlier) and negative means deeper (later). It is not shaded because it is not on the 100 scale.</p>
+    <p>Role is a proxy from median pitches per appearance: {{ROLE_SP_MIN}} or more is a starter (SP), under {{ROLE_RP_MAX}} is a reliever (RP), and anything between is mixed (MR).</p>
+    <p>Deception+ has a split-half reliability of r={{COMPOSITE_R}} and a year-over-year correlation of r={{YOY_R}}. Among its members {{MOST_LABEL}} is the most reliable (r={{MOST_R}}) and {{LEAST_LABEL}} the least (r={{LEAST_R}}). Called strike was removed from the score and this table because it is stable within a season but does not carry over between seasons (year-over-year r={{YOY_CALLEDSTRIKE}}). The dashboard has its numbers.</p>
+    <p>Pitch data comes from Baseball Savant (Statcast). Stuff+ comes from FanGraphs and was entered by hand. This project is independent and not affiliated with MLB, Baseball Savant, or FanGraphs. The <a class="lb-link" href="__DASHBOARD_URL__">dashboard</a> has the full method, the validation table, and the audit log.</p>
+  </div>
+
+</div>
+</div>
+<script>
+(function() {
+  var ROWS = __ROWS_JSON__;
+  var root = document.querySelector('.lbroot');
+  function cssVar(name) { return getComputedStyle(root).getPropertyValue(name).trim(); }
+
+  var CI_PAIRS = { whiff_index: ['whiff_ci_lo', 'whiff_ci_hi'],
+                   whiffmiss_index: ['whiffmiss_ci_lo', 'whiffmiss_ci_hi'] };
+  var N_COLS = { whiff_index: 'whiff_n', chase_index: 'chase_n', gb_index: 'gb_n', weak_index: 'weak_n', timing_index: 'timing_n',
+                 whiffmiss_index: 'whiffmiss_n' };
+
+  var state = { sortKey: 'deception_plus', sortDir: -1, search: '', season: 'all', role: 'all', qualifiedOnly: true };
+
+  function cellColor(val) {
+    if (val === null || val === undefined) return 'transparent';
+    var d = Math.max(-30, Math.min(30, val - 100)) / 30;
+    var color = d >= 0 ? cssVar('--good') : cssVar('--bad');
+    var alpha = Math.abs(d) * 0.22;
+    var hex = color.replace('#', '');
+    var r = parseInt(hex.substring(0,2), 16), g = parseInt(hex.substring(2,4), 16), b = parseInt(hex.substring(4,6), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha.toFixed(2) + ')';
+  }
+
+  function fmt(v) { return (v === null || v === undefined) ? '-' : v.toFixed(1); }
+
+  function fmtDir(v) {
+    if (v === null || v === undefined) return '-';
+    if (Math.abs(v) < 0.05) return '0.0';
+    return (v > 0 ? '+' : '') + v.toFixed(1) + (v > 0 ? ' early' : ' late');
+  }
+
+  function render() {
+    var filtered = ROWS.filter(function(r) {
+      if (state.qualifiedOnly && !r.qualified) return false;
+      if (state.season !== 'all' && String(r.season) !== state.season) return false;
+      if (state.role !== 'all' && r.role !== state.role) return false;
+      if (state.search && r.name.toLowerCase().indexOf(state.search) === -1) return false;
+      return true;
+    });
+    filtered.sort(function(a, b) {
+      var av = a[state.sortKey], bv = b[state.sortKey];
+      if (av === null || av === undefined) av = state.sortKey === 'name' ? '' : -Infinity;
+      if (bv === null || bv === undefined) bv = state.sortKey === 'name' ? '' : -Infinity;
+      if (av < bv) return -1 * state.sortDir;
+      if (av > bv) return 1 * state.sortDir;
+      return 0;
+    });
+
+    document.getElementById('rowCount').textContent = filtered.length.toLocaleString() + ' pitcher-seasons';
+
+    var body = document.getElementById('lbBody');
+    var html = [];
+    filtered.forEach(function(r, i) {
+      var cls = r.qualified ? '' : ' class="unqualified"';
+      var cells = ['<td class="mono">' + (i + 1) + '</td>', '<td class="name">' + r.name.split(', ').reverse().join(' ') + '</td>',
+                   '<td class="mono">' + r.season + '</td>',
+                   '<td class="role" title="' + (r.med_pitches_per_app === null ? '' : 'median ' + r.med_pitches_per_app.toFixed(0) + ' pitches per appearance') + '">' + (r.role || '-') + '</td>'];
+      cells.push('<td class="composite" style="background:' + cellColor(r.deception_plus) + '">' + fmt(r.deception_plus) + '</td>');
+      ['whiff_index', 'chase_index', 'gb_index', 'weak_index', 'timing_index', 'whiffmiss_index'].forEach(function(key) {
+        var nCol = N_COLS[key];
+        var title = r[nCol] !== null ? 'n=' + r[nCol] : '';
+        if (CI_PAIRS[key] && r[CI_PAIRS[key][0]] !== null) {
+          title += (title ? ', ' : '') + '95% CI [' + r[CI_PAIRS[key][0]].toFixed(1) + ', ' + r[CI_PAIRS[key][1]].toFixed(1) + ']';
+        }
+        cells.push('<td class="mono" style="background:' + cellColor(r[key]) + '" title="' + title + '">' + fmt(r[key]) + '</td>');
+      });
+      var dirTitle = r.timingdir_n !== null ? 'n=' + r.timingdir_n : '';
+      if (r.timing_bias_ci_lo !== null) {
+        dirTitle += (dirTitle ? ', ' : '') + '95% CI [' + r.timing_bias_ci_lo.toFixed(1) + ', ' + r.timing_bias_ci_hi.toFixed(1) + '] in. Positive = hitters earlier than expected, negative = later.';
+      }
+      cells.push('<td class="mono" title="' + dirTitle + '">' + fmtDir(r.timing_bias_inches) + '</td>');
+      cells.push('<td class="mono">' + (r.stuff_plus !== null ? r.stuff_plus.toFixed(0) : '-') + '</td>');
+      html.push('<tr' + cls + '>' + cells.join('') + '</tr>');
+    });
+    body.innerHTML = html.join('');
+
+    document.querySelectorAll('#lbTable thead th').forEach(function(th) {
+      th.classList.toggle('sorted', th.dataset.key === state.sortKey);
+    });
+  }
+
+  document.querySelectorAll('#lbTable thead th').forEach(function(th) {
+    th.addEventListener('click', function() {
+      var key = th.dataset.key;
+      if (state.sortKey === key) { state.sortDir *= -1; }
+      else { state.sortKey = key; state.sortDir = key === 'name' ? 1 : -1; }
+      render();
+    });
+  });
+  document.getElementById('searchBox').addEventListener('input', function(e) {
+    state.search = e.target.value.trim().toLowerCase();
+    render();
+  });
+  document.getElementById('seasonFilter').addEventListener('change', function(e) {
+    state.season = e.target.value;
+    render();
+  });
+  document.getElementById('roleFilter').addEventListener('change', function(e) {
+    state.role = e.target.value;
+    render();
+  });
+  document.getElementById('qualifiedOnly').addEventListener('change', function(e) {
+    state.qualifiedOnly = e.target.checked;
+    render();
+  });
+
+  render();
+})();
+</script>
