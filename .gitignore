@@ -9,12 +9,9 @@ logs/
 # Recreate with `python run_pipeline.py --pull`.
 raw/statcast_pitch_level_2025_2026.csv
 
-# output/: only the large per-pitch prediction table and the merge/driver-feature
-# intermediates are excluded; the final reports and page data are tracked.
-# Recreate with `python run_pipeline.py`.
-output/per_pitch_predictions.csv
-output/pitcher_pitchtype_season.csv
-output/pitcher_season_covariates.csv
-output/driver_features.csv
+# output/: everything here is regenerated from raw/ by run_pipeline.py on every run, the same
+# way a dist/ or build/ folder is, so none of it is tracked. The two HTML pages at the repo root
+# are the exception: they're the actual viewable deliverable, not just an intermediate.
+output/
 
 .pytest_cache/
