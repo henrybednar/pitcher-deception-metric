@@ -1,5 +1,7 @@
 # Deception+
 
+[![Tests](https://github.com/henrybednar/pitcher-deception-metric/actions/workflows/tests.yml/badge.svg)](https://github.com/henrybednar/pitcher-deception-metric/actions/workflows/tests.yml)
+
 Deception+ is a pitcher metric built from scratch on Statcast pitch-level data for 2025 and 2026. It compares what happened on each pitch with what a model expects from the pitch itself, the batter, the catcher, the count, the park, and pitcher-batter handedness. A pitcher's score is how far their results land above or below that expectation. 100 is the qualified-pitcher average and 10 points is one standard deviation, the same scale as Stuff+.
 
 The gap between result and expectation is not proven to be deception. It is whatever the model does not explain. Pitch sequencing, tunneling, spin mirroring, tempo, and arm slot were each tested as explanations and none accounts for it.
