@@ -190,8 +190,9 @@ def build_name_crosswalk(path: str) -> dict:
     return crosswalk
 
 
-def load_fangraphs_stuff_files() -> pd.DataFrame | None:
-    files = glob.glob("raw/fangraphs_stuff_*.tsv") + glob.glob("raw/fangraphs_stuff_*.csv")
+def load_fangraphs_files(prefix: str) -> pd.DataFrame | None:
+    """Every fangraphs_{prefix}_*.tsv or .csv file in raw/, concatenated. None if there are none."""
+    files = glob.glob(f"raw/{prefix}_*.tsv") + glob.glob(f"raw/{prefix}_*.csv")
     if not files:
         return None
     frames = [pd.read_csv(f, sep="\t" if f.endswith(".tsv") else ",") for f in files]
@@ -204,7 +205,7 @@ def merge_fangraphs_stuff(pitcher_season_covariates: pd.DataFrame):
     by the caller; the pitcher-season overall Stuff+/Location+/Pitching+ score
     is folded straight into pitcher_season_covariates like every other
     pitcher-season covariate."""
-    fg = load_fangraphs_stuff_files()
+    fg = load_fangraphs_files("fangraphs_stuff")
     if fg is None:
         print("No fangraphs_stuff_*.tsv/csv file found — skipping Stuff+ merge. "
               "See the comment above merge_fangraphs_stuff() for the expected format.")
@@ -258,18 +259,10 @@ def merge_fangraphs_stuff(pitcher_season_covariates: pd.DataFrame):
 # real trade and only overstates a genuine same-name collision (the same crosswalk limitation the
 # Stuff+ merge already has, and rare enough in practice not to be worth an ID lookup FanGraphs
 # doesn't expose).
-def load_fangraphs_standard_files() -> pd.DataFrame | None:
-    files = glob.glob("raw/fangraphs_standard_*.tsv") + glob.glob("raw/fangraphs_standard_*.csv")
-    if not files:
-        return None
-    frames = [pd.read_csv(f, sep="\t" if f.endswith(".tsv") else ",") for f in files]
-    return pd.concat(frames, ignore_index=True)
-
-
 def merge_fangraphs_standard(pitcher_season_covariates: pd.DataFrame) -> pd.DataFrame:
     """Adds games, games_started, innings_pitched to pitcher_season_covariates, for a real
     games-started-share role label instead of export_site_stats.py's pitches-per-appearance proxy."""
-    fg = load_fangraphs_standard_files()
+    fg = load_fangraphs_files("fangraphs_standard")
     if fg is None:
         print("No fangraphs_standard_*.tsv/csv file found — skipping the games/starts/innings merge. "
               "See the comment above merge_fangraphs_standard() for the expected format.")
