@@ -79,7 +79,7 @@ def qualify_text() -> str:
 def timing_vs_savant(ps: pd.DataFrame) -> float:
     """Pitcher-season correlation of the timing index with the share of on-time swings Savant's
     own swing-timing leaderboard reports, qualified pitchers only."""
-    board = pd.read_csv("swing_timing_by_pitcher_2025_2026.csv").rename(columns={"id": "pitcher"})
+    board = pd.read_csv("raw/swing_timing_by_pitcher_2025_2026.csv").rename(columns={"id": "pitcher"})
     joined = ps[ps["qualified"]].merge(board[["pitcher", "season", "on_time_percent"]], on=["pitcher", "season"])
     return float(joined["timing_index"].corr(joined["on_time_percent"]))
 
@@ -116,12 +116,12 @@ def pitcher_roles(raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
-    ps = pd.read_csv("pitcher_season.csv")
-    rr = pd.read_csv("reliability_report.csv").set_index("label")
-    pv = pd.read_csv("predictive_validity_report.csv").set_index("label")
+    ps = pd.read_csv("output/pitcher_season.csv")
+    rr = pd.read_csv("output/reliability_report.csv").set_index("label")
+    pv = pd.read_csv("output/predictive_validity_report.csv").set_index("label")
 
     raw = pd.read_csv(
-        "statcast_pitch_level_2025_2026.csv",
+        "raw/statcast_pitch_level_2025_2026.csv",
         usecols=["pitcher", "season", "game_pk", "game_date"],
         low_memory=False,
     )
@@ -186,11 +186,11 @@ def main() -> None:
         "passes": bool(pv.loc["composite_to_whiff", "f_pvalue"] < 0.01),
     })
 
-    with open("artifact_data.json", encoding="utf-8") as f:
+    with open("output/artifact_data.json", encoding="utf-8") as f:
         n_points = len(json.load(f)["points"])
-    with open("driver_analysis.json", encoding="utf-8") as f:
+    with open("output/driver_analysis.json", encoding="utf-8") as f:
         driver_r2 = [m["r2_mean"] for m in json.load(f).values()]
-    with open("sequencing_driver_report.json", encoding="utf-8") as f:
+    with open("output/sequencing_driver_report.json", encoding="utf-8") as f:
         seq_r2 = [m["r2"] for m in json.load(f).values()]
 
     text = {
@@ -248,7 +248,7 @@ def main() -> None:
     }
 
     out = {"text": text, "components": components}
-    with open("site_stats.json", "w", encoding="utf-8") as f:
+    with open("output/site_stats.json", "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)
     print(f"Saved site_stats.json ({len(text)} text fields, {len(components)} table rows).")
     print(f"data through {text['DATA_THROUGH']}; reliever mean {text['RP_MEAN']} vs starter mean {text['SP_MEAN']}; "

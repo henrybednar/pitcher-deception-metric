@@ -18,7 +18,7 @@ from reliability_and_ci import game_level_table, pitcher_season_point_estimate, 
 
 if __name__ == "__main__":
     print("loading per-pitch predictions...", flush=True)
-    df = pd.read_csv("per_pitch_predictions.csv")
+    df = pd.read_csv("output/per_pitch_predictions.csv")
 
     spec = dict(subset=lambda d: d["is_swing"] & d["timing_dir_raw"].notna(), target="timing_dir_raw")
     result, rel, half_tbl = process_outcome(df, "timingdir", spec, is_binary=False, baseline="stuffloc")
@@ -46,15 +46,15 @@ if __name__ == "__main__":
     keep = ["pitcher", "season", "timingdir_n", "timing_bias_inches", "timing_bias_ci_lo", "timing_bias_ci_hi"]
     result = result[keep]
 
-    ps = pd.read_csv("pitcher_season.csv")
+    ps = pd.read_csv("output/pitcher_season.csv")
     ps = ps.drop(columns=[c for c in keep if c in ps.columns and c not in ("pitcher", "season")], errors="ignore")
     ps = ps.merge(result, on=["pitcher", "season"], how="left")
-    ps.to_csv("pitcher_season.csv", index=False)
+    ps.to_csv("output/pitcher_season.csv", index=False)
 
-    rr = pd.read_csv("reliability_report.csv")
+    rr = pd.read_csv("output/reliability_report.csv")
     rr = rr[rr["label"] != "timingdir"]
     rr = pd.concat([rr, pd.DataFrame([rel])], ignore_index=True)
-    rr.to_csv("reliability_report.csv", index=False)
+    rr.to_csv("output/reliability_report.csv", index=False)
 
     print(f"\ntiming_bias_inches: mean={ps['timing_bias_inches'].mean():.3f}, "
           f"n_scored={ps['timing_bias_inches'].notna().sum()}", flush=True)

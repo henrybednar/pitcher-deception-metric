@@ -25,7 +25,7 @@ def main() -> None:
     parser.add_argument("--out", default=LEADERBOARD_FILE)
     args = parser.parse_args()
 
-    with open("leaderboard_data.json", encoding="utf-8") as f:
+    with open("output/leaderboard_data.json", encoding="utf-8") as f:
         rows = json.load(f)
     stats = load_stats()
 

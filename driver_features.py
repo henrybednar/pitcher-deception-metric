@@ -33,7 +33,7 @@ from sklearn.linear_model import Ridge
 from sklearn.model_selection import GroupKFold, GroupShuffleSplit, cross_val_score
 from sklearn.preprocessing import StandardScaler
 
-PITCH_LEVEL_FILE = "statcast_pitch_level_2025_2026.csv"
+PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2025_2026.csv"
 CHUNKSIZE = 500_000
 MIN_PITCHES_PER_TYPE = 20
 Y0 = 50.0            # Statcast trajectory start, ft from home plate
@@ -230,10 +230,10 @@ if __name__ == "__main__":
           f"{spin['spin_mirror_score_mean'].mean():.1f} deg (0 = match or mirror, 90 = perpendicular)")
 
     features = build_driver_features(
-        pd.read_csv("pitcher_pitchtype_season.csv"),
-        pd.read_csv("pitcher_season_covariates.csv"),
+        pd.read_csv("output/pitcher_pitchtype_season.csv"),
+        pd.read_csv("output/pitcher_season_covariates.csv"),
         tunnel, spin,
     )
-    features.to_csv("driver_features.csv", index=False)
+    features.to_csv("output/driver_features.csv", index=False)
     print(f"\nSaved driver_features.csv: {len(features):,} pitcher-seasons, "
           f"{len(features.columns) - 2} features. Done.")

@@ -22,11 +22,12 @@ Run after data_pull.py has produced its CSVs in this same directory.
 
 import glob
 import unicodedata
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-PITCH_LEVEL_FILE = "statcast_pitch_level_2025_2026.csv"
+PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2025_2026.csv"
 
 
 # ---------------------------------------------------------------------------
@@ -130,13 +131,13 @@ def compute_pitch_mix_entropy(outcome_rates: pd.DataFrame) -> pd.DataFrame:
 # 4. Loaders for the pitcher-season-level leaderboard pulls
 # ---------------------------------------------------------------------------
 def load_arm_angle_leaderboard() -> pd.DataFrame:
-    df = pd.read_csv("arm_angle_by_pitcher_2025_2026.csv")
+    df = pd.read_csv("raw/arm_angle_by_pitcher_2025_2026.csv")
     keep = ["pitcher", "season", "ball_angle"]
     return df[keep].rename(columns={"ball_angle": "arm_angle_szn_avg"})
 
 
 def load_tempo() -> pd.DataFrame:
-    df = pd.read_csv("pitch_tempo_by_pitcher_2025_2026.csv")
+    df = pd.read_csv("raw/pitch_tempo_by_pitcher_2025_2026.csv")
     df = df.rename(columns={"entity_id": "pitcher"})
     # The pull used split=no, so the file's second pace column is a positional duplicate of this one.
     return df[["pitcher", "season", "median_seconds_empty"]].rename(columns={"median_seconds_empty": "tempo_bases_empty_sec"})
@@ -151,7 +152,7 @@ def load_tempo() -> pd.DataFrame:
 # script around bot detection, this expects a table exported/pasted by hand
 # from the FanGraphs site (pitch-type view with Stuff+/Location+/Pitching+
 # columns showing) saved as fangraphs_stuff_*.tsv (tab-separated) or
-# fangraphs_stuff_*.csv in this folder, with at least these columns:
+# fangraphs_stuff_*.csv in raw/, with at least these columns:
 #   season, name, stf_fa, stf_si, stf_fc, stf_fs, stf_sl, stf_cu, stf_ch,
 #   stf_kc, stf_fo, stuff_plus, location_plus, pitching_plus
 #
@@ -186,7 +187,7 @@ def build_name_crosswalk(path: str) -> dict:
 
 
 def load_fangraphs_stuff_files() -> pd.DataFrame | None:
-    files = glob.glob("fangraphs_stuff_*.tsv") + glob.glob("fangraphs_stuff_*.csv")
+    files = glob.glob("raw/fangraphs_stuff_*.tsv") + glob.glob("raw/fangraphs_stuff_*.csv")
     if not files:
         return None
     frames = [pd.read_csv(f, sep="\t" if f.endswith(".tsv") else ",") for f in files]
@@ -247,7 +248,7 @@ def merge_fangraphs_stuff(pitcher_season_covariates: pd.DataFrame):
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     print("loading outcome rates...")
-    outcome_rates = pd.read_csv("outcome_rates_by_pitcher_pitchtype_2025_2026.csv")
+    outcome_rates = pd.read_csv("raw/outcome_rates_by_pitcher_pitchtype_2025_2026.csv")
 
     print("computing pitch characteristics (chunked pass over pitch-level file)...")
     pitch_chars = compute_pitch_characteristics(PITCH_LEVEL_FILE)
@@ -279,8 +280,9 @@ if __name__ == "__main__":
     if fg_pitch_type_long is not None:
         table = table.merge(fg_pitch_type_long, on=["pitcher", "season", "pitch_type"], how="left")
 
-    table.to_csv("pitcher_pitchtype_season.csv", index=False)
-    pitcher_season_covariates.to_csv("pitcher_season_covariates.csv", index=False)
+    Path("output").mkdir(exist_ok=True)
+    table.to_csv("output/pitcher_pitchtype_season.csv", index=False)
+    pitcher_season_covariates.to_csv("output/pitcher_season_covariates.csv", index=False)
 
     print(f"Done. pitcher_pitchtype_season.csv: {table.shape[0]} rows, {table.shape[1]} cols")
     print(f"      pitcher_season_covariates.csv: {pitcher_season_covariates.shape[0]} rows, "

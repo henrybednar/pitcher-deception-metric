@@ -80,6 +80,6 @@ if __name__ == "__main__":
             print(f"  {f['feature']:22s} importance={f['importance']:.5f}", flush=True)
 
     import json
-    with open("sequencing_driver_report.json", "w", encoding="utf-8") as f:
+    with open("output/sequencing_driver_report.json", "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
     print("\nSaved sequencing_driver_report.json. Done.", flush=True)

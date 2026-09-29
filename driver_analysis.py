@@ -22,13 +22,13 @@ from driver_features import run_driver_analysis
 COMPONENTS = ["whiff", "chase", "gb", "weak", "timing", "calledstrike", "align", "whiffmiss"]
 
 if __name__ == "__main__":
-    driver_df = pd.read_csv("driver_features.csv")
+    driver_df = pd.read_csv("output/driver_features.csv")
     print(f"driver features ({len(driver_df.columns) - 2}): "
           f"{[c for c in driver_df.columns if c not in ('pitcher', 'season')]}")
 
-    ps = pd.read_csv("pitcher_season.csv")
+    ps = pd.read_csv("output/pitcher_season.csv")
     results = {label: run_driver_analysis(driver_df, ps, f"{label}_diff_adj_shrunk") for label in COMPONENTS}
 
-    with open("driver_analysis.json", "w", encoding="utf-8") as f:
+    with open("output/driver_analysis.json", "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
     print("\nSaved driver_analysis.json. Done.")

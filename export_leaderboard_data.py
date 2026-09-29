@@ -13,8 +13,8 @@ import pandas as pd
 
 from export_site_stats import pitcher_roles
 
-ps = pd.read_csv("pitcher_season.csv")
-raw = pd.read_csv("statcast_pitch_level_2025_2026.csv", usecols=["pitcher", "season", "game_pk"], low_memory=False)
+ps = pd.read_csv("output/pitcher_season.csv")
+raw = pd.read_csv("raw/statcast_pitch_level_2025_2026.csv", usecols=["pitcher", "season", "game_pk"], low_memory=False)
 ps = ps.merge(pitcher_roles(raw), on=["pitcher", "season"], how="left")
 
 cols = [
@@ -43,7 +43,7 @@ for c in out.columns:
 
 rows = json.loads(out.to_json(orient="records"))
 
-with open("leaderboard_data.json", "w", encoding="utf-8") as f:
+with open("output/leaderboard_data.json", "w", encoding="utf-8") as f:
     json.dump(rows, f, separators=(",", ":"))
 
 print(f"Saved leaderboard_data.json: {len(rows):,} rows, {len(cols)} fields each.")

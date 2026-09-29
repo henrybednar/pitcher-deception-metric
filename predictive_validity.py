@@ -75,8 +75,8 @@ def evaluate(data: pd.DataFrame, x_col: str, prior_col: str, y_col: str) -> dict
 
 
 if __name__ == "__main__":
-    df = pd.read_csv("per_pitch_predictions.csv")
-    ps = pd.read_csv("pitcher_season.csv")
+    df = pd.read_csv("output/per_pitch_predictions.csv")
+    ps = pd.read_csv("output/pitcher_season.csv")
 
     rows = []
     for label, spec in OUTCOME_SPECS.items():
@@ -118,5 +118,5 @@ if __name__ == "__main__":
           f"in-sample delta={result['delta_r2_in_sample']:+.4f}, "
           f"CV delta={result['cv_delta_r2']:+.4f}, p={result['f_pvalue']:.4g}", flush=True)
 
-    pd.DataFrame(rows).to_csv("predictive_validity_report.csv", index=False)
+    pd.DataFrame(rows).to_csv("output/predictive_validity_report.csv", index=False)
     print("\nSaved predictive_validity_report.csv. Done.")

@@ -21,7 +21,7 @@ LORE_PICKS = [
 ]
 MIN_SWINGS = 100
 
-ps = pd.read_csv("pitcher_season.csv")
+ps = pd.read_csv("output/pitcher_season.csv")
 pop = ps[(ps["whiff_n"] >= MIN_SWINGS) & ps["deception_plus"].notna()].copy()
 
 def pctile(series: pd.Series) -> pd.Series:
@@ -63,7 +63,7 @@ for name, season in LORE_PICKS:
         "n": int(r["whiff_n"]), "qualified": bool(r["qualified"]),
     })
 
-with open("artifact_data.json", "w", encoding="utf-8") as f:
+with open("output/artifact_data.json", "w", encoding="utf-8") as f:
     json.dump({"points": points, "lore": lore}, f, separators=(",", ":"))
 
 print(f"Saved artifact_data.json: {len(points):,} points, {len(lore)} lore rows.")

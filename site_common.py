@@ -34,7 +34,7 @@ STANDALONE_BODY_STYLE = (
 TOKEN_PATTERN = re.compile(r"\{\{([A-Z0-9_]+)\}\}")
 
 
-def load_stats(path: str = "site_stats.json") -> dict:
+def load_stats(path: str = "output/site_stats.json") -> dict:
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 

@@ -18,6 +18,8 @@ Run: `pip install pybaseball pandas numpy requests --upgrade` first
 import io
 import shutil
 import time
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import requests
@@ -256,14 +258,15 @@ if __name__ == "__main__":
             print(f"  FAILED: {e}")
 
     outputs = {
-        "statcast_pitch_level_2025_2026.csv": all_pitches,
-        "outcome_rates_by_pitcher_pitchtype_2025_2026.csv": all_rates,
-        "swing_timing_by_pitcher_2025_2026.csv": all_swing_timing,
+        "raw/statcast_pitch_level_2025_2026.csv": all_pitches,
+        "raw/outcome_rates_by_pitcher_pitchtype_2025_2026.csv": all_rates,
+        "raw/swing_timing_by_pitcher_2025_2026.csv": all_swing_timing,
         "stuff_plus_pitchingbot_2025_2026.csv": all_stuff,
-        "arm_angle_by_pitcher_2025_2026.csv": all_arm_angle,
-        "pitch_tempo_by_pitcher_2025_2026.csv": all_tempo,
+        "raw/arm_angle_by_pitcher_2025_2026.csv": all_arm_angle,
+        "raw/pitch_tempo_by_pitcher_2025_2026.csv": all_tempo,
     }
 
+    Path("raw").mkdir(exist_ok=True)
     written, skipped = [], []
     for filename, frames in outputs.items():
         if not frames:

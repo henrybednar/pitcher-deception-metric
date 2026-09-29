@@ -35,9 +35,9 @@ def main() -> None:
     parser.add_argument("--out", default=DASHBOARD_FILE)
     args = parser.parse_args()
 
-    with open("artifact_data.json", encoding="utf-8") as f:
+    with open("output/artifact_data.json", encoding="utf-8") as f:
         artifact_data = json.load(f)
-    with open("driver_analysis.json", encoding="utf-8") as f:
+    with open("output/driver_analysis.json", encoding="utf-8") as f:
         driver_data = json.load(f)
     stats = load_stats()
 

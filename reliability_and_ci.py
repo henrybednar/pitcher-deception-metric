@@ -83,7 +83,7 @@ import pandas as pd
 from scipy.optimize import brentq
 from scipy.stats import chi2
 
-PITCH_LEVEL_FILE = "statcast_pitch_level_2025_2026.csv"
+PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2025_2026.csv"
 FANGRAPHS_COLS = ["stuff_plus", "location_plus", "pitching_plus"]
 
 
@@ -497,7 +497,7 @@ def process_outcome(df: pd.DataFrame, label: str, spec: dict, is_binary: bool, b
 
 if __name__ == "__main__":
     print("loading per-pitch predictions...", flush=True)
-    df = pd.read_csv("per_pitch_predictions.csv")
+    df = pd.read_csv("output/per_pitch_predictions.csv")
     print(f"rows: {len(df):,}", flush=True)
 
     ps = None
@@ -593,7 +593,7 @@ if __name__ == "__main__":
     # merge_data.py. FanGraphs is never used in scoring, only for the dashboard's Stuff+ axis and the
     # leaderboard column.
     names = pd.read_csv(PITCH_LEVEL_FILE, usecols=["pitcher", "player_name"]).drop_duplicates("pitcher")
-    covariates = pd.read_csv("pitcher_season_covariates.csv")
+    covariates = pd.read_csv("output/pitcher_season_covariates.csv")
     ps = ps.merge(names, on="pitcher", how="left")
     ps = merge_fangraphs_columns(ps, covariates)
     y25 = comp_scored[comp_scored["season"] == 2025]
@@ -607,6 +607,6 @@ if __name__ == "__main__":
     print(top.head(10)[["player_name", "season", "deception_plus", "qualified", "whiff_index", "whiff_ci_lo", "whiff_ci_hi",
                           "timing_index", "timing_ci_lo", "timing_ci_hi"]].to_string(index=False))
 
-    ps.to_csv("pitcher_season.csv", index=False)
-    pd.DataFrame(reliability_report).to_csv("reliability_report.csv", index=False)
+    ps.to_csv("output/pitcher_season.csv", index=False)
+    pd.DataFrame(reliability_report).to_csv("output/reliability_report.csv", index=False)
     print("\nSaved pitcher_season.csv and reliability_report.csv. Done.", flush=True)

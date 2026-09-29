@@ -23,7 +23,9 @@ python -m venv .venv
 
 The pipeline starts from the raw files listed in `RAW_INPUTS` in `run_pipeline.py`. A full run takes about 11 minutes on a 24-thread machine and needs about 1.3 GB of free disk. `python run_pipeline.py --list` shows the steps, `--from STEP` and `--only STEP` run part of it, and each step logs to `logs/`.
 
-`--pull` runs `data_pull.py` first. It fetches whatever Savant has that day, so the data cutoff and every downstream number move with it. `fangraphs_stuff_manual.tsv` was pasted from FanGraphs by hand because scripted access is blocked. It is used only for the Stuff+ axis on the dashboard and the leaderboard column, never in scoring.
+`--pull` runs `data_pull.py` first. It fetches whatever Savant has that day, so the data cutoff and every downstream number move with it. `raw/fangraphs_stuff_manual.tsv` was pasted from FanGraphs by hand because scripted access is blocked. It is used only for the Stuff+ axis on the dashboard and the leaderboard column, never in scoring.
+
+Raw pulled and manually-dropped files live in `raw/`; everything the pipeline generates (intermediates, reports, and the JSON the pages read) lives in `output/`. The two HTML pages and every `.py` script stay at the project root.
 
 Tests: `pip install -r requirements-dev.txt`, then `pytest`.
 

@@ -22,6 +22,8 @@ non-regular-season, 2026 0.3%, since 2026's postseason hasn't happened yet). Lef
 land unevenly on whichever pitchers happened to appear in those games.
 """
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -31,8 +33,8 @@ from physics_features import add_physics_features
 from pitch_pairs import TRAJECTORY_COLS, add_pair_features
 from swing_alignment import add_swing_alignment
 
-PITCH_LEVEL_FILE = "statcast_pitch_level_2025_2026.csv"
-PREDICTIONS_FILE = "per_pitch_predictions.csv"
+PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2025_2026.csv"
+PREDICTIONS_FILE = "output/per_pitch_predictions.csv"
 CHUNKSIZE = 500_000
 WEAK_CONTACT_EV = 85.0
 IN_ZONE = set(range(1, 10))
@@ -134,5 +136,6 @@ if __name__ == "__main__":
     print("loading full pitch-level data...", flush=True)
     df = load_pitch_data(PITCH_LEVEL_FILE)
     print(f"total pitches: {len(df):,}", flush=True)
+    Path(PREDICTIONS_FILE).parent.mkdir(exist_ok=True)
     df[TABLE_COLS].to_csv(PREDICTIONS_FILE, index=False)
     print(f"Saved {PREDICTIONS_FILE}: {len(df):,} rows, {len(TABLE_COLS)} cols. Done.", flush=True)
