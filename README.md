@@ -127,6 +127,8 @@ Numbers from before these fixes are not comparable.
 - Vertical swing alignment (over or under) is not in the pitch-level export, and bat speed, swing length and attack angle are not scored.
 - Weak contact is the noisiest member, with reliability near 0.31.
 - About 1.7% of pitches are not scored: unclassified pitch types, knuckleballs, eephus and other pitch types that share no model, pitcher-seasons averaging under 75 mph, and pitches missing core tracking values.
+- Batter and catcher tendencies are built from each opponent's whole season, not a date-ordered window up to that point. That's the right choice for a retrospective season-level opponent-quality adjustment, but it means a pitch thrown in April can be informed by that batter's September performance too. It would need reworking before this metric could be used for real-time, in-season prediction.
+- Many individually well-evidenced changes have gone into this metric over several audit rounds (season fixed effect, `l2_regularization`, `spin_axis_gap`, `pitch_count_in_appearance`, the tau2 collapse, timing recalibration, two rounds of dead-feature removal), each cleared on its own held-out interval. No formal correction (Bonferroni, FDR) has been applied across that whole sequence of decisions, so the true joint error rate is higher than any single change's reported interval suggests. The 2025-to-2026 forecast test is a genuinely independent check on this — it's stayed positive and stable across every round — but that's a partial mitigation, not a resolution.
 
 ## Sources
 
