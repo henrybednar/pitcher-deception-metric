@@ -108,8 +108,19 @@ def load_pitch_data(path: str) -> pd.DataFrame:
     # Deterministic 50/50 split by game, independent of chronology, isolates
     # measurement noise from true-talent drift across the (partial) season.
     df["half"] = (df["game_pk"] % 2).astype(int)
+    df = add_pitch_count_in_appearance(df)
 
     return replace_nonfinite(df)
+
+
+def add_pitch_count_in_appearance(df: pd.DataFrame) -> pd.DataFrame:
+    """In-game fatigue: this pitch's count within the outing (1 = first pitch thrown). A held-out
+    test found this explains most of the reliever-vs-starter whiff gap (~1.3pp actual-minus-
+    expected, shrunk to ~0.1pp once the model can see it) — relievers are almost always on a fresh
+    arm, starters routinely aren't, and the model had no way to tell them apart."""
+    order = df.sort_values(["pitcher", "game_pk", "at_bat_number", "pitch_number"]).index
+    df.loc[order, "pitch_count_in_appearance"] = df.loc[order].groupby(["pitcher", "game_pk"]).cumcount() + 1
+    return df
 
 
 def read_aligned_predictions(df: pd.DataFrame) -> pd.DataFrame:

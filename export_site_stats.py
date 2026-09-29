@@ -31,6 +31,8 @@ COMPONENTS = [
 ]
 SP_MIN_PITCHES = 60
 RP_MAX_PITCHES = 30
+GS_SHARE_SP_MIN = 0.8
+GS_SHARE_RP_MAX = 0.1
 
 
 def fmt_r(x: float) -> str:
@@ -107,11 +109,35 @@ def role_label(median_pitches: float) -> str:
     return "MR"
 
 
-def pitcher_roles(raw: pd.DataFrame) -> pd.DataFrame:
-    """Role proxy: median pitches per appearance for each pitcher-season. raw needs pitcher, season, game_pk."""
+def real_role_label(gs_share: float) -> str | float:
+    if pd.isna(gs_share):
+        return np.nan
+    if gs_share >= GS_SHARE_SP_MIN:
+        return "SP"
+    if gs_share < GS_SHARE_RP_MAX:
+        return "RP"
+    return "MR"
+
+
+def pitcher_roles(raw: pd.DataFrame, usage: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Role label: SP/RP/MR per pitcher-season. Prefers the real games-started share (usage: pitcher,
+    season, games, games_started, from the FanGraphs standard export) over the pitches-per-appearance
+    proxy alone — the proxy mislabels 17.7% of pitcher-seasons on 2025-26 data, concentrated in
+    swingmen and spot starters a single pitch-count threshold can't tell apart from a true starter or
+    reliever. Falls back to the proxy where usage is missing or not passed, so this still works
+    without that manual export. raw needs pitcher, season, game_pk."""
     per_game = raw.groupby(["pitcher", "season", "game_pk"]).size().reset_index(name="pitches")
     roles = per_game.groupby(["pitcher", "season"])["pitches"].median().rename("med_pitches_per_app").reset_index()
-    roles["role"] = roles["med_pitches_per_app"].map(role_label)
+    proxy_role = roles["med_pitches_per_app"].map(role_label)
+
+    real_role = pd.Series(np.nan, index=roles.index, dtype=object)
+    if usage is not None:
+        keyed = roles[["pitcher", "season"]].merge(
+            usage[["pitcher", "season", "games", "games_started"]], on=["pitcher", "season"], how="left")
+        gs_share = np.where(keyed["games"] > 0, keyed["games_started"] / keyed["games"], np.nan)
+        real_role = pd.Series(gs_share, index=roles.index).map(real_role_label)
+
+    roles["role"] = real_role.where(real_role.notna(), proxy_role)
     return roles
 
 
@@ -127,7 +153,8 @@ def main() -> None:
     )
     data_through = pd.to_datetime(raw["game_date"]).max()
 
-    ps = ps.merge(pitcher_roles(raw), on=["pitcher", "season"], how="left")
+    ps = ps.merge(pitcher_roles(raw, usage=ps[["pitcher", "season", "games", "games_started"]]),
+                  on=["pitcher", "season"], how="left")
     qualified = ps[ps["qualified"]].copy()
 
     # year over year, same definition as reliability_and_ci.py
@@ -215,6 +242,8 @@ def main() -> None:
         "TOP2_SCORE": f"{top2.iloc[1]['deception_plus']:.1f}",
         "ROLE_SP_MIN": str(SP_MIN_PITCHES),
         "ROLE_RP_MAX": str(RP_MAX_PITCHES),
+        "ROLE_GS_MIN": f"{GS_SHARE_SP_MIN * 100:.0f}%",
+        "ROLE_GS_MAX": f"{GS_SHARE_RP_MAX * 100:.0f}%",
         "SP_MEAN": f"{qualified.loc[qualified['role'] == 'SP', 'deception_plus'].mean():.1f}",
         "RP_MEAN": f"{qualified.loc[qualified['role'] == 'RP', 'deception_plus'].mean():.1f}",
         "RP_TOP25": str(int((top["role"] == "RP").sum())),

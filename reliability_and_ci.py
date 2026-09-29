@@ -84,13 +84,14 @@ from scipy.optimize import brentq
 from scipy.stats import chi2
 
 PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2025_2026.csv"
-FANGRAPHS_COLS = ["stuff_plus", "location_plus", "pitching_plus"]
+FANGRAPHS_COLS = ["stuff_plus", "location_plus", "pitching_plus", "games", "games_started", "innings_pitched"]
 
 
 def merge_fangraphs_columns(ps: pd.DataFrame, covariates: pd.DataFrame) -> pd.DataFrame:
     """Left-merge whichever FANGRAPHS_COLS are present in covariates (pitcher x season); NaN for any
-    that are absent, since merge_data.merge_fangraphs_stuff() skips them entirely when no manual
-    FanGraphs export has been dropped in, rather than writing empty columns."""
+    that are absent, since merge_data.py's two FanGraphs merges (merge_fangraphs_stuff,
+    merge_fangraphs_standard) each skip their columns entirely when that manual export hasn't been
+    dropped in, rather than writing empty columns."""
     present = [c for c in FANGRAPHS_COLS if c in covariates.columns]
     ps = ps.merge(covariates[["pitcher", "season"] + present], on=["pitcher", "season"], how="left")
     for c in FANGRAPHS_COLS:

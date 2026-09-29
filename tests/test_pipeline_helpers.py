@@ -80,6 +80,36 @@ def test_pitcher_roles_labels_starters_relievers_and_swingmen():
     assert roles.loc[1, "med_pitches_per_app"] == 92.5
 
 
+def test_pitcher_roles_prefers_real_games_started_share_over_the_pitch_count_proxy():
+    # Pitcher 1's own appearances average a starter-like 90 pitches, but he actually started only
+    # 2 of 20 games (a swingman who happened to throw long in his rare starts) — real usage should
+    # override the proxy's "SP" guess.
+    games = {(1, 10): 90, (1, 11): 95}
+    raw = pd.DataFrame(
+        [(pitcher, 2025, game) for (pitcher, game), pitches in games.items() for _ in range(pitches)],
+        columns=["pitcher", "season", "game_pk"],
+    )
+    usage = pd.DataFrame({"pitcher": [1], "season": [2025], "games": [20], "games_started": [2]})
+
+    roles = pitcher_roles(raw, usage=usage).set_index("pitcher")
+
+    assert roles.loc[1, "role"] == "MR"
+
+
+def test_pitcher_roles_falls_back_to_the_proxy_when_usage_is_missing_for_a_pitcher():
+    games = {(1, 10): 90, (1, 11): 95, (2, 20): 15, (2, 21): 20}
+    raw = pd.DataFrame(
+        [(pitcher, 2025, game) for (pitcher, game), pitches in games.items() for _ in range(pitches)],
+        columns=["pitcher", "season", "game_pk"],
+    )
+    usage = pd.DataFrame({"pitcher": [1], "season": [2025], "games": [20], "games_started": [18]})
+
+    roles = pitcher_roles(raw, usage=usage).set_index("pitcher")
+
+    assert roles.loc[1, "role"] == "SP"    # from real usage
+    assert roles.loc[2, "role"] == "RP"    # pitcher 2 has no usage row, falls back to the proxy
+
+
 @pytest.fixture
 def small_pitch_frame(monkeypatch):
     monkeypatch.setattr(fit_full_model, "MIN_N_FOR_MODEL", 100)
@@ -121,6 +151,27 @@ def test_plate_height_is_normalized_to_the_zone_and_nan_for_a_broken_zone():
 
     assert result.iloc[0] == pytest.approx(0.5)
     assert result.iloc[1:].isna().all()       # zero height, negative height, missing bottom
+
+
+def test_pitch_count_in_appearance_is_a_one_based_running_count_per_pitcher_game_regardless_of_row_order():
+    # Rows arrive out of chronological order on purpose, matching a real CSV read that isn't
+    # guaranteed to be pre-sorted; the count must follow at_bat_number/pitch_number, not row order.
+    # A row id (not used by the function) lets each row be checked unambiguously afterward.
+    frame = pd.DataFrame({
+        "row": ["ab2pn1", "ab1pn2", "ab1pn1", "other_pitcher", "other_game"],
+        "pitcher": [1, 1, 1, 2, 1],
+        "game_pk": [100, 100, 100, 100, 200],
+        "at_bat_number": [2, 1, 1, 1, 1],
+        "pitch_number": [1, 2, 1, 1, 1],
+    })
+
+    out = build_pitch_table.add_pitch_count_in_appearance(frame).set_index("row")["pitch_count_in_appearance"]
+
+    assert out["ab1pn1"] == 1     # first pitch thrown, this pitcher, this game
+    assert out["ab1pn2"] == 2     # second pitch thrown
+    assert out["ab2pn1"] == 3     # third pitch thrown
+    assert out["other_pitcher"] == 1   # a different pitcher in the same game starts its own count
+    assert out["other_game"] == 1      # the same pitcher in a different game starts its own count
 
 
 def test_filter_regular_season_drops_postseason_and_spring_training_and_the_game_type_column():

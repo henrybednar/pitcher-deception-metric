@@ -166,7 +166,7 @@ __HEAD__
       </div>
       <div class="dx-read">
         <h3>Relievers score higher</h3>
-        <p>Qualified relievers average {{RP_MEAN}} against {{SP_MEAN}} for starters, and {{RP_TOP25}} of the 25 highest scores belong to relievers. The model has no control for role, fatigue, or times through the order, so part of that gap is probably role. The leaderboard can filter by starter or reliever.</p>
+        <p>Qualified relievers still average {{RP_MEAN}} against {{SP_MEAN}} for starters, and {{RP_TOP25}} of the 25 highest scores belong to relievers, even after the model controls for in-game fatigue (how many pitches into the outing each pitch was). Most of what was a larger gap turned out to be relievers almost always throwing on a fresh arm; what's left may still be partly role. The leaderboard can filter by starter or reliever.</p>
       </div>
       <div class="dx-read">
         <h3>Two complete seasons</h3>
@@ -267,7 +267,7 @@ __COMPONENT_ROWS__
     <p>Deception+ is a weighted average of the available components among its {{N_COMPOSITE}} members, at least two. Each weight is the component's league-wide split-half reliability times the pitcher's sample size relative to the median for that component. The result is scaled against qualified pitcher-seasons only, so 100 is their average and 10 points is one standard deviation. Qualified means {{QUALIFY_TEXT}}. Every leaderboard score has a 95% interval from a bootstrap that resamples whole games.</p>
     <h3>Known limits</h3>
     <ul class="dx-limits">
-      <li>No control for role, fatigue, or times through the order. Relievers score higher on average.</li>
+      <li>The model controls for in-game fatigue (pitch count within the outing), which closed most of the reliever-vs-starter gap, but not times through the order specifically. A smaller gap remains: relievers still average {{RP_MEAN}} against {{SP_MEAN}} for starters.</li>
       <li>Bat tracking is used for contact depth, horizontal reach and whiff miss distance. Savant's vertical alignment (over or under) is not in the pitch-level export, and bat speed, swing length, and attack angle are not scored.</li>
       <li>Each hitter's ideal contact point is estimated from their hardest-hit balls. It is not Savant's own, so timing follows Savant's on-time share closely but is not a copy (pitcher-season correlation {{TIMING_ONTIME_R}}).</li>
       <li>The residual has not been shown to be deception. It is whatever the model does not explain.</li>

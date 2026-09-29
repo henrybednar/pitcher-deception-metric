@@ -13,6 +13,10 @@ Joins the raw pulls from data_pull.py into two analysis-ready tables:
        (arm angle leaderboard, pitch tempo, pitch-mix entropy)
      - Stuff+/Location+/PitchingBot, if a FanGraphs export has been dropped in
        (see merge_fangraphs_stuff() below) — optional, skipped if absent.
+     - games, games_started, innings_pitched, if a second FanGraphs export has
+       been dropped in (see merge_fangraphs_standard() below) — optional,
+       skipped if absent. export_site_stats.pitcher_roles() prefers the real
+       games-started share this gives over its own pitches-per-appearance proxy.
 
   2. pitcher_season_covariates.csv  (grain: pitcher x season)
      - the same pitcher-season covariates, standalone, for pitcher-level modeling
@@ -244,6 +248,53 @@ def merge_fangraphs_stuff(pitcher_season_covariates: pd.DataFrame):
 
 
 # ---------------------------------------------------------------------------
+# 6. Optional games/starts/innings merge (manual export, real role instead of a proxy)
+# ---------------------------------------------------------------------------
+# Same reason as the Stuff+ export above: FanGraphs blocks scripted access. Expects a standard
+# pitching leaderboard exported/pasted by hand as fangraphs_standard_*.tsv or .csv in raw/, with at
+# least Season, Name, G, GS, IP. Unlike the Stuff+ export, this one does NOT collapse a mid-season
+# trade into one row — a traded pitcher gets one row per team with no combined total — so rows are
+# summed by (pitcher, season) rather than deduplicated, which gives the right season total for a
+# real trade and only overstates a genuine same-name collision (the same crosswalk limitation the
+# Stuff+ merge already has, and rare enough in practice not to be worth an ID lookup FanGraphs
+# doesn't expose).
+def load_fangraphs_standard_files() -> pd.DataFrame | None:
+    files = glob.glob("raw/fangraphs_standard_*.tsv") + glob.glob("raw/fangraphs_standard_*.csv")
+    if not files:
+        return None
+    frames = [pd.read_csv(f, sep="\t" if f.endswith(".tsv") else ",") for f in files]
+    return pd.concat(frames, ignore_index=True)
+
+
+def merge_fangraphs_standard(pitcher_season_covariates: pd.DataFrame) -> pd.DataFrame:
+    """Adds games, games_started, innings_pitched to pitcher_season_covariates, for a real
+    games-started-share role label instead of export_site_stats.py's pitches-per-appearance proxy."""
+    fg = load_fangraphs_standard_files()
+    if fg is None:
+        print("No fangraphs_standard_*.tsv/csv file found — skipping the games/starts/innings merge. "
+              "See the comment above merge_fangraphs_standard() for the expected format.")
+        return pitcher_season_covariates
+
+    fg = fg.rename(columns={"Season": "season", "Name": "name", "G": "games", "GS": "games_started", "IP": "innings_pitched"})
+    missing = {"season", "name", "games", "games_started", "innings_pitched"} - set(fg.columns)
+    if missing:
+        raise ValueError(f"Expected Season, Name, G, GS, IP in the FanGraphs standard export, missing {missing}")
+
+    crosswalk = build_name_crosswalk(PITCH_LEVEL_FILE)
+    fg["pitcher"] = fg["name"].map(normalize_name).map(crosswalk)
+    unmatched = fg["pitcher"].isna().sum()
+    if unmatched:
+        sample = fg.loc[fg["pitcher"].isna(), "name"].unique()[:10]
+        print(f"Warning: {unmatched}/{len(fg)} FanGraphs standard rows had no name match in our own "
+              f"Statcast pull and will be dropped. Sample unmatched names: {list(sample)}")
+    fg = fg.dropna(subset=["pitcher"]).copy()
+    fg["pitcher"] = fg["pitcher"].astype(int)
+
+    totals = fg.groupby(["pitcher", "season"])[["games", "games_started", "innings_pitched"]].sum().reset_index()
+    return pitcher_season_covariates.merge(totals, on=["pitcher", "season"], how="outer")
+
+
+# ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
@@ -275,6 +326,9 @@ if __name__ == "__main__":
 
     print("attempting FanGraphs Stuff+/Location+/PitchingBot merge (optional)...")
     fg_pitch_type_long, pitcher_season_covariates = merge_fangraphs_stuff(pitcher_season_covariates)
+
+    print("attempting FanGraphs games/starts/innings merge (optional)...")
+    pitcher_season_covariates = merge_fangraphs_standard(pitcher_season_covariates)
 
     table = table.merge(pitcher_season_covariates, on=["pitcher", "season"], how="left")
     if fg_pitch_type_long is not None:

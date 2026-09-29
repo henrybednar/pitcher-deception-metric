@@ -54,12 +54,17 @@ OUTCOMES = {
     "gb": dict(subset="is_bip", target="is_gb", kind="classify"),
     "weak": dict(subset="is_bip", target="is_weak", kind="classify"),
 }
-CONTEXT_FEATURES = ["stand", "balls", "strikes", "home_team", "same_hand", "season"]
+CONTEXT_FEATURES = ["stand", "balls", "strikes", "home_team", "same_hand", "season", "pitch_count_in_appearance"]
 # season is a fixed effect, not a talent signal: the 2025-26 pull carries a real leaguewide
 # calibration gap between the two years (e.g. whiff actual-minus-expected +1.2 points in 2025,
 # -0.8 in 2026, before this feature existed), and without a way to see which season a pitch is
 # from, the model can't help but read that gap as pitcher skill. Adding it lets the model absorb
 # the level shift instead.
+# pitch_count_in_appearance (build_pitch_table.py) is the same idea for role and in-game fatigue:
+# without it the model has no way to know a pitch was the reliever's 8th of the night or the
+# starter's 88th, so it read most of that gap as pitcher skill too. A held-out test found this
+# closed the reliever-vs-starter whiff residual gap by about 94% (~1.3pp actual-minus-expected to
+# ~0.1pp), for a real if small held-out AUC gain (+0.0004, 95% interval +0.0000 to +0.0007).
 CATEGORICAL = ["p_throws", "stand", "home_team", "pitch_type", "season"]
 # A pitch type with too few rows for its own model shares a similar type's model, with pitch_type as a
 # feature. Knuckle curves alone (about 3.5k rows for ground ball, weak contact and whiff miss) had no

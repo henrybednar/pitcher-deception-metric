@@ -2,7 +2,7 @@
 Pitcher Deception Project: export leaderboard_data.json from the canonical pitcher_season.csv
 ==============================================================================================
 build_leaderboard.py only reads this JSON. It holds every scored pitcher-season with the
-component indexes, sample sizes, intervals, the role proxy from export_site_stats.pitcher_roles(), and the
+component indexes, sample sizes, intervals, the role label from export_site_stats.pitcher_roles(), and the
 signed timing readout in inches (timing_bias_inches). Ground ball is scored and shown but is not
 part of Deception+. See COMPOSITE_OUTCOMES in reliability_and_ci.py.
 """
@@ -15,7 +15,8 @@ from export_site_stats import pitcher_roles
 
 ps = pd.read_csv("output/pitcher_season.csv")
 raw = pd.read_csv("raw/statcast_pitch_level_2025_2026.csv", usecols=["pitcher", "season", "game_pk"], low_memory=False)
-ps = ps.merge(pitcher_roles(raw), on=["pitcher", "season"], how="left")
+ps = ps.merge(pitcher_roles(raw, usage=ps[["pitcher", "season", "games", "games_started"]]),
+              on=["pitcher", "season"], how="left")
 
 cols = [
     "player_name", "season", "qualified", "deception_plus",
