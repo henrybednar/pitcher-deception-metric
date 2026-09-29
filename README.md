@@ -68,7 +68,7 @@ Bat-tracking components need each hitter's ideal contact point, which the pitch-
 
 Statistics below were measured on 2025-26 data through September 27, 2026 (the completed 2026 regular season), after the fixes listed under "Fixes".
 
-- Deception+ has 5 members: whiff, chase, weak contact, timing and whiff miss distance. Composite split-half reliability is 0.749 and year-over-year correlation is 0.606.
+- Deception+ has 5 members: whiff, chase, weak contact, timing and whiff miss distance. Composite split-half reliability is 0.751 and year-over-year correlation is 0.609.
 - Timing measures distance from the hitter's ideal contact depth, early or late, on swings that made contact. Against Savant's on-time share it correlates -0.57. Previous-pitch features are in no model's expectation. Sequencing is the pitcher's choice, so it is tested as an explanation instead.
 - Whiff miss distance is a member. Dropping it lowers reliability from 0.749 to 0.718 and year-over-year correlation from 0.594 to 0.573.
 - Ground ball was taken out of the composite and is shown as its own readout. Its talent is nearly uncorrelated with the other members (index correlations of at most 0.17), and a pitcher's 2025 Deception+ correlates -0.04 with their 2026 ground-ball index, and so it is a separate skill. With it in, reliability is 0.722 and year-over-year correlation 0.561. Among qualified pitcher-seasons two moved by more than 10 points: Tyler Rogers in 2026 (93 to 81) and Clayton Kershaw in 2025 (93 to 82). Add `gb` to `COMPOSITE_OUTCOMES` in `reliability_and_ci.py` to reverse it.
@@ -104,6 +104,7 @@ Statistics below were measured on 2025-26 data through September 27, 2026 (the c
 - Timing under-predicted actual deviation by 0.24 inches at the low end of its predicted range (the other nine deciles were within 0.08 inches). A post-hoc, out-of-fold isotonic recalibration fixed it: the worst-decile residual is now 0.02 inches, and the calibration gap across the whole predicted range is -0.0155 to +0.0207 inches, down from -0.075 to +0.192.
 - Between-pitcher variance (tau2) was estimated from every pitcher-season row, so a pitcher with data in both 2025 and 2026 counted their own talent twice. About 650 pitchers have both seasons. Collapsing each pitcher to one n-weighted point before tau2 is estimated dropped it by about 9% for both whiff and timing.
 - Net effect of this round (`game_type` filter, season as a feature, `l2_regularization=3.0`, timing recalibration, and the tau2 fix, measured together against the last checkpoint above): composite split-half reliability held at 0.749 and year-over-year correlation rose from 0.594 to 0.606.
+- `spin_axis_gap` (`physics_features.py`) joins the stuff features: circular hours between the measured spin axis and the axis implied by observed movement, a seam-shifted-wake proxy for aerodynamic break a hitter's eye doesn't expect from the spin it reads. A held-out-pitcher test across all 5 folds found +0.0011 whiff AUC on four-seamers (95% interval +0.0004 to +0.0018, every fold positive) and no effect on timing (interval includes zero). Composite split-half reliability moved from 0.749 to 0.751 and year-over-year correlation from 0.606 to 0.609.
 
 Numbers from before these fixes are not comparable.
 
@@ -113,7 +114,7 @@ Numbers from before these fixes are not comparable.
 - The full pipeline has been run from the raw files seven times as it changed, the last two from a fresh pull. The latest run took 13.2 minutes. Removing the unused model tiers and covariates reproduced the previous outputs to machine precision, and later changes moved the numbers as described under Fixes.
 - The bootstrap seed does not matter. On an earlier composite, five seeds gave the same reliability to three decimals, identical top-25 membership, and no Deception+ score moved by more than 0.12 points.
 - Model seeds are fixed at 42.
-- `pytest` runs 76 unit tests covering the swing-alignment reference, input hygiene, previous-pitch features, pitch physics, fold-honest tendencies, the season filter and season-as-a-feature (including that it absorbs a population-level calibration gap, not just a single held-out row), pitch-level variance, the between-pitcher variance estimator and its repeated-pitcher collapse, the design effect, shrinkage, the timing recalibration, the index scale, the composite weights, intervals, the row-alignment check and the model-fitting loop.
+- `pytest` runs 79 unit tests covering the swing-alignment reference, input hygiene, previous-pitch features, pitch physics (including the spin-axis-gap geometry), fold-honest tendencies, the season filter and season-as-a-feature (including that it absorbs a population-level calibration gap, not just a single held-out row), pitch-level variance, the between-pitcher variance estimator and its repeated-pitcher collapse, the design effect, shrinkage, the timing recalibration, the index scale, the composite weights, intervals, the row-alignment check and the model-fitting loop.
 
 ## Known limits
 

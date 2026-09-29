@@ -5,73 +5,31 @@
     "features": [
       {
         "feature": "absvelo_x_changed",
-        "importance": 0.00118
+        "importance": 0.00134
       },
       {
         "feature": "movement_diff_prev",
-        "importance": 0.00083
+        "importance": 0.00101
       },
       {
         "feature": "velo_diff_prev",
-        "importance": 0.00066
+        "importance": 0.00075
       },
       {
         "feature": "loc_diff_prev",
-        "importance": 0.00033
+        "importance": 0.00042
       },
       {
         "feature": "tunnel_diff_prev",
-        "importance": 0.00031
+        "importance": 0.00041
       },
       {
         "feature": "tunnel_x_changed",
-        "importance": 0.00026
+        "importance": 0.00034
       },
       {
         "feature": "spin_mirror_prev",
-        "importance": 8e-05
-      },
-      {
-        "feature": "movement_x_changed",
-        "importance": 2e-05
-      },
-      {
-        "feature": "pitch_type_changed",
-        "importance": 0.0
-      }
-    ]
-  },
-  "chase": {
-    "n": 300000,
-    "r2": 0.0007,
-    "features": [
-      {
-        "feature": "loc_diff_prev",
-        "importance": 0.0015
-      },
-      {
-        "feature": "tunnel_diff_prev",
-        "importance": 0.00077
-      },
-      {
-        "feature": "tunnel_x_changed",
-        "importance": 0.00067
-      },
-      {
-        "feature": "movement_diff_prev",
-        "importance": 0.00066
-      },
-      {
-        "feature": "velo_diff_prev",
-        "importance": 0.00064
-      },
-      {
-        "feature": "absvelo_x_changed",
-        "importance": 0.00029
-      },
-      {
-        "feature": "spin_mirror_prev",
-        "importance": 0.00018
+        "importance": 9e-05
       },
       {
         "feature": "pitch_type_changed",
@@ -83,83 +41,125 @@
       }
     ]
   },
-  "gb": {
-    "n": 204802,
-    "r2": -0.0003,
+  "chase": {
+    "n": 300000,
+    "r2": 0.0008,
     "features": [
       {
-        "feature": "movement_diff_prev",
-        "importance": 0.00123
-      },
-      {
-        "feature": "velo_diff_prev",
-        "importance": 0.00119
-      },
-      {
-        "feature": "absvelo_x_changed",
-        "importance": 0.00084
+        "feature": "loc_diff_prev",
+        "importance": 0.00159
       },
       {
         "feature": "tunnel_diff_prev",
-        "importance": 0.00055
-      },
-      {
-        "feature": "movement_x_changed",
-        "importance": 0.00048
-      },
-      {
-        "feature": "loc_diff_prev",
-        "importance": 0.00032
+        "importance": 0.00082
       },
       {
         "feature": "tunnel_x_changed",
-        "importance": 0.00031
+        "importance": 0.00072
+      },
+      {
+        "feature": "velo_diff_prev",
+        "importance": 0.00064
+      },
+      {
+        "feature": "movement_diff_prev",
+        "importance": 0.0005
+      },
+      {
+        "feature": "absvelo_x_changed",
+        "importance": 0.00032
       },
       {
         "feature": "spin_mirror_prev",
-        "importance": 4e-05
+        "importance": 0.00011
+      },
+      {
+        "feature": "movement_x_changed",
+        "importance": 1e-05
       },
       {
         "feature": "pitch_type_changed",
-        "importance": 1e-05
+        "importance": 0.0
+      }
+    ]
+  },
+  "gb": {
+    "n": 204802,
+    "r2": -0.0001,
+    "features": [
+      {
+        "feature": "velo_diff_prev",
+        "importance": 0.00112
+      },
+      {
+        "feature": "movement_diff_prev",
+        "importance": 0.00083
+      },
+      {
+        "feature": "movement_x_changed",
+        "importance": 0.00066
+      },
+      {
+        "feature": "absvelo_x_changed",
+        "importance": 0.00064
+      },
+      {
+        "feature": "tunnel_diff_prev",
+        "importance": 0.00061
+      },
+      {
+        "feature": "loc_diff_prev",
+        "importance": 0.00041
+      },
+      {
+        "feature": "spin_mirror_prev",
+        "importance": 0.00019
+      },
+      {
+        "feature": "tunnel_x_changed",
+        "importance": 0.00011
+      },
+      {
+        "feature": "pitch_type_changed",
+        "importance": 0.0
       }
     ]
   },
   "weak": {
     "n": 204802,
-    "r2": 0.0002,
+    "r2": -0.0,
     "features": [
       {
-        "feature": "absvelo_x_changed",
-        "importance": 0.00078
+        "feature": "tunnel_x_changed",
+        "importance": 0.00263
       },
       {
         "feature": "movement_diff_prev",
-        "importance": 0.00074
+        "importance": 0.00229
       },
       {
         "feature": "loc_diff_prev",
-        "importance": 0.0006
+        "importance": 0.00163
       },
       {
-        "feature": "tunnel_x_changed",
-        "importance": 0.00052
-      },
-      {
-        "feature": "tunnel_diff_prev",
-        "importance": 0.00029
+        "feature": "absvelo_x_changed",
+        "importance": 0.0011
       },
       {
         "feature": "movement_x_changed",
-        "importance": 0.00027
+        "importance": 0.00059
       },
       {
         "feature": "velo_diff_prev",
-        "importance": 0.00026
+        "importance": 0.00037
       },
       {
         "feature": "spin_mirror_prev",
-        "importance": 1e-05
+        "importance": 0.00021
+      },
+      {
+        "feature": "tunnel_diff_prev",
+        "importance": 0.00013
       },
       {
         "feature": "pitch_type_changed",
@@ -173,22 +173,110 @@
     "features": [
       {
         "feature": "loc_diff_prev",
-        "importance": 0.00722
+        "importance": 0.00942
       },
       {
         "feature": "tunnel_diff_prev",
-        "importance": 0.00094
-      },
-      {
-        "feature": "absvelo_x_changed",
-        "importance": 0.00033
+        "importance": 0.0015
       },
       {
         "feature": "tunnel_x_changed",
-        "importance": 0.00025
+        "importance": 0.00042
+      },
+      {
+        "feature": "absvelo_x_changed",
+        "importance": 0.00037
+      },
+      {
+        "feature": "movement_diff_prev",
+        "importance": 0.00018
+      },
+      {
+        "feature": "spin_mirror_prev",
+        "importance": 9e-05
+      },
+      {
+        "feature": "velo_diff_prev",
+        "importance": 5e-05
       },
       {
         "feature": "movement_x_changed",
+        "importance": 2e-05
+      },
+      {
+        "feature": "pitch_type_changed",
+        "importance": 0.0
+      }
+    ]
+  },
+  "timing": {
+    "n": 300000,
+    "r2": 0.0014,
+    "features": [
+      {
+        "feature": "movement_diff_prev",
+        "importance": 0.00376
+      },
+      {
+        "feature": "absvelo_x_changed",
+        "importance": 0.00258
+      },
+      {
+        "feature": "loc_diff_prev",
+        "importance": 0.00133
+      },
+      {
+        "feature": "velo_diff_prev",
+        "importance": 0.00119
+      },
+      {
+        "feature": "tunnel_x_changed",
+        "importance": 0.00078
+      },
+      {
+        "feature": "movement_x_changed",
+        "importance": 0.00029
+      },
+      {
+        "feature": "tunnel_diff_prev",
+        "importance": 0.00013
+      },
+      {
+        "feature": "spin_mirror_prev",
+        "importance": 7e-05
+      },
+      {
+        "feature": "pitch_type_changed",
+        "importance": 0.0
+      }
+    ]
+  },
+  "align": {
+    "n": 300000,
+    "r2": -0.0002,
+    "features": [
+      {
+        "feature": "tunnel_diff_prev",
+        "importance": 0.00111
+      },
+      {
+        "feature": "tunnel_x_changed",
+        "importance": 0.00054
+      },
+      {
+        "feature": "loc_diff_prev",
+        "importance": 0.00046
+      },
+      {
+        "feature": "absvelo_x_changed",
+        "importance": 0.00026
+      },
+      {
+        "feature": "movement_diff_prev",
+        "importance": 0.00017
+      },
+      {
+        "feature": "spin_mirror_prev",
         "importance": 8e-05
       },
       {
@@ -200,138 +288,50 @@
         "importance": 0.0
       },
       {
-        "feature": "movement_diff_prev",
+        "feature": "movement_x_changed",
         "importance": -1e-05
-      },
-      {
-        "feature": "spin_mirror_prev",
-        "importance": -3e-05
-      }
-    ]
-  },
-  "timing": {
-    "n": 300000,
-    "r2": 0.0015,
-    "features": [
-      {
-        "feature": "movement_diff_prev",
-        "importance": 0.0027
-      },
-      {
-        "feature": "absvelo_x_changed",
-        "importance": 0.00194
-      },
-      {
-        "feature": "loc_diff_prev",
-        "importance": 0.00129
-      },
-      {
-        "feature": "velo_diff_prev",
-        "importance": 0.00125
-      },
-      {
-        "feature": "tunnel_x_changed",
-        "importance": 0.00071
-      },
-      {
-        "feature": "movement_x_changed",
-        "importance": 0.00043
-      },
-      {
-        "feature": "tunnel_diff_prev",
-        "importance": 0.00016
-      },
-      {
-        "feature": "spin_mirror_prev",
-        "importance": 0.00015
-      },
-      {
-        "feature": "pitch_type_changed",
-        "importance": 0.0
-      }
-    ]
-  },
-  "align": {
-    "n": 300000,
-    "r2": -0.0005,
-    "features": [
-      {
-        "feature": "tunnel_diff_prev",
-        "importance": 0.00158
-      },
-      {
-        "feature": "loc_diff_prev",
-        "importance": 0.00095
-      },
-      {
-        "feature": "movement_diff_prev",
-        "importance": 0.00041
-      },
-      {
-        "feature": "tunnel_x_changed",
-        "importance": 0.00032
-      },
-      {
-        "feature": "absvelo_x_changed",
-        "importance": 0.00015
-      },
-      {
-        "feature": "velo_diff_prev",
-        "importance": 9e-05
-      },
-      {
-        "feature": "spin_mirror_prev",
-        "importance": 9e-05
-      },
-      {
-        "feature": "pitch_type_changed",
-        "importance": 0.0
-      },
-      {
-        "feature": "movement_x_changed",
-        "importance": -4e-05
       }
     ]
   },
   "whiffmiss": {
     "n": 125304,
-    "r2": 0.0022,
+    "r2": 0.0019,
     "features": [
       {
-        "feature": "tunnel_x_changed",
-        "importance": 0.00555
-      },
-      {
         "feature": "loc_diff_prev",
-        "importance": 0.00431
-      },
-      {
-        "feature": "movement_diff_prev",
-        "importance": 0.00215
+        "importance": 0.00777
       },
       {
         "feature": "absvelo_x_changed",
-        "importance": 0.00204
+        "importance": 0.00266
       },
       {
-        "feature": "velo_diff_prev",
-        "importance": 0.00167
+        "feature": "tunnel_x_changed",
+        "importance": 0.00264
       },
       {
         "feature": "tunnel_diff_prev",
-        "importance": 0.00063
+        "importance": 0.00208
+      },
+      {
+        "feature": "movement_diff_prev",
+        "importance": 0.00152
+      },
+      {
+        "feature": "velo_diff_prev",
+        "importance": 0.00142
       },
       {
         "feature": "movement_x_changed",
-        "importance": 0.00037
+        "importance": 0.00034
+      },
+      {
+        "feature": "spin_mirror_prev",
+        "importance": 0.00019
       },
       {
         "feature": "pitch_type_changed",
         "importance": 0.0
-      },
-      {
-        "feature": "spin_mirror_prev",
-        "importance": -4e-05
       }
     ]
   }

@@ -13,9 +13,20 @@ so no outcome and no other pitch enters.
                                perceived velocity
   tunnel_frac                  share of the flight time already used when the ball reaches 23.5 ft
   ext_x_decel                  extension times decel_frac
+  spin_axis_gap                circular hours between the measured spin axis and the axis implied by
+                               observed movement (see below) — the one feature here that checks one
+                               measurement against another rather than describing the trajectory alone
 
-Measured on four-seamers with the shipped model, adding these lowered whiff logloss by 0.0005
-(95% interval 0.0002 to 0.0008) and timing squared error by 0.11%, and left weak contact unchanged.
+Measured on four-seamers with the shipped model, adding late_break/decel/tunnel/ext_x_decel lowered
+whiff logloss by 0.0005 (95% interval 0.0002 to 0.0008) and timing squared error by 0.11%, and left
+weak contact unchanged.
+
+spin_axis_gap: the axis implied by movement is atan2(hb_in, -ivb_in), the sign convention that lines
+up with Statcast's own spin_axis on four-seamers and curveballs, where spin efficiency is high enough
+that movement should track the axis tightly (median gap 0.29h there, calibrated against 8
+candidate sign/argument conventions). A real gap is seam-shifted wake: aerodynamic break a hitter's
+eye doesn't expect from the spin it reads. Added for whiff AUC on four-seamers +0.0011 (95% interval
++0.0004 to +0.0018, all 5 folds positive); no effect on timing (interval includes zero).
 """
 
 import numpy as np
@@ -27,6 +38,7 @@ GRAVITY = 32.174  # ft/s^2
 INCHES_PER_FOOT = 12
 PHYSICS_FEATURES = [
     "late_break_x", "late_break_z", "late_break_mag", "decel_frac", "ext_gain", "tunnel_frac", "ext_x_decel",
+    "spin_axis_gap",
 ]
 
 
@@ -36,8 +48,21 @@ def time_from_release(vy0: pd.Series, ay: pd.Series, y: float) -> pd.Series:
     return (vy - vy0) / ay
 
 
+def add_spin_axis_gap(df: pd.DataFrame) -> pd.Series:
+    """Circular hours (0-6) between measured spin_axis and the axis implied by observed movement.
+    NaN where spin_axis, hb_in or ivb_in is missing; HistGradientBoosting routes that natively, the
+    same way it already does for the vy0/ay/ax/az inputs above, none of which is in REQUIRED_TRACKING
+    either."""
+    implied_deg = (np.degrees(np.arctan2(df["hb_in"], -df["ivb_in"])) + 360) % 360
+    implied_clock = (implied_deg / 30.0) % 12
+    measured_clock = (df["spin_axis"] / 30.0) % 12
+    gap = (measured_clock - implied_clock + 6) % 12 - 6
+    return gap.abs()
+
+
 def add_physics_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Adds PHYSICS_FEATURES. Needs vy0, ay, ax, az, release_speed, effective_speed, release_extension."""
+    """Adds PHYSICS_FEATURES. Needs vy0, ay, ax, az, release_speed, effective_speed, release_extension,
+    spin_axis, hb_in, ivb_in."""
     vy0, ay = df["vy0"], df["ay"]
     t_plate = time_from_release(vy0, ay, Y_PLATE)
     t_tunnel = time_from_release(vy0, ay, Y_TUNNEL)
@@ -50,4 +75,5 @@ def add_physics_features(df: pd.DataFrame) -> pd.DataFrame:
     df["ext_gain"] = df["effective_speed"] - df["release_speed"]
     df["tunnel_frac"] = t_tunnel / t_plate
     df["ext_x_decel"] = df["release_extension"] * df["decel_frac"]
+    df["spin_axis_gap"] = add_spin_axis_gap(df)
     return df

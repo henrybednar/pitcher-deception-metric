@@ -6,7 +6,8 @@ from physics_features import GRAVITY, PHYSICS_FEATURES, add_physics_features, ti
 
 
 def pitch(**overrides):
-    row = dict(vy0=-130.0, ay=25.0, ax=0.0, az=-GRAVITY, release_speed=92.0, effective_speed=94.0, release_extension=6.5)
+    row = dict(vy0=-130.0, ay=25.0, ax=0.0, az=-GRAVITY, release_speed=92.0, effective_speed=94.0, release_extension=6.5,
+              hb_in=-8.0, ivb_in=16.0, spin_axis=225.0)
     row.update(overrides)
     return pd.DataFrame([row])
 
@@ -49,3 +50,28 @@ def test_every_physics_feature_is_added_and_finite_for_a_normal_pitch():
 
     assert set(PHYSICS_FEATURES) <= set(out.columns)
     assert np.isfinite(out[PHYSICS_FEATURES].to_numpy()).all()
+
+
+def implied_axis_deg(hb: float, ivb: float) -> float:
+    return (np.degrees(np.arctan2(hb, -ivb)) + 360) % 360
+
+
+def test_spin_axis_gap_is_zero_when_measured_axis_matches_the_movement_implied_axis():
+    hb, ivb = -8.0, 16.0
+    out = add_physics_features(pitch(hb_in=hb, ivb_in=ivb, spin_axis=implied_axis_deg(hb, ivb)))
+
+    assert out.loc[0, "spin_axis_gap"] == pytest.approx(0.0, abs=1e-9)
+
+
+def test_spin_axis_gap_is_six_hours_when_the_axes_are_opposite():
+    hb, ivb = -8.0, 16.0
+    opposite = (implied_axis_deg(hb, ivb) + 180) % 360
+    out = add_physics_features(pitch(hb_in=hb, ivb_in=ivb, spin_axis=opposite))
+
+    assert out.loc[0, "spin_axis_gap"] == pytest.approx(6.0, abs=1e-9)
+
+
+def test_spin_axis_gap_is_nan_when_spin_axis_is_missing():
+    out = add_physics_features(pitch(spin_axis=np.nan))
+
+    assert np.isnan(out.loc[0, "spin_axis_gap"])
