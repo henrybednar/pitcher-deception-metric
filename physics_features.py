@@ -11,15 +11,20 @@ so no outcome and no other pitch enters.
   decel_frac                   share of the initial plate-ward speed lost to drag by the plate
   ext_gain                     effective speed minus release speed (mph): what extension adds to
                                perceived velocity
-  tunnel_frac                  share of the flight time already used when the ball reaches 23.5 ft
-  ext_x_decel                  extension times decel_frac
   spin_axis_gap                circular hours between the measured spin axis and the axis implied by
                                observed movement (see below) — the one feature here that checks one
                                measurement against another rather than describing the trajectory alone
 
-Measured on four-seamers with the shipped model, adding late_break/decel/tunnel/ext_x_decel lowered
-whiff logloss by 0.0005 (95% interval 0.0002 to 0.0008) and timing squared error by 0.11%, and left
-weak contact unchanged.
+Measured on four-seamers with the shipped model, adding late_break/decel/ext_gain lowered whiff
+logloss by 0.0005 (95% interval 0.0002 to 0.0008) and timing squared error by 0.11%, and left weak
+contact unchanged.
+
+tunnel_frac (share of flight time used by 23.5 ft) and ext_x_decel (extension times decel_frac) were
+part of that same original bundle but never carried their own weight: permutation importance was
+near-zero-or-negative across all 8 scored outcomes, tunnel_frac correlates 1.000 with decel_frac
+(pure redundancy), and a held-out test confirmed dropping both changes nothing (whiff AUC delta
++0.0003, 95% interval -0.0003 to +0.0009; timing R2 delta -0.0000, interval -0.0003 to +0.0003).
+Removed rather than kept as inert.
 
 spin_axis_gap: the axis implied by movement is atan2(hb_in, -ivb_in), the sign convention that lines
 up with Statcast's own spin_axis on four-seamers and curveballs, where spin efficiency is high enough
@@ -37,8 +42,7 @@ from driver_features import Y0, Y_PLATE, Y_TUNNEL
 GRAVITY = 32.174  # ft/s^2
 INCHES_PER_FOOT = 12
 PHYSICS_FEATURES = [
-    "late_break_x", "late_break_z", "late_break_mag", "decel_frac", "ext_gain", "tunnel_frac", "ext_x_decel",
-    "spin_axis_gap",
+    "late_break_x", "late_break_z", "late_break_mag", "decel_frac", "ext_gain", "spin_axis_gap",
 ]
 
 
@@ -73,7 +77,5 @@ def add_physics_features(df: pd.DataFrame) -> pd.DataFrame:
     vy_plate = -np.sqrt(np.maximum(vy0 ** 2 - 2 * ay * (Y0 - Y_PLATE), 0))
     df["decel_frac"] = 1 - vy_plate.abs() / vy0.abs()
     df["ext_gain"] = df["effective_speed"] - df["release_speed"]
-    df["tunnel_frac"] = t_tunnel / t_plate
-    df["ext_x_decel"] = df["release_extension"] * df["decel_frac"]
     df["spin_axis_gap"] = add_spin_axis_gap(df)
     return df

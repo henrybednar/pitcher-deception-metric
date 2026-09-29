@@ -1,617 +1,617 @@
 {
   "whiff": {
     "n": 1490,
-    "r2_mean": 0.011,
-    "r2_std": 0.032,
+    "r2_mean": 0.008,
+    "r2_std": 0.029,
     "features": [
       {
         "feature": "Pace between pitches",
-        "importance": 0.07474,
-        "coef": 0.00211
+        "importance": 0.07534,
+        "coef": 0.0021
       },
       {
         "feature": "Velocity gap from previous pitch",
-        "importance": 0.0186,
-        "coef": 0.00209
+        "importance": 0.02327,
+        "coef": 0.0022
       },
       {
         "feature": "Average vertical approach angle",
-        "importance": 0.01015,
-        "coef": -0.00036
-      },
-      {
-        "feature": "Spin-axis mirror score (real; low = match/mirror)",
-        "importance": 0.00856,
-        "coef": -0.00083
+        "importance": 0.01061,
+        "coef": -0.00038
       },
       {
         "feature": "Season-average arm angle",
-        "importance": 0.00641,
-        "coef": 0.00051
+        "importance": 0.00895,
+        "coef": 0.00039
+      },
+      {
+        "feature": "Spin-axis mirror score (real; low = match/mirror)",
+        "importance": 0.00696,
+        "coef": -0.0008
       },
       {
         "feature": "Same-pitch-type repeat rate",
-        "importance": 0.004,
-        "coef": 0.00257
+        "importance": 0.00476,
+        "coef": 0.0025
       },
       {
         "feature": "Repertoire size (# pitch types)",
-        "importance": 0.00131,
-        "coef": 0.00087
+        "importance": 0.00115,
+        "coef": 0.00088
       },
       {
         "feature": "Release-point (z) consistency (season proxy)",
-        "importance": 0.00086,
-        "coef": 7e-05
+        "importance": 0.00026,
+        "coef": -2e-05
       },
       {
         "feature": "Release-point (x) consistency (season proxy)",
-        "importance": 0.00043,
-        "coef": 0.00015
+        "importance": -0.00028,
+        "coef": 0.00012
       },
       {
         "feature": "VAA consistency (season proxy)",
-        "importance": -0.0012,
-        "coef": -0.00146
-      },
-      {
-        "feature": "Arm-angle consistency (season proxy)",
-        "importance": -0.00156,
-        "coef": -0.00055
+        "importance": -0.00076,
+        "coef": -0.00149
       },
       {
         "feature": "Release extension",
-        "importance": -0.00174,
-        "coef": 0.00079
+        "importance": -0.00124,
+        "coef": 0.0008
       },
       {
         "feature": "Pitch-pair tunnel differential (real)",
-        "importance": -0.00272,
-        "coef": 0.00059
+        "importance": -0.00271,
+        "coef": 0.00056
+      },
+      {
+        "feature": "Arm-angle consistency (season proxy)",
+        "importance": -0.00332,
+        "coef": -0.00049
       },
       {
         "feature": "Pitch-mix unpredictability (entropy)",
-        "importance": -0.00707,
-        "coef": 0.00049
+        "importance": -0.00575,
+        "coef": 0.00045
       }
     ]
   },
   "chase": {
     "n": 1498,
-    "r2_mean": 0.019,
-    "r2_std": 0.03,
+    "r2_mean": 0.018,
+    "r2_std": 0.034,
     "features": [
       {
         "feature": "Pace between pitches",
-        "importance": 0.03264,
-        "coef": 0.00155
+        "importance": 0.03232,
+        "coef": 0.00158
       },
       {
         "feature": "Pitch-mix unpredictability (entropy)",
-        "importance": 0.022,
-        "coef": -0.00162
+        "importance": 0.0192,
+        "coef": -0.00169
       },
       {
         "feature": "Same-pitch-type repeat rate",
-        "importance": 0.0182,
-        "coef": 0.00093
+        "importance": 0.01544,
+        "coef": 0.00092
       },
       {
         "feature": "Release-point (x) consistency (season proxy)",
-        "importance": 0.00877,
-        "coef": -0.0006
+        "importance": 0.00788,
+        "coef": -0.00058
       },
       {
         "feature": "Release-point (z) consistency (season proxy)",
-        "importance": 0.00666,
-        "coef": 0.00053
-      },
-      {
-        "feature": "Release extension",
-        "importance": 0.00342,
-        "coef": -0.0001
+        "importance": 0.00581,
+        "coef": 0.0005
       },
       {
         "feature": "Repertoire size (# pitch types)",
-        "importance": 0.00224,
-        "coef": 0.00028
+        "importance": 0.00229,
+        "coef": 0.0003
+      },
+      {
+        "feature": "Release extension",
+        "importance": 0.00229,
+        "coef": 7e-05
       },
       {
         "feature": "Season-average arm angle",
-        "importance": 0.00071,
-        "coef": 0.00012
+        "importance": -9e-05,
+        "coef": 1e-05
       },
       {
         "feature": "Arm-angle consistency (season proxy)",
-        "importance": -0.00037,
-        "coef": -0.00012
+        "importance": -0.00092,
+        "coef": -9e-05
       },
       {
         "feature": "Spin-axis mirror score (real; low = match/mirror)",
-        "importance": -0.0022,
-        "coef": 0.0001
+        "importance": -0.00226,
+        "coef": 0.00014
       },
       {
         "feature": "Pitch-pair tunnel differential (real)",
-        "importance": -0.0028,
+        "importance": -0.00252,
         "coef": 0.00096
       },
       {
-        "feature": "Average vertical approach angle",
-        "importance": -0.00344,
-        "coef": 2e-05
+        "feature": "VAA consistency (season proxy)",
+        "importance": -0.00336,
+        "coef": -0.00047
       },
       {
-        "feature": "VAA consistency (season proxy)",
-        "importance": -0.00364,
-        "coef": -0.00046
+        "feature": "Average vertical approach angle",
+        "importance": -0.00358,
+        "coef": -3e-05
       },
       {
         "feature": "Velocity gap from previous pitch",
-        "importance": -0.00567,
-        "coef": 0.00058
+        "importance": -0.00608,
+        "coef": 0.0006
       }
     ]
   },
   "gb": {
     "n": 1315,
-    "r2_mean": 0.007,
-    "r2_std": 0.019,
+    "r2_mean": 0.008,
+    "r2_std": 0.024,
     "features": [
       {
         "feature": "Pace between pitches",
-        "importance": 0.01388,
-        "coef": -0.0019
+        "importance": 0.01818,
+        "coef": -0.00204
       },
       {
         "feature": "Same-pitch-type repeat rate",
-        "importance": 0.00785,
-        "coef": 0.00172
-      },
-      {
-        "feature": "VAA consistency (season proxy)",
-        "importance": 0.00709,
-        "coef": 0.00251
+        "importance": 0.0072,
+        "coef": 0.00174
       },
       {
         "feature": "Release extension",
-        "importance": 0.00428,
-        "coef": -6e-05
+        "importance": 0.00634,
+        "coef": 8e-05
+      },
+      {
+        "feature": "VAA consistency (season proxy)",
+        "importance": 0.00596,
+        "coef": 0.00254
       },
       {
         "feature": "Pitch-mix unpredictability (entropy)",
-        "importance": 0.00259,
-        "coef": 0.00137
+        "importance": 0.00264,
+        "coef": 0.00157
       },
       {
         "feature": "Pitch-pair tunnel differential (real)",
-        "importance": 0.00182,
-        "coef": -0.00053
-      },
-      {
-        "feature": "Arm-angle consistency (season proxy)",
-        "importance": 0.00157,
-        "coef": 6e-05
-      },
-      {
-        "feature": "Release-point (z) consistency (season proxy)",
-        "importance": 0.00107,
-        "coef": 0.00019
+        "importance": 0.00178,
+        "coef": -0.00059
       },
       {
         "feature": "Spin-axis mirror score (real; low = match/mirror)",
-        "importance": 0.00058,
-        "coef": -0.00042
+        "importance": 0.00138,
+        "coef": -0.00041
+      },
+      {
+        "feature": "Release-point (z) consistency (season proxy)",
+        "importance": 0.00121,
+        "coef": 0.00023
+      },
+      {
+        "feature": "Arm-angle consistency (season proxy)",
+        "importance": 0.00111,
+        "coef": -0.00012
       },
       {
         "feature": "Repertoire size (# pitch types)",
-        "importance": -0.0008,
-        "coef": -0.00032
+        "importance": -0.00087,
+        "coef": -0.00048
       },
       {
         "feature": "Velocity gap from previous pitch",
-        "importance": -0.00098,
-        "coef": -4e-05
+        "importance": -0.00102,
+        "coef": -9e-05
       },
       {
         "feature": "Average vertical approach angle",
-        "importance": -0.00344,
+        "importance": -0.00258,
         "coef": 0.00125
       },
       {
         "feature": "Release-point (x) consistency (season proxy)",
-        "importance": -0.00547,
-        "coef": 0.00022
+        "importance": -0.00652,
+        "coef": 0.00035
       },
       {
         "feature": "Season-average arm angle",
-        "importance": -0.01258,
-        "coef": 0.00048
+        "importance": -0.01522,
+        "coef": 0.00052
       }
     ]
   },
   "weak": {
     "n": 1315,
-    "r2_mean": -0.009,
-    "r2_std": 0.022,
+    "r2_mean": -0.013,
+    "r2_std": 0.019,
     "features": [
       {
         "feature": "Velocity gap from previous pitch",
-        "importance": 0.02336,
-        "coef": 0.00136
-      },
-      {
-        "feature": "Pace between pitches",
-        "importance": 0.00709,
-        "coef": 0.00057
-      },
-      {
-        "feature": "Release extension",
-        "importance": 0.007,
-        "coef": -0.00012
+        "importance": 0.02025,
+        "coef": 0.00132
       },
       {
         "feature": "Repertoire size (# pitch types)",
-        "importance": 0.00485,
-        "coef": 0.00051
+        "importance": 0.00581,
+        "coef": 0.00052
+      },
+      {
+        "feature": "Release extension",
+        "importance": 0.0057,
+        "coef": -5e-05
+      },
+      {
+        "feature": "Pace between pitches",
+        "importance": 0.0051,
+        "coef": 0.00058
       },
       {
         "feature": "Same-pitch-type repeat rate",
-        "importance": 0.003,
+        "importance": 0.00242,
         "coef": 0.00098
       },
       {
-        "feature": "Season-average arm angle",
-        "importance": 0.00052,
-        "coef": 0.00015
+        "feature": "Spin-axis mirror score (real; low = match/mirror)",
+        "importance": 0.00066,
+        "coef": 3e-05
       },
       {
         "feature": "Arm-angle consistency (season proxy)",
-        "importance": 0.00043,
-        "coef": 0.00043
+        "importance": 0.00021,
+        "coef": 0.00044
       },
       {
-        "feature": "Pitch-mix unpredictability (entropy)",
-        "importance": 0.00025,
-        "coef": -0.00057
+        "feature": "Season-average arm angle",
+        "importance": 0.00016,
+        "coef": 7e-05
       },
       {
         "feature": "Release-point (z) consistency (season proxy)",
-        "importance": -0.00025,
-        "coef": -0.00065
-      },
-      {
-        "feature": "Spin-axis mirror score (real; low = match/mirror)",
-        "importance": -0.00068,
-        "coef": 4e-05
-      },
-      {
-        "feature": "Pitch-pair tunnel differential (real)",
-        "importance": -0.00125,
-        "coef": 4e-05
+        "importance": -0.00021,
+        "coef": -0.00071
       },
       {
         "feature": "Release-point (x) consistency (season proxy)",
-        "importance": -0.00198,
-        "coef": -0.00012
+        "importance": -0.00041,
+        "coef": -7e-05
+      },
+      {
+        "feature": "Pitch-pair tunnel differential (real)",
+        "importance": -0.00145,
+        "coef": 8e-05
+      },
+      {
+        "feature": "Pitch-mix unpredictability (entropy)",
+        "importance": -0.00272,
+        "coef": -0.00054
       },
       {
         "feature": "VAA consistency (season proxy)",
-        "importance": -0.00311,
-        "coef": -0.00081
+        "importance": -0.00386,
+        "coef": -0.0008
       },
       {
         "feature": "Average vertical approach angle",
-        "importance": -0.00454,
-        "coef": -0.0
+        "importance": -0.0046,
+        "coef": -1e-05
       }
     ]
   },
   "timing": {
     "n": 1457,
     "r2_mean": 0.027,
-    "r2_std": 0.032,
+    "r2_std": 0.031,
     "features": [
       {
         "feature": "Velocity gap from previous pitch",
-        "importance": 0.06194,
-        "coef": 0.07696
+        "importance": 0.06263,
+        "coef": 0.07535
       },
       {
         "feature": "Same-pitch-type repeat rate",
-        "importance": 0.01409,
-        "coef": 0.05556
+        "importance": 0.01497,
+        "coef": 0.0541
       },
       {
         "feature": "Release-point (x) consistency (season proxy)",
-        "importance": 0.00652,
-        "coef": -0.01615
+        "importance": 0.00642,
+        "coef": -0.01483
       },
       {
         "feature": "Average vertical approach angle",
-        "importance": 0.00345,
-        "coef": 0.00403
+        "importance": 0.0033,
+        "coef": 0.00402
       },
       {
         "feature": "Pace between pitches",
-        "importance": 0.00127,
-        "coef": -0.00511
+        "importance": 0.0026,
+        "coef": -0.0049
       },
       {
         "feature": "Release extension",
-        "importance": 0.00122,
-        "coef": 0.00104
-      },
-      {
-        "feature": "Repertoire size (# pitch types)",
-        "importance": 0.00103,
-        "coef": 0.01095
+        "importance": 0.0013,
+        "coef": 0.00148
       },
       {
         "feature": "Arm-angle consistency (season proxy)",
-        "importance": -0.00013,
-        "coef": 0.0043
+        "importance": 0.00082,
+        "coef": 0.00479
       },
       {
-        "feature": "Season-average arm angle",
-        "importance": -0.00033,
-        "coef": 0.01236
-      },
-      {
-        "feature": "VAA consistency (season proxy)",
-        "importance": -0.00093,
-        "coef": -0.02922
+        "feature": "Repertoire size (# pitch types)",
+        "importance": 0.00077,
+        "coef": 0.00811
       },
       {
         "feature": "Release-point (z) consistency (season proxy)",
-        "importance": -0.00104,
-        "coef": -0.01113
+        "importance": -3e-05,
+        "coef": -0.01142
+      },
+      {
+        "feature": "Season-average arm angle",
+        "importance": -0.00024,
+        "coef": 0.0146
       },
       {
         "feature": "Spin-axis mirror score (real; low = match/mirror)",
-        "importance": -0.00206,
-        "coef": -0.00461
+        "importance": -0.00025,
+        "coef": -0.00455
+      },
+      {
+        "feature": "VAA consistency (season proxy)",
+        "importance": -0.00138,
+        "coef": -0.02822
       },
       {
         "feature": "Pitch-pair tunnel differential (real)",
-        "importance": -0.00278,
-        "coef": 0.00434
+        "importance": -0.00151,
+        "coef": 0.00466
       },
       {
         "feature": "Pitch-mix unpredictability (entropy)",
-        "importance": -0.00495,
-        "coef": 0.01703
+        "importance": -0.00312,
+        "coef": 0.01955
       }
     ]
   },
   "calledstrike": {
     "n": 1497,
-    "r2_mean": -0.018,
+    "r2_mean": -0.021,
     "r2_std": 0.01,
     "features": [
       {
         "feature": "Pace between pitches",
-        "importance": 0.01332,
-        "coef": 0.0003
-      },
-      {
-        "feature": "Pitch-mix unpredictability (entropy)",
-        "importance": 0.00392,
-        "coef": -0.00029
+        "importance": 0.0131,
+        "coef": 0.00028
       },
       {
         "feature": "Pitch-pair tunnel differential (real)",
-        "importance": 0.00358,
-        "coef": 0.0002
+        "importance": 0.00752,
+        "coef": 0.00021
       },
       {
-        "feature": "Velocity gap from previous pitch",
-        "importance": 0.00226,
-        "coef": -0.00026
+        "feature": "Pitch-mix unpredictability (entropy)",
+        "importance": 0.00531,
+        "coef": -0.00027
       },
       {
         "feature": "Release-point (x) consistency (season proxy)",
-        "importance": 0.00121,
-        "coef": 0.00014
+        "importance": 0.00172,
+        "coef": 0.00016
       },
       {
         "feature": "Release extension",
-        "importance": 0.00116,
-        "coef": -0.00018
-      },
-      {
-        "feature": "Arm-angle consistency (season proxy)",
-        "importance": 0.00089,
-        "coef": -0.0001
-      },
-      {
-        "feature": "Spin-axis mirror score (real; low = match/mirror)",
-        "importance": 1e-05,
-        "coef": 0.00018
-      },
-      {
-        "feature": "Average vertical approach angle",
-        "importance": -0.00104,
-        "coef": 2e-05
-      },
-      {
-        "feature": "Same-pitch-type repeat rate",
-        "importance": -0.00149,
+        "importance": 0.00164,
         "coef": -0.00016
       },
       {
-        "feature": "Season-average arm angle",
-        "importance": -0.00217,
-        "coef": -0.00033
+        "feature": "Spin-axis mirror score (real; low = match/mirror)",
+        "importance": 0.00048,
+        "coef": 0.00019
+      },
+      {
+        "feature": "Velocity gap from previous pitch",
+        "importance": 0.0004,
+        "coef": -0.00024
+      },
+      {
+        "feature": "Arm-angle consistency (season proxy)",
+        "importance": -0.0006,
+        "coef": -0.00013
+      },
+      {
+        "feature": "Average vertical approach angle",
+        "importance": -0.00114,
+        "coef": 2e-05
       },
       {
         "feature": "Repertoire size (# pitch types)",
-        "importance": -0.00234,
-        "coef": -0.0001
+        "importance": -0.00176,
+        "coef": -9e-05
+      },
+      {
+        "feature": "Same-pitch-type repeat rate",
+        "importance": -0.00198,
+        "coef": -0.00015
+      },
+      {
+        "feature": "Season-average arm angle",
+        "importance": -0.00284,
+        "coef": -0.00034
       },
       {
         "feature": "Release-point (z) consistency (season proxy)",
-        "importance": -0.00983,
+        "importance": -0.00761,
         "coef": 5e-05
       },
       {
         "feature": "VAA consistency (season proxy)",
-        "importance": -0.01121,
-        "coef": 0.0001
+        "importance": -0.01183,
+        "coef": 0.00011
       }
     ]
   },
   "align": {
     "n": 1457,
-    "r2_mean": 0.004,
-    "r2_std": 0.018,
+    "r2_mean": 0.007,
+    "r2_std": 0.017,
     "features": [
       {
         "feature": "Pitch-mix unpredictability (entropy)",
-        "importance": 0.01957,
-        "coef": 0.00056
+        "importance": 0.02116,
+        "coef": 0.00073
       },
       {
         "feature": "Average vertical approach angle",
-        "importance": 0.00572,
+        "importance": 0.00867,
         "coef": -0.00154
       },
       {
         "feature": "Velocity gap from previous pitch",
-        "importance": 0.00563,
-        "coef": 0.00064
-      },
-      {
-        "feature": "Repertoire size (# pitch types)",
-        "importance": 0.00184,
-        "coef": -1e-05
+        "importance": 0.00806,
+        "coef": 0.00075
       },
       {
         "feature": "Release-point (x) consistency (season proxy)",
-        "importance": 0.00166,
-        "coef": 0.00024
-      },
-      {
-        "feature": "Season-average arm angle",
-        "importance": 0.00166,
-        "coef": -0.00018
-      },
-      {
-        "feature": "Spin-axis mirror score (real; low = match/mirror)",
-        "importance": 0.00116,
-        "coef": -0.0005
-      },
-      {
-        "feature": "Pitch-pair tunnel differential (real)",
-        "importance": 0.00089,
-        "coef": 0.00018
-      },
-      {
-        "feature": "Same-pitch-type repeat rate",
-        "importance": 0.00068,
-        "coef": -0.00067
-      },
-      {
-        "feature": "Arm-angle consistency (season proxy)",
-        "importance": -5e-05,
-        "coef": 0.00101
-      },
-      {
-        "feature": "Pace between pitches",
-        "importance": -0.00027,
-        "coef": -0.00077
+        "importance": 0.00293,
+        "coef": 0.00043
       },
       {
         "feature": "VAA consistency (season proxy)",
-        "importance": -0.00096,
-        "coef": -0.00054
+        "importance": 0.00219,
+        "coef": -0.00071
+      },
+      {
+        "feature": "Repertoire size (# pitch types)",
+        "importance": 0.00215,
+        "coef": -0.0001
+      },
+      {
+        "feature": "Season-average arm angle",
+        "importance": 0.00189,
+        "coef": -8e-05
+      },
+      {
+        "feature": "Pitch-pair tunnel differential (real)",
+        "importance": 0.00181,
+        "coef": 0.00026
+      },
+      {
+        "feature": "Same-pitch-type repeat rate",
+        "importance": 0.00024,
+        "coef": -0.00055
+      },
+      {
+        "feature": "Spin-axis mirror score (real; low = match/mirror)",
+        "importance": -0.00026,
+        "coef": -0.00045
+      },
+      {
+        "feature": "Pace between pitches",
+        "importance": -0.00058,
+        "coef": -0.00074
+      },
+      {
+        "feature": "Arm-angle consistency (season proxy)",
+        "importance": -0.0011,
+        "coef": 0.00084
       },
       {
         "feature": "Release extension",
-        "importance": -0.00123,
-        "coef": -0.00019
+        "importance": -0.00182,
+        "coef": -0.00027
       },
       {
         "feature": "Release-point (z) consistency (season proxy)",
-        "importance": -0.00165,
-        "coef": -0.00183
+        "importance": -0.00226,
+        "coef": -0.00176
       }
     ]
   },
   "whiffmiss": {
     "n": 1139,
-    "r2_mean": 0.047,
-    "r2_std": 0.052,
+    "r2_mean": 0.055,
+    "r2_std": 0.057,
     "features": [
       {
         "feature": "Velocity gap from previous pitch",
-        "importance": 0.14426,
-        "coef": 0.02126
+        "importance": 0.15719,
+        "coef": 0.02236
       },
       {
         "feature": "Same-pitch-type repeat rate",
-        "importance": 0.06394,
-        "coef": 0.02035
+        "importance": 0.07472,
+        "coef": 0.02103
       },
       {
         "feature": "Pace between pitches",
-        "importance": 0.01984,
-        "coef": 0.00729
-      },
-      {
-        "feature": "Season-average arm angle",
-        "importance": 0.00742,
-        "coef": 0.00221
+        "importance": 0.02307,
+        "coef": 0.00756
       },
       {
         "feature": "Spin-axis mirror score (real; low = match/mirror)",
-        "importance": 0.00534,
+        "importance": 0.00703,
         "coef": -0.00296
       },
       {
-        "feature": "Average vertical approach angle",
-        "importance": 0.00323,
-        "coef": 0.00299
-      },
-      {
-        "feature": "Release extension",
-        "importance": 0.00135,
-        "coef": 0.00014
+        "feature": "Season-average arm angle",
+        "importance": 0.00663,
+        "coef": 0.0018
       },
       {
         "feature": "Release-point (z) consistency (season proxy)",
-        "importance": 6e-05,
-        "coef": 0.00045
+        "importance": 0.00463,
+        "coef": 0.00024
+      },
+      {
+        "feature": "Average vertical approach angle",
+        "importance": 0.00227,
+        "coef": 0.00294
       },
       {
         "feature": "Arm-angle consistency (season proxy)",
-        "importance": -0.00021,
-        "coef": 0.00058
+        "importance": 0.00114,
+        "coef": 0.00072
       },
       {
-        "feature": "VAA consistency (season proxy)",
-        "importance": -0.00032,
-        "coef": -0.0061
+        "feature": "Release extension",
+        "importance": 0.00048,
+        "coef": 0.00112
       },
       {
         "feature": "Release-point (x) consistency (season proxy)",
-        "importance": -0.00036,
-        "coef": 1e-05
+        "importance": -0.00132,
+        "coef": 0.00041
       },
       {
         "feature": "Repertoire size (# pitch types)",
-        "importance": -0.00087,
-        "coef": -0.00283
+        "importance": -0.00173,
+        "coef": -0.00417
+      },
+      {
+        "feature": "VAA consistency (season proxy)",
+        "importance": -0.00424,
+        "coef": -0.00646
       },
       {
         "feature": "Pitch-mix unpredictability (entropy)",
-        "importance": -0.0039,
-        "coef": 0.00438
+        "importance": -0.00636,
+        "coef": 0.00556
       },
       {
         "feature": "Pitch-pair tunnel differential (real)",
-        "importance": -0.00844,
-        "coef": 0.00196
+        "importance": -0.00855,
+        "coef": 0.00217
       }
     ]
   }

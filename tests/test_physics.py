@@ -38,11 +38,10 @@ def test_extension_gain_is_effective_speed_minus_release_speed():
     assert add_physics_features(pitch()).loc[0, "ext_gain"] == pytest.approx(2.0)
 
 
-def test_deceleration_fraction_and_tunnel_fraction_are_shares_between_zero_and_one():
+def test_deceleration_fraction_is_a_share_between_zero_and_one():
     out = add_physics_features(pitch())
 
     assert 0 < out.loc[0, "decel_frac"] < 0.2
-    assert 0.5 < out.loc[0, "tunnel_frac"] < 1.0
 
 
 def test_every_physics_feature_is_added_and_finite_for_a_normal_pitch():
