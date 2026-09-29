@@ -18,8 +18,8 @@ Two numbers reported per component, not just one:
     is NOT guaranteed non-negative — a genuinely uninformative predictor
     will show a negative or near-zero out-of-sample delta on average.
 
-2026 is a partial season, so treat this as a direction-of-effect check on
-a real held-out year, not a precise long-run estimate.
+Two seasons is a real held-out year, but still only one; treat this as a direction-of-effect
+check, not a precise long-run estimate.
 """
 
 import numpy as np

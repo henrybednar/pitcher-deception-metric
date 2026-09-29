@@ -12,14 +12,15 @@ contact point, not just the raw intercept columns.
 
 HALF-SPLIT: every pitch also gets a deterministic half assignment (game_pk parity) for split-half
 reliability. It is independent of chronology, so it measures measurement noise rather than
-true-talent drift across a partial season.
+true-talent drift across the season.
 
 REGULAR SEASON ONLY: postseason and spring training pitches are dropped (filter_regular_season).
 They come from a different competitive population (playoff-caliber pitching; non-competitive spring
 rosters) — postseason whiff rate runs 2 to 4 points above regular season, spring-training chase rate
 9 points above — and the two seasons in this pull carry very different shares of them (2025 was 5.7%
-non-regular-season, 2026 0.3%, since 2026's postseason hasn't happened yet). Left in, that mix would
-land unevenly on whichever pitchers happened to appear in those games.
+non-regular-season, 2026 0.3%, since this pull's cutoff of September 27 predates the 2026
+postseason). Left in, that mix would land unevenly on whichever pitchers happened to appear in
+those games.
 """
 
 from pathlib import Path

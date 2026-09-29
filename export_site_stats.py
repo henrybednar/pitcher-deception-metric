@@ -87,13 +87,16 @@ def timing_vs_savant(ps: pd.DataFrame) -> float:
 
 
 def component_yoy(ps: pd.DataFrame, key: str) -> float:
-    """Correlation of a component's index across seasons for pitchers with a real sample in
-    2025 (the qualifying minimum) and half that in the partial 2026 season."""
+    """Correlation of a component's index across seasons, both seasons held to the same qualifying
+    minimum. Used to halve the 2026 threshold from when 2026 was a partial season; both seasons are
+    now complete, and the asymmetry was measurably diluting several of these correlations (+0.004 to
+    +0.010 once matched) by pairing a fully-qualified 2025 side against a noisier, under-qualified
+    2026 side."""
     min_n = QUALIFY_MIN_N[key]
     cols = ["pitcher", f"{key}_index", f"{key}_n"]
     a = ps[ps["season"] == 2025][cols].dropna()
     b = ps[ps["season"] == 2026][cols].dropna()
-    joined = a[a[f"{key}_n"] >= min_n].merge(b[b[f"{key}_n"] >= min_n / 2], on="pitcher", suffixes=("_25", "_26"))
+    joined = a[a[f"{key}_n"] >= min_n].merge(b[b[f"{key}_n"] >= min_n], on="pitcher", suffixes=("_25", "_26"))
     return float(joined[f"{key}_index_25"].corr(joined[f"{key}_index_26"]))
 
 
