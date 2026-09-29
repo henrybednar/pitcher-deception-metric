@@ -7,12 +7,14 @@ Pulls and merges everything needed for the deception metric:
   2. Outcome rates by pitcher/pitch type: Whiff%, Chase%, GB%, Strike%
      (computed from #1)
   3. Swing timing / miss distance leaderboard (bat tracking, 2024+ only)
-  4. Stuff+ / Location+ / PitchingBot, by pitch type, from FanGraphs
-  5. Arm angle leaderboard (tunneling feature)
-  6. Pitch tempo leaderboard (rhythm disruption)
+  4. Arm angle leaderboard (tunneling feature)
+  5. Pitch tempo leaderboard (rhythm disruption)
 
-Run: `pip install pybaseball pandas numpy requests --upgrade` first
-(need pybaseball >=2.2.7 for Stuff+ support).
+Stuff+ / Location+ / PitchingBot comes from a FanGraphs export dropped in by
+hand (see merge_data.merge_fangraphs_stuff) — FanGraphs blocks scripted
+access with a 403, so there is no automated pull for it here.
+
+Run: `pip install pybaseball pandas numpy requests --upgrade` first.
 """
 
 import io
@@ -145,20 +147,7 @@ def pull_swing_timing(year: int, min_swings="1") -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 4. Stuff+ / Location+ / PitchingBot by pitch type (FanGraphs)
-# ---------------------------------------------------------------------------
-def pull_stuff_plus(year: int) -> pd.DataFrame:
-    """
-    stat_columns='ALL' pulls every FanGraphs column, including the
-    Stuff+/Location+/PitchingBot-by-pitch-type columns confirmed present
-    in pybaseball's FangraphsPitchingStats enum (added in v2.2.7).
-    This is the slow legacy-leaderboard scrape — expect it to take a while.
-    """
-    return pb.pitching_stats(year, qual=0, stat_columns="ALL")
-
-
-# ---------------------------------------------------------------------------
-# 5. Arm angle (tunneling feature — actual release angle, not inferred)
+# 4. Arm angle (tunneling feature — actual release angle, not inferred)
 # ---------------------------------------------------------------------------
 def pull_arm_angle(year: int, min_pitches="1") -> pd.DataFrame:
     """Params confirmed live 2026-09-14 by watching the leaderboard's own
@@ -179,7 +168,7 @@ def pull_arm_angle(year: int, min_pitches="1") -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 6. Pitch tempo (rhythm disruption — a real deception lever, not just pace)
+# 5. Pitch tempo (rhythm disruption — a real deception lever, not just pace)
 # ---------------------------------------------------------------------------
 def pull_pitch_tempo(year: int, min_pitches="1") -> pd.DataFrame:
     url = (
@@ -202,7 +191,6 @@ if __name__ == "__main__":
     all_pitches = []
     all_rates = []
     all_swing_timing = []
-    all_stuff = []
     all_arm_angle = []
     all_tempo = []
 
@@ -231,15 +219,6 @@ if __name__ == "__main__":
             print(f"  FAILED: {e}")
         time.sleep(1)
 
-        print("pulling Stuff+/Location+/PitchingBot from FanGraphs...")
-        try:
-            stuff = pull_stuff_plus(year)
-            stuff["season"] = year
-            all_stuff.append(stuff)
-        except Exception as e:
-            print(f"  FAILED: {e}")
-        time.sleep(1)
-
         print("pulling arm angle leaderboard...")
         try:
             arm_angle = pull_arm_angle(year)
@@ -261,7 +240,6 @@ if __name__ == "__main__":
         "raw/statcast_pitch_level_2025_2026.csv": all_pitches,
         "raw/outcome_rates_by_pitcher_pitchtype_2025_2026.csv": all_rates,
         "raw/swing_timing_by_pitcher_2025_2026.csv": all_swing_timing,
-        "stuff_plus_pitchingbot_2025_2026.csv": all_stuff,
         "raw/arm_angle_by_pitcher_2025_2026.csv": all_arm_angle,
         "raw/pitch_tempo_by_pitcher_2025_2026.csv": all_tempo,
     }
