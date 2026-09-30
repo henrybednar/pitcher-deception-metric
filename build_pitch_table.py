@@ -53,6 +53,7 @@ RAW_COLS = [
     "arm_angle", "release_pos_x", "release_pos_z",
     "batter", "stand", "fielder_2", "at_bat_number", "pitch_number", "spin_axis",
     "balls", "strikes", "home_team", "game_type",
+    "outs_when_up", "on_1b", "on_2b", "on_3b", "bat_score", "fld_score",
 ] + TRAJECTORY_COLS
 
 SWING_DESC = {"foul", "foul_tip", "hit_into_play", "swinging_strike", "swinging_strike_blocked", "missed_bunt", "foul_bunt"}
@@ -107,20 +108,46 @@ def load_pitch_data(path: str) -> pd.DataFrame:
     df = blank_incomplete_tracking(df)
 
     # Deterministic 50/50 split by game, independent of chronology, isolates
-    # measurement noise from true-talent drift across the (partial) season.
+    # measurement noise from true-talent drift across the season.
     df["half"] = (df["game_pk"] % 2).astype(int)
     df = add_pitch_count_in_appearance(df)
+    df = add_times_faced_this_game(df)
+    df = add_game_state_features(df)
 
     return replace_nonfinite(df)
 
 
 def add_pitch_count_in_appearance(df: pd.DataFrame) -> pd.DataFrame:
     """In-game fatigue: this pitch's count within the outing (1 = first pitch thrown). A held-out
-    test found this explains most of the reliever-vs-starter whiff gap (~1.3pp actual-minus-
-    expected, shrunk to ~0.1pp once the model can see it) — relievers are almost always on a fresh
-    arm, starters routinely aren't, and the model had no way to tell them apart."""
+    test found this explains most of the reliever-vs-starter whiff gap (about 1.3 points actual-
+    minus-expected, shrunk to about 0.1 once the model can see it). Relievers are almost always on
+    a fresh arm, starters routinely aren't, and the model had no way to tell them apart."""
     order = df.sort_values(["pitcher", "game_pk", "at_bat_number", "pitch_number"]).index
     df.loc[order, "pitch_count_in_appearance"] = df.loc[order].groupby(["pitcher", "game_pk"]).cumcount() + 1
+    return df
+
+
+def add_times_faced_this_game(df: pd.DataFrame) -> pd.DataFrame:
+    """This at-bat's rank among the same pitcher-batter pair's meetings this game (1 = first time
+    facing each other today). The pitch-level version of "times through the order": a batter's
+    second or third look at the same pitcher in one game is a real, plausible advantage that the
+    model had no way to see."""
+    order = df.sort_values(["pitcher", "batter", "game_pk", "at_bat_number", "pitch_number"]).index
+    keys = df.loc[order, ["pitcher", "batter", "game_pk", "at_bat_number"]]
+    first_pitch_of_at_bat = ~keys.duplicated()
+    rank = first_pitch_of_at_bat.groupby([keys["pitcher"], keys["batter"], keys["game_pk"]]).cumsum()
+    df.loc[order, "times_faced_this_game"] = rank.to_numpy()
+    return df
+
+
+def add_game_state_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Situational context no other feature carries: outs, total baserunners, and the pitching
+    team's score lead (positive) or deficit (negative). A batter's approach plausibly shifts with
+    the bases empty in a blowout versus runners in scoring position in a close game, and the model
+    had no way to see that either."""
+    df["outs"] = df["outs_when_up"]
+    df["runners_on"] = df[["on_1b", "on_2b", "on_3b"]].notna().sum(axis=1)
+    df["score_diff"] = df["fld_score"] - df["bat_score"]
     return df
 
 

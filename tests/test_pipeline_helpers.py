@@ -144,6 +144,22 @@ def test_fit_tier_leaves_unscored_pitch_types_empty(small_pitch_frame):
     assert df.loc[50:, "expected"].notna().all()
 
 
+def test_fit_tier_with_tendencies_enabled_builds_batter_catcher_and_same_hand_features(small_pitch_frame):
+    # No other test exercises fit_tier's tendency-building path (every other fit_tier test passes
+    # with_tendencies=False); this is the one that would have caught a broken TENDENCY_KEYS entry.
+    df = small_pitch_frame
+    rng = np.random.default_rng(7)
+    df["batter"] = rng.integers(0, 15, len(df))
+    df["fielder_2"] = rng.integers(100, 105, len(df))
+    df["season"] = 2025
+    mask = pd.Series(True, index=df.index)
+
+    fit_tier(df, "expected", "target", mask, "regress", STUFF_FEATURES + LOCATION_FEATURES, with_tendencies=True)
+
+    assert df["expected"].notna().all()
+    assert np.corrcoef(df["expected"], df["target"])[0, 1] > 0.5
+
+
 def test_plate_height_is_normalized_to_the_zone_and_nan_for_a_broken_zone():
     frame = pd.DataFrame({"plate_z": [2.5, 2.5, 2.5, 2.5], "sz_bot": [1.5, 1.6, 1.6, np.nan], "sz_top": [3.5, 1.6, 1.0, 3.5]})
 
@@ -172,6 +188,46 @@ def test_pitch_count_in_appearance_is_a_one_based_running_count_per_pitcher_game
     assert out["ab2pn1"] == 3     # third pitch thrown
     assert out["other_pitcher"] == 1   # a different pitcher in the same game starts its own count
     assert out["other_game"] == 1      # the same pitcher in a different game starts its own count
+
+
+def test_times_faced_this_game_ranks_meetings_between_one_pitcher_and_one_batter():
+    # A realistic game: batter 10 leads off (at-bat 1, two pitches), batter 20 bats next (at-bat 2),
+    # batter 10 comes back around twice more later (at-bats 8 and 15), and batter 30 is a different
+    # batter entirely.
+    frame = pd.DataFrame({
+        "row": ["meeting1_pitch1", "meeting1_pitch2", "other_batter_between", "meeting2", "meeting3", "different_batter"],
+        "pitcher": [1, 1, 1, 1, 1, 1],
+        "batter": [10, 10, 20, 10, 10, 30],
+        "game_pk": [100, 100, 100, 100, 100, 100],
+        "at_bat_number": [1, 1, 2, 8, 15, 3],
+        "pitch_number": [1, 2, 1, 1, 1, 1],
+    })
+
+    out = build_pitch_table.add_times_faced_this_game(frame).set_index("row")["times_faced_this_game"]
+
+    assert out["meeting1_pitch1"] == 1      # first meeting, first pitch
+    assert out["meeting1_pitch2"] == 1      # still the first meeting, second pitch of that at-bat
+    assert out["meeting2"] == 2             # second time facing this batter
+    assert out["meeting3"] == 3             # third time
+    assert out["different_batter"] == 1     # an unrelated batter, unaffected by batter 10's count
+    assert out["other_batter_between"] == 1 # batter 20's own first meeting, independent of batter 10's
+
+
+def test_game_state_features_read_outs_runners_and_score_from_the_pitching_teams_perspective():
+    frame = pd.DataFrame({
+        "outs_when_up": [0, 2],
+        "on_1b": [123.0, np.nan],
+        "on_2b": [np.nan, np.nan],
+        "on_3b": [456.0, np.nan],
+        "bat_score": [3, 1],
+        "fld_score": [5, 1],
+    })
+
+    out = build_pitch_table.add_game_state_features(frame)
+
+    assert out["outs"].tolist() == [0, 2]
+    assert out["runners_on"].tolist() == [2, 0]
+    assert out["score_diff"].tolist() == [2, 0]   # pitching team's lead: fld_score - bat_score
 
 
 def test_filter_regular_season_drops_postseason_and_spring_training_and_the_game_type_column():

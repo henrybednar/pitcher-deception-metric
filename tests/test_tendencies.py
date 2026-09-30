@@ -65,3 +65,23 @@ def test_seasons_are_kept_apart():
 
     assert out[0] == pytest.approx(0.0)           # 2025, pitcher 10 sees only pitcher 20's 2025 outcome
     assert np.isnan(out[2])                       # 2026 has a single pitcher
+
+
+def test_split_by_hand_matches_a_row_against_same_handed_training_pitchers_only():
+    df = pd.DataFrame({
+        "batter": [1, 1, 1, 1, 1, 1], "season": [2025] * 6,
+        "pitcher": [10, 10, 20, 20, 30, 40],
+        "p_throws": ["R", "R", "L", "L", "R", "L"],
+        "hit": [1.0, 1.0, 0.0, 1.0, 0.0, 1.0],
+    })
+    train = np.array([10, 20, 30, 40])
+    totals = build_totals(df, pd.Series(True, index=df.index), "batter", "hit", split_by_hand=True)
+
+    out = tendency_for_rows(df, totals, "batter", train, leave_out_own=True, split_by_hand=True)
+
+    assert out[0] == pytest.approx(0.0)    # pitcher 10 (R) sees only the other R pitcher, 30: 0/1
+    assert out[1] == pytest.approx(0.0)
+    assert out[2] == pytest.approx(1.0)    # pitcher 20 (L) sees only the other L pitcher, 40: 1/1
+    assert out[3] == pytest.approx(1.0)
+    assert out[4] == pytest.approx(1.0)    # pitcher 30 (R) sees only the other R pitcher, 10: 2/2
+    assert out[5] == pytest.approx(0.5)    # pitcher 40 (L) sees only the other L pitcher, 20: 1/2

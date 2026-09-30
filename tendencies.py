@@ -24,29 +24,45 @@ import pandas as pd
 TOTAL_COLS = ["tsum", "tcount"]
 
 
-def build_totals(df: pd.DataFrame, mask: pd.Series, key_col: str, target_col: str) -> pd.DataFrame:
-    """Per (key, season, pitcher) sum and count of the target over the outcome's rows."""
-    sub = df.loc[mask, [key_col, "season", "pitcher", target_col]]
-    return (sub.groupby([key_col, "season", "pitcher"])[target_col]
-            .agg(tsum="sum", tcount="count").reset_index())
+def build_totals(df: pd.DataFrame, mask: pd.Series, key_col: str, target_col: str,
+                 split_by_hand: bool = False) -> pd.DataFrame:
+    """Per (key, season, pitcher) sum and count of the target over the outcome's rows.
+
+    split_by_hand=True also keeps each contributing pitcher's own p_throws, so
+    tendency_for_rows() can build a same-handed and an opposite-handed tendency instead of one
+    blended number. Tested, not adopted by default: a batter's platoon split is real, but halving
+    the sample by handedness makes each half noisier, and whether the specificity is worth that
+    noise needs a held-out test, not an assumption (see fit_full_model.py's comment where this is
+    tested)."""
+    cols = [key_col, "season", "pitcher", target_col] + (["p_throws"] if split_by_hand else [])
+    sub = df.loc[mask, cols]
+    group_cols = [key_col, "season", "pitcher"] + (["p_throws"] if split_by_hand else [])
+    return sub.groupby(group_cols)[target_col].agg(tsum="sum", tcount="count").reset_index()
 
 
 def tendency_for_rows(rows: pd.DataFrame, totals: pd.DataFrame, key_col: str,
-                      train_pitchers: np.ndarray, leave_out_own: bool) -> np.ndarray:
-    """Mean target for each row's (key, season) over the training pitchers.
+                      train_pitchers: np.ndarray, leave_out_own: bool,
+                      split_by_hand: bool = False) -> np.ndarray:
+    """Mean target for each row's (key, season[, p_throws if split_by_hand]) over the training
+    pitchers.
 
     leave_out_own=True is for training rows: their own pitcher's contribution is subtracted, so a
     pitcher never sets the feature that scores that pitcher. Test rows use False, because test
     pitchers are not in train_pitchers and contribute nothing to the totals.
+    split_by_hand=True matches each row against training pitchers who share ITS OWN p_throws only
+    (totals must have come from build_totals(..., split_by_hand=True)), so the tendency reflects
+    this batter's performance against same-handed pitchers specifically, not a blend of both.
     NaN where no other training pitcher contributed.
     """
+    match_cols = [key_col, "season", "p_throws"] if split_by_hand else [key_col, "season"]
     in_train = totals[totals["pitcher"].isin(train_pitchers)]
-    by_key = in_train.groupby([key_col, "season"])[TOTAL_COLS].sum().rename(columns={"tsum": "ksum", "tcount": "kcount"}).reset_index()
-    keyed = rows[[key_col, "season", "pitcher"]].merge(by_key, on=[key_col, "season"], how="left")
+    by_key = in_train.groupby(match_cols)[TOTAL_COLS].sum().rename(columns={"tsum": "ksum", "tcount": "kcount"}).reset_index()
+    own_cols = match_cols + ["pitcher"]
+    keyed = rows[own_cols].merge(by_key, on=match_cols, how="left")
     ksum, kcount = keyed["ksum"].fillna(0.0).to_numpy(), keyed["kcount"].fillna(0.0).to_numpy()
     if leave_out_own:
-        own = in_train[[key_col, "season", "pitcher", "tsum", "tcount"]].rename(columns={"tsum": "osum", "tcount": "ocount"})
-        keyed = keyed.merge(own, on=[key_col, "season", "pitcher"], how="left")
+        own = in_train[own_cols + ["tsum", "tcount"]].rename(columns={"tsum": "osum", "tcount": "ocount"})
+        keyed = keyed.merge(own, on=own_cols, how="left")
         ksum = ksum - keyed["osum"].fillna(0.0).to_numpy()
         kcount = kcount - keyed["ocount"].fillna(0.0).to_numpy()
     with np.errstate(invalid="ignore", divide="ignore"):

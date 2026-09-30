@@ -54,7 +54,8 @@ OUTCOMES = {
     "gb": dict(subset="is_bip", target="is_gb", kind="classify"),
     "weak": dict(subset="is_bip", target="is_weak", kind="classify"),
 }
-CONTEXT_FEATURES = ["stand", "balls", "strikes", "home_team", "same_hand", "season", "pitch_count_in_appearance"]
+CONTEXT_FEATURES = ["stand", "balls", "strikes", "home_team", "same_hand", "season", "pitch_count_in_appearance",
+                    "times_faced_this_game", "outs", "runners_on", "score_diff"]
 # season is a fixed effect, not a talent signal: the 2025-26 pull carries a real leaguewide
 # calibration gap between the two years (e.g. whiff actual-minus-expected +1.2 points in 2025,
 # -0.8 in 2026, before this feature existed), and without a way to see which season a pitch is
@@ -71,7 +72,17 @@ CATEGORICAL = ["p_throws", "stand", "home_team", "pitch_type", "season"]
 # skill, log loss 0.694 against 0.693 for a constant. With curveballs they gain 0.025, 0.034 and 0.063
 # (log loss, log loss, squared error), and curveballs gain a little too.
 POOLED_WITH = {"KC": "CU"}
-TENDENCY_KEYS = {"batter_tendency": "batter", "catcher_tendency": "fielder_2"}
+# name -> (key_col, split_by_hand). batter_tendency_same_hand matches each row against only the
+# training batters' outcomes vs pitchers who share ITS OWN pitcher's handedness, instead of one
+# blended number across both. A held-out test found this adds real signal for whiff (+0.0008 AUC,
+# 95% interval +0.0003 to +0.0013) and is neutral for chase (interval includes zero); kept as an
+# addition alongside the blended batter_tendency, not a replacement, since catchers have no
+# platoon-split analog and the blended number still carries real signal on its own.
+TENDENCY_KEYS = {
+    "batter_tendency": ("batter", False),
+    "catcher_tendency": ("fielder_2", False),
+    "batter_tendency_same_hand": ("batter", True),
+}
 
 
 def add_same_hand(df: pd.DataFrame) -> pd.DataFrame:
@@ -122,9 +133,11 @@ def fit_oof(sub: pd.DataFrame, y: np.ndarray, groups: np.ndarray, feature_cols: 
             X_train["season"] = X_train["season"].astype(season_dtype)
             X_test["season"] = X_test["season"].astype(season_dtype)
         for name, tendency_totals in (totals or {}).items():
-            key_col = TENDENCY_KEYS[name]
-            X_train[name] = tendency_for_rows(train_rows, tendency_totals, key_col, train_pitchers, leave_out_own=True)
-            X_test[name] = tendency_for_rows(test_rows, tendency_totals, key_col, train_pitchers, leave_out_own=False)
+            key_col, split_by_hand = TENDENCY_KEYS[name]
+            X_train[name] = tendency_for_rows(train_rows, tendency_totals, key_col, train_pitchers,
+                                              leave_out_own=True, split_by_hand=split_by_hand)
+            X_test[name] = tendency_for_rows(test_rows, tendency_totals, key_col, train_pitchers,
+                                             leave_out_own=False, split_by_hand=split_by_hand)
         model = make_model(kind, feature_cols).fit(X_train, y[train_idx])
         oof[test_idx] = model.predict_proba(X_test)[:, 1] if kind == "classify" else model.predict(X_test)
     return oof
@@ -135,7 +148,8 @@ def fit_tier(df: pd.DataFrame, out_col: str, target_col: str, subset_mask: pd.Se
     """Writes out_col for every scored pitch type. Rare types join POOLED_WITH's model, or else share an OTHER model."""
     df[out_col] = np.nan
     outcome_rows = subset_mask & df["pitch_type"].notna()
-    totals = ({name: build_totals(df, outcome_rows, key_col, target_col) for name, key_col in TENDENCY_KEYS.items()}
+    totals = ({name: build_totals(df, outcome_rows, key_col, target_col, split_by_hand=split_by_hand)
+               for name, (key_col, split_by_hand) in TENDENCY_KEYS.items()}
               if with_tendencies else None)
 
     counts = df.loc[outcome_rows, "pitch_type"].value_counts()
