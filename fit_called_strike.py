@@ -13,6 +13,14 @@ which aren't about pitch shape at all). Target: description == "called_strike".
 
 Fit at the full tier, reusing fit_full_model.py's `fit_full_outcome` (GroupKFold by pitcher,
 batter+catcher tendency, count/park context), so it is the same methodology as the other outcomes.
+
+Umpire identity was tested here as a candidate addition: MLB's public Stats API (unlike Statcast,
+whose own `umpire` column ships empty) gives each game's home-plate umpire by game_pk, so an
+umpire_tendency feature (the umpire's own called-strike rate on other pitchers' takes that season)
+is buildable with the same fold-honest mechanism as batter and catcher tendency. A held-out test on
+four-seamers found no real gain (mean AUC delta +0.0000, 95% interval -0.0000 to +0.0001, not every
+fold positive): called strike's baseline AUC is already 0.988, almost entirely from plate location,
+leaving little room for umpire identity to register. Not adopted; see README's Fixes section.
 """
 
 from build_pitch_table import PITCH_LEVEL_FILE, load_pitch_data, read_aligned_predictions, save_predictions
