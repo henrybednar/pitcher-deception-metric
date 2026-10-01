@@ -5,3 +5,5 @@ scikit-learn==1.9.1
 scipy==1.17.1
 # Only needed for data_pull.py (also installs requests)
 pybaseball==2.2.7
+# Only needed for driver_ols_report.py
+statsmodels==0.15.0
