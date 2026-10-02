@@ -165,6 +165,13 @@ def load_tempo() -> pd.DataFrame:
 # automated id crosswalk lookup — so instead of relying on any external id
 # service, this builds its own name -> MLBAM-id crosswalk directly from our
 # own Statcast pull (pitcher, player_name), which is exact and already local.
+#
+# Some names belong to two pitchers (Luis García, Jacob Webb, Yunior Marte in the 2025-26 pull). A name
+# alone cannot tell them apart, and a plain name -> id dictionary silently keeps the last one it saw, so
+# one pitcher received the other's Stuff+ (and, in the standard export, the other's games and starts).
+# Those rows are now resolved by the team on the FanGraphs row against the teams each pitcher threw
+# for in that season, and left unmatched when that cannot decide.
+FANGRAPHS_TEAM_TO_STATCAST = {"ARI": "AZ", "CHW": "CWS", "KCR": "KC", "SDP": "SD", "SFG": "SF", "TBR": "TB", "WSN": "WSH"}
 FANGRAPHS_PITCH_TYPE_MAP = {
     "stf_fa": "FF", "stf_si": "SI", "stf_fc": "FC", "stf_fs": "FS",
     "stf_sl": "SL", "stf_cu": "CU", "stf_ch": "CH", "stf_kc": "KC", "stf_fo": "FO",
@@ -177,17 +184,56 @@ def normalize_name(s: str) -> str:
     return " ".join(s.split())
 
 
-def build_name_crosswalk(path: str) -> dict:
-    """normalized 'first last' -> MLBAM pitcher id, from our own pitch-level pull."""
-    crosswalk = {}
+def statcast_team(fangraphs_team: str) -> str:
+    """FanGraphs team abbreviation as Statcast writes it (SFG is SF, CHW is CWS, and so on)."""
+    return FANGRAPHS_TEAM_TO_STATCAST.get(fangraphs_team, fangraphs_team)
+
+
+def build_name_crosswalk(path: str) -> dict[str, list[int]]:
+    """normalized 'first last' -> every MLBAM pitcher id with that name, from our own pitch-level pull."""
+    ids: dict[str, set[int]] = {}
     for chunk in pd.read_csv(path, usecols=["pitcher", "player_name"], chunksize=CHUNKSIZE):
         # usecols preserves the FILE's column order (player_name precedes
         # pitcher there), not the order listed above — select explicitly
         # rather than unpacking itertuples() positionally.
         for pid, name in chunk[["pitcher", "player_name"]].drop_duplicates().itertuples(index=False):
             last, first = [p.strip() for p in name.split(",", 1)]
-            crosswalk[normalize_name(f"{first} {last}")] = pid
-    return crosswalk
+            ids.setdefault(normalize_name(f"{first} {last}"), set()).add(int(pid))
+    return {name: sorted(pids) for name, pids in ids.items()}
+
+
+def pitcher_season_teams(path: str) -> pd.DataFrame:
+    """Every team each pitcher threw for in the regular season, one row per pitcher and season. The
+    pitching team is the home team in the top of an inning and the away team in the bottom."""
+    parts = []
+    for chunk in pd.read_csv(path, usecols=["pitcher", "season", "game_type", "inning_topbot", "home_team", "away_team"],
+                             chunksize=CHUNKSIZE):
+        chunk = chunk[chunk["game_type"] == "R"]
+        chunk = chunk.assign(team=np.where(chunk["inning_topbot"] == "Top", chunk["home_team"], chunk["away_team"]))
+        parts.append(chunk[["pitcher", "season", "team"]].drop_duplicates())
+    teams = pd.concat(parts).drop_duplicates()
+    return teams.groupby(["pitcher", "season"])["team"].agg(frozenset).rename("teams").reset_index()
+
+
+def resolve_fangraphs_pitchers(fg: pd.DataFrame, crosswalk: dict[str, list[int]], teams: pd.DataFrame) -> pd.Series:
+    """MLBAM id for each FanGraphs row (needs name, season, team), NaN where there is none.
+
+    A name with one pitcher resolves directly. A name shared by several resolves by team: a single-team
+    row goes to the pitcher who threw for that team that season, and a "3 Tms" row to the pitcher who threw
+    for three. Anything that does not pick out exactly one pitcher is left unmatched, not guessed."""
+    season_teams = {(r.pitcher, r.season): r.teams for r in teams.itertuples()}
+    resolved = []
+    for name, season, team in zip(fg["name"], fg["season"], fg["team"]):
+        candidates = crosswalk.get(normalize_name(name), [])
+        if len(candidates) > 1:
+            label = str(team)
+            if label.endswith(" Tms"):
+                wanted = int(label.split()[0])
+                candidates = [c for c in candidates if len(season_teams.get((c, season), ())) == wanted]
+            else:
+                candidates = [c for c in candidates if statcast_team(label) in season_teams.get((c, season), ())]
+        resolved.append(candidates[0] if len(candidates) == 1 else np.nan)
+    return pd.Series(resolved, index=fg.index, dtype="float")
 
 
 def load_fangraphs_files(prefix: str) -> pd.DataFrame | None:
@@ -217,14 +263,17 @@ def merge_fangraphs_stuff(pitcher_season_covariates: pd.DataFrame):
         )
 
     crosswalk = build_name_crosswalk(PITCH_LEVEL_FILE)
-    fg["pitcher"] = fg["name"].map(normalize_name).map(crosswalk)
+    fg["pitcher"] = resolve_fangraphs_pitchers(fg, crosswalk, pitcher_season_teams(PITCH_LEVEL_FILE))
 
     unmatched = fg["pitcher"].isna().sum()
     if unmatched:
         sample = fg.loc[fg["pitcher"].isna(), "name"].unique()[:10]
-        print(f"Warning: {unmatched}/{len(fg)} FanGraphs rows had no name match in our own "
+        print(f"Warning: {unmatched}/{len(fg)} FanGraphs rows had no match in our own "
               f"Statcast pull and will be dropped from the Stuff+ merge. "
               f"Sample unmatched names: {list(sample)}")
+    shared = fg["name"].map(normalize_name).map(lambda n: len(crosswalk.get(n, [])) > 1)
+    print(f"{int(shared.sum())} Stuff+ rows carry a name shared by two pitchers; "
+          f"{int((shared & fg['pitcher'].notna()).sum())} resolved by team.")
     fg = fg.dropna(subset=["pitcher"]).copy()
     fg["pitcher"] = fg["pitcher"].astype(int)
     # FanGraphs' own export already collapses a mid-season trade into one
@@ -256,9 +305,8 @@ def merge_fangraphs_stuff(pitcher_season_covariates: pd.DataFrame):
 # least Season, Name, G, GS, IP. Unlike the Stuff+ export, this one does NOT collapse a mid-season
 # trade into one row — a traded pitcher gets one row per team with no combined total — so rows are
 # summed by (pitcher, season) rather than deduplicated, which gives the right season total for a
-# real trade and only overstates a genuine same-name collision (the same crosswalk limitation the
-# Stuff+ merge already has, and rare enough in practice not to be worth an ID lookup FanGraphs
-# doesn't expose).
+# real trade. Each row carries its own team, so a name shared by two pitchers is resolved row by row
+# the same way as in the Stuff+ merge, and each pitcher's rows are summed separately.
 def merge_fangraphs_standard(pitcher_season_covariates: pd.DataFrame) -> pd.DataFrame:
     """Adds games, games_started, innings_pitched to pitcher_season_covariates, for a real
     games-started-share role label instead of export_site_stats.py's pitches-per-appearance proxy."""
@@ -268,17 +316,18 @@ def merge_fangraphs_standard(pitcher_season_covariates: pd.DataFrame) -> pd.Data
               "See the comment above merge_fangraphs_standard() for the expected format.")
         return pitcher_season_covariates
 
-    fg = fg.rename(columns={"Season": "season", "Name": "name", "G": "games", "GS": "games_started", "IP": "innings_pitched"})
+    fg = fg.rename(columns={"Season": "season", "Name": "name", "G": "games", "GS": "games_started", "IP": "innings_pitched",
+                            "Team": "team"})
     missing = {"season", "name", "games", "games_started", "innings_pitched"} - set(fg.columns)
     if missing:
         raise ValueError(f"Expected Season, Name, G, GS, IP in the FanGraphs standard export, missing {missing}")
 
     crosswalk = build_name_crosswalk(PITCH_LEVEL_FILE)
-    fg["pitcher"] = fg["name"].map(normalize_name).map(crosswalk)
+    fg["pitcher"] = resolve_fangraphs_pitchers(fg, crosswalk, pitcher_season_teams(PITCH_LEVEL_FILE))
     unmatched = fg["pitcher"].isna().sum()
     if unmatched:
         sample = fg.loc[fg["pitcher"].isna(), "name"].unique()[:10]
-        print(f"Warning: {unmatched}/{len(fg)} FanGraphs standard rows had no name match in our own "
+        print(f"Warning: {unmatched}/{len(fg)} FanGraphs standard rows had no match in our own "
               f"Statcast pull and will be dropped. Sample unmatched names: {list(sample)}")
     fg = fg.dropna(subset=["pitcher"]).copy()
     fg["pitcher"] = fg["pitcher"].astype(int)
