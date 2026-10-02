@@ -83,7 +83,7 @@
 .lbroot * { box-sizing: border-box; }
 .lbroot p { margin: 0; }
 .lbroot h1, .lbroot h2 { font-family: var(--font-display); font-weight: 500; margin: 0; color: var(--text-primary); }
-.lb-wrap { max-width: 1120px; margin: 0 auto; padding: 1.25rem 1.25rem 3rem; display: flex; flex-direction: column; gap: 1rem; }
+.lb-wrap { max-width: 1240px; margin: 0 auto; padding: 1.25rem 1.25rem 3rem; display: flex; flex-direction: column; gap: 1rem; }
 .lb-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.75rem; border-bottom: 0.5px solid var(--border); padding-bottom: 1rem; }
 .lb-head h1 { font-size: 22px; }
 .lb-eyebrow { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); }
@@ -98,11 +98,11 @@
 .lb-legend .swatch { display: inline-flex; align-items: center; gap: 5px; }
 .lb-legend i { width: 28px; height: 9px; border-radius: 3px; display: inline-block; }
 .lb-table-wrap { overflow-x: auto; background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; }
-table.lb-table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 1100px; }
-table.lb-table th, table.lb-table td { padding: 7px 10px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.lb-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.lb-table th, table.lb-table td { padding: 7px 8px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.lb-table th { white-space: normal; vertical-align: bottom; line-height: 1.25; }
 table.lb-table th:first-child, table.lb-table td:first-child { text-align: left; padding-left: 14px; }
 table.lb-table th:nth-child(2), table.lb-table td:nth-child(2) { text-align: left; }
-table.lb-table th:nth-child(4), table.lb-table td:nth-child(4) { text-align: center; }
 table.lb-table thead th {
   position: sticky; top: 0; background: var(--surface-2); color: var(--text-secondary);
   font-family: var(--font-body); font-weight: 500; font-size: 11.5px; letter-spacing: 0.02em;
@@ -115,13 +115,40 @@ table.lb-table tbody tr:hover { background: var(--row-hover); }
 table.lb-table td.name { font-weight: 500; }
 table.lb-table td.mono { font-family: var(--font-mono); }
 table.lb-table td.composite { font-family: var(--font-mono); font-weight: 500; font-size: 14px; }
-table.lb-table td.unqualified { opacity: 0.55; }
+table.lb-table tr.unqualified td { opacity: 0.55; }
 .lb-badge { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); margin-left: 4px; }
 .lb-link { color: var(--accent); text-decoration: underline; white-space: nowrap; }
 .lb-note { font-size: 13px; color: var(--text-secondary); line-height: 1.6; background: var(--surface); border: 0.5px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; max-width: 90ch; }
 .lb-footnote { font-size: 12.5px; color: var(--text-muted); line-height: 1.65; display: flex; flex-direction: column; gap: 0.6rem; max-width: 90ch; }
 .lb-footnote p { margin: 0; }
-table.lb-table td.role { color: var(--text-secondary); font-size: 12px; }
+.role-tag { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); border: 0.5px solid var(--border-strong); border-radius: 4px; padding: 0 4px; margin-left: 6px; vertical-align: 1px; }
+tr.detail { display: none; }
+tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; color: var(--text-secondary); font-size: 12.5px; background: var(--surface-2); }
+.detail .di { display: none; margin-right: 14px; white-space: nowrap; }
+.detail .di b { font-weight: 500; color: var(--text-primary); }
+.narrow-only { display: none; }
+/* Optional columns drop out as the window narrows (c1 first); a tapped row lists what is hidden. */
+@media (max-width: 960px) {
+  .c1 { display: none; }
+  .detail .di.c1 { display: inline; }
+  tr.row { cursor: pointer; }
+  tr.detail.open { display: table-row; }
+  .narrow-only { display: inline; }
+}
+@media (max-width: 860px) { .c2 { display: none; } .detail .di.c2 { display: inline; } }
+@media (max-width: 660px) { .c3 { display: none; } .detail .di.c3 { display: inline; } }
+@media (max-width: 580px) {
+  .c4 { display: none; } .detail .di.c4 { display: inline; }
+  table.lb-table td.name { white-space: normal; }
+}
+@media (max-width: 440px) {
+  table.lb-table th, table.lb-table td { padding: 7px 5px; }
+  table.lb-table td { font-size: 12.5px; }
+  table.lb-table th { font-size: 10.5px; }
+  .role-tag { margin-left: 4px; }
+}
+@media (max-width: 400px) { .c5 { display: none; } .detail .di.c5 { display: inline; } }
+@media (max-width: 350px) { .c6 { display: none; } .detail .di.c6 { display: inline; } }
 @media (max-width: 480px) {
   .lb-controls { flex-direction: column; align-items: stretch; }
   .lb-count { margin-left: 0; }
@@ -135,11 +162,11 @@ table.lb-table td.role { color: var(--text-secondary); font-size: 12px; }
     <div>
       <p class="lb-eyebrow">2025-26 &middot; Deception+ &middot; data through September 27, 2026</p>
       <h1>Deception+ leaderboard</h1>
-      <p class="lb-sub">Click a column to sort. Hover an index for its sample size and 95% interval. Rows below the minimum sample for one or more components are dimmed and hidden by default. <a class="lb-link" href="deception_dashboard.html">&larr; Dashboard and method</a></p>
+      <p class="lb-sub">Click a column to sort. Hover an index for its sample size and 95% interval. Rows below the minimum sample for one or more components are dimmed and hidden by default. <span class="narrow-only">Tap a row for the columns that do not fit. </span><a class="lb-link" href="deception_dashboard.html">&larr; Dashboard and method</a></p>
     </div>
   </div>
 
-  <p class="lb-note">Qualified relievers still average 101.4 against 98.9 for starters even after the model controls for in-game fatigue, and it has no control for times through the order specifically. Use the role filter to compare like with like.</p>
+  <p class="lb-note">Qualified relievers still average 101.4 against 98.9 for starters even after the model controls for in-game fatigue and times through the order. Use the role filter to compare like with like.</p>
 
   <div class="lb-controls">
     <input type="text" id="searchBox" placeholder="Search player" aria-label="Search player">
@@ -168,19 +195,18 @@ table.lb-table td.role { color: var(--text-secondary); font-size: 12px; }
     <table class="lb-table" id="lbTable">
       <thead>
         <tr>
-          <th style="text-align:left; cursor:default;">#</th>
+          <th class="c4" style="text-align:left; cursor:default;">#</th>
           <th data-key="name" style="text-align:left;">Player</th>
-          <th data-key="season">Season</th>
-          <th data-key="role" style="text-align:center;">Role</th>
+          <th data-key="season" class="c3">Season</th>
           <th data-key="deception_plus">Deception+</th>
           <th data-key="whiff_index">Whiff</th>
-          <th data-key="chase_index">Chase</th>
-          <th data-key="gb_index" title="Scored and shown, not part of Deception+">Ground ball*</th>
-          <th data-key="weak_index">Weak contact</th>
-          <th data-key="timing_index">Timing</th>
-          <th data-key="whiffmiss_index">Whiff miss</th>
-          <th data-key="timing_bias_inches">Timing dir</th>
-          <th data-key="stuff_plus">Stuff+</th>
+          <th data-key="chase_index" class="c6">Chase</th>
+          <th data-key="weak_index" class="c3">Weak contact</th>
+          <th data-key="timing_index" class="c5">Timing</th>
+          <th data-key="whiffmiss_index" class="c2">Whiff miss</th>
+          <th data-key="gb_index" class="c2" title="Scored and shown, not part of Deception+">Ground ball*</th>
+          <th data-key="timing_bias_inches" class="c1">Timing dir</th>
+          <th data-key="stuff_plus" class="c1">Stuff+</th>
         </tr>
       </thead>
       <tbody id="lbBody"></tbody>
@@ -190,7 +216,7 @@ table.lb-table td.role { color: var(--text-secondary); font-size: 12px; }
   <div class="lb-footnote">
     <p>Each index is the pitcher's actual rate minus the rate a model expects from the pitch's measured traits (velocity, spin, movement, location), the batter, the catcher, the count, the park, and pitcher-batter handedness. Small samples are shrunk toward the average. 100 is the average scored pitcher-season for each index and the average qualified pitcher-season for Deception+, and 10 points is one standard deviation. Deception+ is a reliability-weighted average of 5 components: whiff, chase, weak contact, timing and whiff miss distance.</p>
     <p>Timing is the gap between where the bat met the ball and the hitter's estimated ideal contact depth, so early and late contact both count. It is scored on swings that made contact. Whiff miss distance is Statcast's distance between ball and barrel at closest approach on swings and misses. *Ground ball is scored and shown but is not part of Deception+, because it is a different skill from the other components (its index correlates at most 0.196 with them). Timing dir is the signed timing gap in inches against a stuff-and-location baseline: positive means contact farther out front than the hitter's ideal (earlier) and negative means deeper (later). It is not shaded because it is not on the 100 scale.</p>
-    <p>Role comes from each pitcher's real share of appearances that were starts: 80% or more is a starter (SP), under 10% is a reliever (RP), and anything between is mixed (MR). Where that isn't available, role falls back to a proxy from median pitches per appearance: 60 or more is a starter, under 30 is a reliever.</p>
+    <p>Role, the tag beside each name, comes from each pitcher's real share of appearances that were starts: 80% or more is a starter (SP), under 10% is a reliever (RP), and anything between is mixed (MR). Where that isn't available, role falls back to a proxy from median pitches per appearance: 60 or more is a starter, under 30 is a reliever.</p>
     <p>Deception+ has a split-half reliability of r=0.740 and a year-over-year correlation of r=0.598. Among its members timing is the most reliable (r=0.643) and weak contact the least (r=0.261). Called strike was removed from the score and this table because it is stable within a season but does not carry over between seasons (year-over-year r=0.147). Deception+ correlates r=0.399 with Stuff+, so the score is not independent of pitch quality. The dashboard has its numbers and shows where that relationship sits.</p>
     <p>Pitch data comes from Baseball Savant (Statcast). Stuff+ comes from FanGraphs and was entered by hand. This project is independent and not affiliated with MLB, Baseball Savant, or FanGraphs. The <a class="lb-link" href="deception_dashboard.html">dashboard</a> has the full method, the validation table, and the audit log.</p>
   </div>
@@ -250,26 +276,36 @@ table.lb-table td.role { color: var(--text-secondary); font-size: 12px; }
     var body = document.getElementById('lbBody');
     var html = [];
     filtered.forEach(function(r, i) {
-      var cls = r.qualified ? '' : ' class="unqualified"';
-      var cells = ['<td class="mono">' + (i + 1) + '</td>', '<td class="name">' + r.name.split(', ').reverse().join(' ') + '</td>',
-                   '<td class="mono">' + r.season + '</td>',
-                   '<td class="role" title="' + (r.med_pitches_per_app === null ? '' : 'median ' + r.med_pitches_per_app.toFixed(0) + ' pitches per appearance') + '">' + (r.role || '-') + '</td>'];
-      cells.push('<td class="composite" style="background:' + cellColor(r.deception_plus) + '">' + fmt(r.deception_plus) + '</td>');
-      ['whiff_index', 'chase_index', 'gb_index', 'weak_index', 'timing_index', 'whiffmiss_index'].forEach(function(key) {
+      var cls = r.qualified ? '' : ' unqualified';
+      var roleTitle = r.med_pitches_per_app === null ? '' : 'median ' + r.med_pitches_per_app.toFixed(0) + ' pitches per appearance';
+      var roleTag = r.role ? '<span class="role-tag" title="' + roleTitle + '">' + r.role + '</span>' : '';
+      function indexCell(key, extra) {
         var nCol = N_COLS[key];
         var title = r[nCol] !== null ? 'n=' + r[nCol] : '';
         if (CI_PAIRS[key] && r[CI_PAIRS[key][0]] !== null) {
           title += (title ? ', ' : '') + '95% CI [' + r[CI_PAIRS[key][0]].toFixed(1) + ', ' + r[CI_PAIRS[key][1]].toFixed(1) + ']';
         }
-        cells.push('<td class="mono" style="background:' + cellColor(r[key]) + '" title="' + title + '">' + fmt(r[key]) + '</td>');
-      });
+        return '<td class="mono' + extra + '" style="background:' + cellColor(r[key]) + '" title="' + title + '">' + fmt(r[key]) + '</td>';
+      }
       var dirTitle = r.timingdir_n !== null ? 'n=' + r.timingdir_n : '';
       if (r.timing_bias_ci_lo !== null) {
         dirTitle += (dirTitle ? ', ' : '') + '95% CI [' + r.timing_bias_ci_lo.toFixed(1) + ', ' + r.timing_bias_ci_hi.toFixed(1) + '] in. Positive = hitters earlier than expected, negative = later.';
       }
-      cells.push('<td class="mono" title="' + dirTitle + '">' + fmtDir(r.timing_bias_inches) + '</td>');
-      cells.push('<td class="mono">' + (r.stuff_plus !== null ? r.stuff_plus.toFixed(0) : '-') + '</td>');
-      html.push('<tr' + cls + '>' + cells.join('') + '</tr>');
+      var stuff = r.stuff_plus !== null ? r.stuff_plus.toFixed(0) : '-';
+      var cells = ['<td class="mono c4">' + (i + 1) + '</td>',
+                   '<td class="name">' + r.name.split(', ').reverse().join(' ') + roleTag + '</td>',
+                   '<td class="mono c3">' + r.season + '</td>',
+                   '<td class="composite" style="background:' + cellColor(r.deception_plus) + '">' + fmt(r.deception_plus) + '</td>',
+                   indexCell('whiff_index', ''), indexCell('chase_index', ' c6'), indexCell('weak_index', ' c3'),
+                   indexCell('timing_index', ' c5'), indexCell('whiffmiss_index', ' c2'), indexCell('gb_index', ' c2'),
+                   '<td class="mono c1" title="' + dirTitle + '">' + fmtDir(r.timing_bias_inches) + '</td>',
+                   '<td class="mono c1">' + stuff + '</td>'];
+      function item(c, label, value) { return '<span class="di ' + c + '"><b>' + label + '</b> ' + value + '</span>'; }
+      var detail = item('c4', 'Rank', '#' + (i + 1)) + item('c3', 'Season', r.season) + item('c3', 'Weak contact', fmt(r.weak_index)) + item('c5', 'Timing', fmt(r.timing_index)) + item('c6', 'Chase', fmt(r.chase_index)) +
+                   item('c2', 'Whiff miss', fmt(r.whiffmiss_index)) + item('c2', 'Ground ball*', fmt(r.gb_index)) +
+                   item('c1', 'Timing dir', fmtDir(r.timing_bias_inches)) + item('c1', 'Stuff+', stuff);
+      html.push('<tr class="row' + cls + '">' + cells.join('') + '</tr>');
+      html.push('<tr class="detail' + cls + '"><td colspan="12">' + detail + '</td></tr>');
     });
     body.innerHTML = html.join('');
 
@@ -281,10 +317,15 @@ table.lb-table td.role { color: var(--text-secondary); font-size: 12px; }
   document.querySelectorAll('#lbTable thead th').forEach(function(th) {
     th.addEventListener('click', function() {
       var key = th.dataset.key;
+      if (!key) return;
       if (state.sortKey === key) { state.sortDir *= -1; }
       else { state.sortKey = key; state.sortDir = key === 'name' ? 1 : -1; }
       render();
     });
+  });
+  document.getElementById('lbBody').addEventListener('click', function(e) {
+    var tr = e.target.closest('tr.row');
+    if (tr && tr.nextElementSibling) tr.nextElementSibling.classList.toggle('open');
   });
   document.getElementById('searchBox').addEventListener('input', function(e) {
     state.search = e.target.value.trim().toLowerCase();
