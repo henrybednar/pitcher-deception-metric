@@ -266,7 +266,7 @@ __HEAD__
     <div class="dx-section-head">
       <div>
         <h2>Stuff+ against deception</h2>
-        <p class="dx-section-note">Each point is one pitcher-season with at least 100 swings ({{N_POINTS}} points). Highlighted points are pitchers with a reputation for an unusual delivery. Stuff+ comes from FanGraphs and was entered by hand. The model never uses it.</p>
+        <p class="dx-section-note">Each point is one pitcher-season with at least 100 swings and a Stuff+ figure ({{N_POINTS}} points). Highlighted points are pitchers with a reputation for an unusual delivery. Stuff+ comes from FanGraphs and was entered by hand. The model never uses it. The trend line fits every plotted point, so its r differs a little from the qualified-only figure in the next section.</p>
       </div>
       <div class="dx-toggle" id="scatterToggle">
         <button data-metric="composite" class="active">Deception+</button>
@@ -279,9 +279,11 @@ __HEAD__
       </div>
     </div>
     <div class="dx-card">
+      <p class="dx-chart-title" id="scatterTrendNote"></p>
       <div class="dx-legend">
         <span><i style="background:var(--chart-muted)"></i>League field</span>
         <span><i style="background:var(--chart-highlight)"></i>Notable delivery or reputation</span>
+        <span><i style="background:var(--text-primary); width:16px; height:2px; border-radius:0;"></i>Trend line (least squares)</span>
       </div>
       <div style="position:relative; height:400px;">
         <canvas id="scatterChart" role="img" aria-label="Scatter plot of FanGraphs Stuff+ against the deception index for {{N_POINTS}} pitcher-seasons"></canvas>
@@ -489,7 +491,8 @@ __COMPONENT_ROWS__
     type: 'scatter',
     data: { datasets: [
       { label: 'League field', data: [], backgroundColor: cssVar('--chart-muted'), borderWidth: 0 },
-      { label: 'Notable delivery or reputation', data: [], backgroundColor: cssVar('--chart-highlight'), borderWidth: 0 }
+      { label: 'Notable delivery or reputation', data: [], backgroundColor: cssVar('--chart-highlight'), borderWidth: 0 },
+      { label: 'Trend line', data: [], showLine: true, borderColor: cssVar('--text-primary'), borderWidth: 2, pointRadius: 0, pointHitRadius: 0, order: 0 }
     ]},
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -502,7 +505,7 @@ __COMPONENT_ROWS__
       },
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: function(c) {
+        tooltip: { filter: function(item) { return item.datasetIndex < 2; }, callbacks: { label: function(c) {
           var d = c.raw;
           return d.name + ' (' + d.season + '): Stuff+ ' + d.x.toFixed(0) + ', index ' + d.y.toFixed(1) + ', n=' + d.n;
         }}}
@@ -510,10 +513,28 @@ __COMPONENT_ROWS__
     }
   });
 
+  function fitLine(rows) {
+    var n = rows.length, sx = 0, sy = 0, i;
+    for (i = 0; i < n; i++) { sx += rows[i].x; sy += rows[i].y; }
+    var mx = sx / n, my = sy / n, sxx = 0, syy = 0, sxy = 0;
+    for (i = 0; i < n; i++) {
+      var dx = rows[i].x - mx, dy = rows[i].y - my;
+      sxx += dx * dx; syy += dy * dy; sxy += dx * dy;
+    }
+    var slope = sxy / sxx;
+    return { n: n, slope: slope, intercept: my - slope * mx, r: sxy / Math.sqrt(sxx * syy) };
+  }
+
   function setScatterMetric(metric) {
     var built = buildScatterData(metric);
     scatterChart.data.datasets[0].data = built.ctx;
     scatterChart.data.datasets[1].data = built.hi;
+    var rows = built.ctx.concat(built.hi), fit = fitLine(rows);
+    var xs = rows.map(function(p) { return p.x; }), x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
+    scatterChart.data.datasets[2].data = [{ x: x0, y: fit.intercept + fit.slope * x0 }, { x: x1, y: fit.intercept + fit.slope * x1 }];
+    document.getElementById('scatterTrendNote').textContent = (metric === 'composite' ? 'Deception+' : METRIC_LABEL[metric] + ' index') +
+      (fit.slope >= 0 ? ' rises ' : ' falls ') + Math.abs(fit.slope * 10).toFixed(1) + ' points for every 10 Stuff+ points (r = ' +
+      fit.r.toFixed(2) + ', ' + fit.n.toLocaleString('en-US') + ' pitcher-seasons).';
     scatterChart.options.scales.y.title.text = (metric === 'composite' ? 'Deception+' : METRIC_LABEL[metric] + ' deception index') + ' (100 = average)';
     scatterChart.update();
   }

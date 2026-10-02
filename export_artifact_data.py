@@ -2,7 +2,7 @@
 Pitcher Deception Project: export artifact_data.json from the canonical pitcher_season.csv
 ==========================================================================================
 build_artifact.py reads this JSON. It holds the dashboard's scatter points
-(one per pitcher-season with at least 100 swings) and eight hand-picked
+(one per pitcher-season with at least 100 swings and a Stuff+ figure) and eight hand-picked
 pitchers for the reputation check.
 """
 
@@ -39,6 +39,8 @@ def num(v):
 
 points = []
 for _, r in pop.iterrows():
+    if pd.isna(r["stuff_plus"]):
+        continue  # a scatter point needs both axes
     points.append([
         r["player_name"], int(r["season"]), num(r["stuff_plus"]),
         num(r["whiff_index"]), num(r["chase_index"]), num(r["gb_index"]),
