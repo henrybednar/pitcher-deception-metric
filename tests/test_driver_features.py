@@ -39,3 +39,26 @@ def test_fdr_adjusted_p_values_do_not_depend_on_the_scale_of_a_feature():
     rescaled = X.assign(f2=X["f2"] * 1000)
 
     assert fdr_adjusted_p_values(rescaled, y)["f2"] == pytest.approx(fdr_adjusted_p_values(X, y)["f2"])
+
+
+def test_clustered_p_values_are_larger_than_naive_ones_when_each_pitcher_has_two_identical_rows():
+    X, rng = noisy_frame(n=300, seed=3)
+    y = 0.12 * X["f3"] + rng.normal(size=len(X))
+    groups = np.arange(len(X))
+    # every pitcher appears twice with the same values, as a pitcher's two seasons can be strongly dependent
+    X2, y2, g2 = pd.concat([X, X], ignore_index=True), pd.concat([y, y], ignore_index=True), np.concatenate([groups, groups])
+
+    naive = fdr_adjusted_p_values(X2, y2)
+    clustered = fdr_adjusted_p_values(X2, y2, groups=g2)
+
+    assert clustered["f3"] > naive["f3"]            # the duplicated rows overstate the evidence for the naive fit
+
+
+def test_clustered_p_values_match_the_single_row_fit_when_pitchers_are_not_repeated():
+    X, rng = noisy_frame(n=800, seed=4)
+    y = 0.05 * X["f1"] + rng.normal(size=len(X))
+
+    clustered = fdr_adjusted_p_values(X, y, groups=np.arange(len(X)))
+    naive = fdr_adjusted_p_values(X, y)
+
+    assert clustered.to_numpy() == pytest.approx(naive.to_numpy(), abs=0.05)   # one row per cluster is the robust fit

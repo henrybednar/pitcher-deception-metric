@@ -1,7 +1,8 @@
 """OLS coefficient-table version of driver_features.py's driver regression, for the two headline
 Deception+ components (whiff: rate outcome, timing: magnitude outcome), matching the reference
 report's methodology (plain multiple OLS, coefficients + SE + p-values + 95% CI per feature), plus a
-Benjamini-Hochberg adjusted q across the 14 features of each model.
+Benjamini-Hochberg adjusted q across the 14 features of each model, with standard errors
+clustered on pitcher.
 
 Uses the exact same feature set and NaN-handling as driver_features.run_driver_analysis (median
 fill, same exclusions), just swapping Ridge+RandomForest for statsmodels OLS so real p-values and
@@ -36,10 +37,13 @@ for label in LABELS:
 
     X = sm.add_constant(data[feature_cols])
     y = data[target_col]
-    model = sm.OLS(y, X).fit()
+    # Standard errors, p-values and intervals cluster on pitcher: most pitchers appear in both seasons, and
+    # a pitcher's two rows are dependent. R2, F and the coefficients are the plain OLS values.
+    plain = sm.OLS(y, X).fit()
+    model = sm.OLS(y, X).fit(cov_type="cluster", cov_kwds={"groups": data["pitcher"].to_numpy()})
 
     ci = model.conf_int(alpha=0.05)
-    q = fdr_adjusted_p_values(data[feature_cols], y)
+    q = fdr_adjusted_p_values(data[feature_cols], y, groups=data["pitcher"].to_numpy())
     rows = []
     for feat in feature_cols:
         rows.append({
@@ -55,12 +59,13 @@ for label in LABELS:
 
     results[label] = {
         "n": int(model.nobs),
+        "pitchers": int(data["pitcher"].nunique()),
         "n_features": len(feature_cols),
-        "r2": round(float(model.rsquared), 4),
-        "adj_r2": round(float(model.rsquared_adj), 4),
-        "fvalue": round(float(model.fvalue), 3),
-        "f_pvalue": float(model.f_pvalue),
-        "df_resid": int(model.df_resid),
+        "r2": round(float(plain.rsquared), 4),
+        "adj_r2": round(float(plain.rsquared_adj), 4),
+        "fvalue": round(float(plain.fvalue), 3),
+        "f_pvalue": float(plain.f_pvalue),
+        "df_resid": int(plain.df_resid),
         "intercept": round(float(model.params["const"]), 6),
         "rows": rows,
     }

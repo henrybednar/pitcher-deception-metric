@@ -182,11 +182,17 @@ def build_driver_features(pitch_types: pd.DataFrame, covariates: pd.DataFrame,
     return features.merge(spin.drop(columns=["spin_mirror_pairs_n"]), on=["pitcher", "season"], how="left")
 
 
-def fdr_adjusted_p_values(X: pd.DataFrame, y: pd.Series) -> pd.Series:
+def fdr_adjusted_p_values(X: pd.DataFrame, y: pd.Series, groups: np.ndarray | None = None) -> pd.Series:
     """Per-feature p-values from a multiple OLS fit, adjusted across the features
     (Benjamini-Hochberg). With 14 features per outcome, about one raw p
-    below 0.05 is expected by chance alone, so the adjusted value is the one to read."""
-    fit = sm.OLS(y, sm.add_constant(X)).fit()
+    below 0.05 is expected by chance alone, so the adjusted value is the one to read.
+
+    `groups` clusters the standard errors, one cluster per pitcher. A pitcher with both seasons in
+    the sample contributes two rows whose residuals and features are strongly dependent (the
+    same-pitcher correlation of the whiff residual across seasons is 0.49), so classical errors
+    overstate the evidence."""
+    model = sm.OLS(y, sm.add_constant(X))
+    fit = model.fit() if groups is None else model.fit(cov_type="cluster", cov_kwds={"groups": np.asarray(groups)})
     p = fit.pvalues[X.columns]
     return pd.Series(multipletests(p.values, method="fdr_bh")[1], index=X.columns)
 
@@ -216,7 +222,7 @@ def run_driver_analysis(driver_df: pd.DataFrame, scores: pd.DataFrame, target_co
     ridge = Ridge(alpha=1.0)
     ridge.fit(StandardScaler().fit_transform(X), y)
 
-    q = fdr_adjusted_p_values(X, y)
+    q = fdr_adjusted_p_values(X, y, groups=pitcher_groups)
     rows = [{"feature": FEATURE_LABELS.get(feat, feat),
              "importance": round(float(perm.importances_mean[i]), 5),
              "coef": round(float(ridge.coef_[i]), 5),
