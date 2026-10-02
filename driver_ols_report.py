@@ -1,6 +1,7 @@
 """OLS coefficient-table version of driver_features.py's driver regression, for the two headline
 Deception+ components (whiff: rate outcome, timing: magnitude outcome), matching the reference
-report's methodology (plain multiple OLS, coefficients + SE + p-values + 95% CI per feature).
+report's methodology (plain multiple OLS, coefficients + SE + p-values + 95% CI per feature), plus a
+Benjamini-Hochberg adjusted q across the 14 features of each model.
 
 Uses the exact same feature set and NaN-handling as driver_features.run_driver_analysis (median
 fill, same exclusions), just swapping Ridge+RandomForest for statsmodels OLS so real p-values and
@@ -15,6 +16,8 @@ import json
 
 import pandas as pd
 import statsmodels.api as sm
+
+from driver_features import fdr_adjusted_p_values
 
 LABELS = ["whiff", "timing"]
 
@@ -36,6 +39,7 @@ for label in LABELS:
     model = sm.OLS(y, X).fit()
 
     ci = model.conf_int(alpha=0.05)
+    q = fdr_adjusted_p_values(data[feature_cols], y)
     rows = []
     for feat in feature_cols:
         rows.append({
@@ -43,6 +47,7 @@ for label in LABELS:
             "coef": round(float(model.params[feat]), 6),
             "se": round(float(model.bse[feat]), 6),
             "p": round(float(model.pvalues[feat]), 6),
+            "q": round(float(q[feat]), 6),
             "ci_lo": round(float(ci.loc[feat, 0]), 6),
             "ci_hi": round(float(ci.loc[feat, 1]), 6),
         })
@@ -64,7 +69,7 @@ for label in LABELS:
           f"df_resid={results[label]['df_resid']}", flush=True)
     for r in rows:
         sig = "***" if r["p"] < 0.001 else "**" if r["p"] < 0.01 else "*" if r["p"] < 0.05 else ""
-        print(f"  {r['feature']:38s} coef={r['coef']:+.5f}  se={r['se']:.5f}  p={r['p']:.4f}{sig:3s} "
+        print(f"  {r['feature']:38s} coef={r['coef']:+.5f}  se={r['se']:.5f}  p={r['p']:.4f}{sig:3s} q={r['q']:.4f} "
               f"CI=[{r['ci_lo']:+.5f}, {r['ci_hi']:+.5f}]", flush=True)
 
 with open("output/driver_ols_report.json", "w", encoding="utf-8") as f:
