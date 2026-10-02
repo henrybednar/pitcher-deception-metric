@@ -363,3 +363,52 @@ def test_season_feature_absorbs_a_season_level_calibration_gap_at_the_population
 
     by_season = df.groupby("season")["expected"].mean()
     assert (by_season[2025] - by_season[2026]) > 5.0
+
+
+def test_year_month_labels_each_pitch_with_its_season_and_month():
+    df = pd.DataFrame({"game_date": ["2025-03-18", "2025-09-28", "2026-04-02"]})
+
+    out = build_pitch_table.add_year_month(df)
+
+    assert out["year_month"].tolist() == ["2025-03", "2025-09", "2026-04"]
+
+
+def month_frame():
+    # five pitchers, each throwing in months A and B; the league ran +0.05 above expectation in A and -0.05 in B
+    rows = []
+    for pitcher in range(5):
+        for month, shift in (("2025-04", 0.05), ("2025-07", -0.05)):
+            for k in range(40):
+                p = 0.30
+                rows.append({"pitcher": pitcher, "year_month": month, "expected": p, "actual": p + shift + (0.01 if k % 2 else -0.01)})
+    return pd.DataFrame(rows)
+
+
+def test_month_recalibration_removes_the_league_wide_level_of_each_month_and_keeps_predictions_in_range():
+    df = month_frame()
+
+    adjusted = fit_full_model.recalibrate_oof_by_group(df, "actual", "expected", "year_month", binary=True)
+
+    gaps = (df["actual"] - adjusted).groupby(df["year_month"]).mean()
+    assert gaps.abs().max() < 1e-9
+    assert adjusted.min() >= 0.0 and adjusted.max() <= 1.0
+
+
+def test_month_recalibration_never_lets_a_pitcher_set_the_offset_that_scores_that_pitcher():
+    df = month_frame()
+    solo = pd.DataFrame({"pitcher": 99, "year_month": "2025-05", "expected": 0.30, "actual": 0.90}, index=range(30))
+    df = pd.concat([df, solo], ignore_index=True)
+
+    adjusted = fit_full_model.recalibrate_oof_by_group(df, "actual", "expected", "year_month", binary=True)
+
+    # pitcher 99 is the only one who threw in 2025-05, so no other pitcher can set that month's offset
+    assert adjusted[df["pitcher"] == 99].tolist() == pytest.approx([0.30] * 30)
+
+
+def test_month_recalibration_of_a_continuous_outcome_shifts_without_clipping():
+    df = month_frame().assign(expected=lambda d: d["expected"] * 20, actual=lambda d: d["actual"] * 20)
+
+    adjusted = fit_full_model.recalibrate_oof_by_group(df, "actual", "expected", "year_month", binary=False)
+
+    assert adjusted.max() > 1.0                                  # a unit-interval clip would have flattened these
+    assert (df["actual"] - adjusted).groupby(df["year_month"]).mean().abs().max() < 1e-9

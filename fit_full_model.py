@@ -203,6 +203,38 @@ def recalibrate_oof_isotonic(sub: pd.DataFrame, target_col: str, expected_col: s
     return out
 
 
+def recalibrate_oof_by_group(sub: pd.DataFrame, target_col: str, expected_col: str, group_col: str,
+                             binary: bool, n_splits: int = 5) -> np.ndarray:
+    """Removes the league-wide level of each group (here year and month) from an out-of-fold expectation.
+
+    Actual minus expected ran from -0.3 to +1.3 percentage points between months for whiff, and from
+    -0.9 to +3.1 for ground ball, with no feature in the model that could see the date. A pitcher who
+    throws mostly in one stretch of the season inherited that month's gap as if it were skill: the
+    month alone moved a qualified pitcher by 2 to 3.5 index points (SD) per component and by 3 to 6 at
+    the 95th percentile. Adding the date as a model feature barely moved the gap (four-seam whiff, SD
+    0.54 to 0.51 percentage points), so this is a second out-of-fold step instead, grouped by pitcher
+    like the models: each pitcher's offsets come only from other pitchers, so a pitcher's own outcomes
+    never set the offset that scores them. A group the other pitchers never threw in gets no offset.
+    Binary expectations stay inside [0, 1]."""
+    groups = sub["pitcher"].to_numpy()
+    expected = sub[expected_col].to_numpy(float)
+    resid = sub[target_col].to_numpy(float) - expected
+    keys = sub[group_col].to_numpy()
+    out = np.full(len(sub), np.nan)
+    for train_idx, test_idx in GroupKFold(n_splits=n_splits).split(sub, resid, groups=groups):
+        offset = pd.Series(resid[train_idx]).groupby(keys[train_idx]).mean()
+        adjusted = expected[test_idx] + pd.Series(keys[test_idx]).map(offset).fillna(0.0).to_numpy()
+        out[test_idx] = np.clip(adjusted, 0.0, 1.0) if binary else adjusted
+    return out
+
+
+def recalibrate_scored_by_month(df: pd.DataFrame, label: str, target_col: str, binary: bool) -> None:
+    """Applies recalibrate_oof_by_group to every pitch that has a {label}_expected_full, in place."""
+    col = f"{label}_expected_full"
+    scored = df[col].notna()
+    df.loc[scored, col] = recalibrate_oof_by_group(df.loc[scored], target_col, col, "year_month", binary)
+
+
 if __name__ == "__main__":
     print("loading full pitch-level data...", flush=True)
     df = prepare_context(load_pitch_data(PITCH_LEVEL_FILE))
@@ -212,5 +244,6 @@ if __name__ == "__main__":
     for label, spec in OUTCOMES.items():
         print(f"\n=== {label.upper()} (full tier: stuff+location+opponent+catcher+context) ===", flush=True)
         fit_full_outcome(df, label, spec["target"], df[spec["subset"]], spec["kind"])
+        recalibrate_scored_by_month(df, label, spec["target"], binary=True)
         new_cols.append(f"{label}_expected_full")
     save_predictions(existing, df, new_cols)

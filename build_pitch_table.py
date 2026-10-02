@@ -52,7 +52,7 @@ RAW_COLS = [
     "vaa", "haa", "release_extension", "effective_speed",
     "arm_angle", "release_pos_x", "release_pos_z",
     "batter", "stand", "fielder_2", "at_bat_number", "pitch_number", "spin_axis",
-    "balls", "strikes", "home_team", "game_type",
+    "balls", "strikes", "home_team", "game_type", "game_date",
     "outs_when_up", "on_1b", "on_2b", "on_3b", "bat_score", "fld_score",
 ] + TRAJECTORY_COLS
 
@@ -72,6 +72,13 @@ def filter_regular_season(df: pd.DataFrame) -> pd.DataFrame:
     return df[df["game_type"] == "R"].drop(columns="game_type").reset_index(drop=True)
 
 
+def add_year_month(df: pd.DataFrame) -> pd.DataFrame:
+    """Season and month of each game as a label such as "2025-09", for the month-level recalibration of
+    the expectations (fit_full_model.recalibrate_oof_by_group)."""
+    df["year_month"] = pd.to_datetime(df["game_date"]).dt.to_period("M").astype(str)
+    return df
+
+
 def load_pitch_data(path: str) -> pd.DataFrame:
     """Read the pitch-level file and build every feature and target.
 
@@ -82,6 +89,7 @@ def load_pitch_data(path: str) -> pd.DataFrame:
     """
     df = pd.concat(pd.read_csv(path, usecols=RAW_COLS, chunksize=CHUNKSIZE, low_memory=False), ignore_index=True)
     df = filter_regular_season(df)
+    df = add_year_month(df)
     df = replace_nonfinite(df)
     df, _ = apply_domain_gates(df)
     df = alias_pitch_types(df)

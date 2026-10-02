@@ -11,6 +11,9 @@ Subset: pitches the batter DIDN'T swing at and that were a real ball/strike judg
 (excludes hit_by_pitch and the pitch-clock-violation automatic_ball/automatic_strike calls,
 which aren't about pitch shape at all). Target: description == "called_strike".
 
+Not month-recalibrated like the scored outcomes (fit_full_model.recalibrate_oof_by_group): its month gap
+is small (SD 0.24 pp) and the recalibration cost log loss (0.1295 to 0.1300).
+
 Fit at the full tier, reusing fit_full_model.py's `fit_full_outcome` (GroupKFold by pitcher,
 batter+catcher tendency, count/park context), so it is the same methodology as the other outcomes.
 

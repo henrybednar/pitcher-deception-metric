@@ -27,6 +27,10 @@ the timing model once raised out-of-fold R2 by 0.003 (0.37% of squared error).
 Writes the targets and predictions into per_pitch_predictions.csv by position, after checking the
 row order matches.
 
+MONTH RECALIBRATION: after the models (and the timing isotonic step below), each expectation is shifted by
+the league-wide gap of its year and month, estimated from other pitchers only (fit_full_model.py has the
+reasoning and the numbers).
+
 TIMING RECALIBRATION: a calibration check found the timing model under-predicts actual deviation by
 0.24 in at the low end of its predicted range (the other 9 deciles were within 0.08 in). Fixed with a
 post-hoc, out-of-fold isotonic recalibration (recalibrate_oof_isotonic) rather than a different loss
@@ -37,7 +41,7 @@ import pandas as pd
 from sklearn.metrics import r2_score
 
 from build_pitch_table import PITCH_LEVEL_FILE, load_pitch_data, read_aligned_predictions, save_predictions
-from fit_full_model import fit_full_outcome, prepare_context, recalibrate_oof_isotonic
+from fit_full_model import fit_full_outcome, prepare_context, recalibrate_oof_isotonic, recalibrate_scored_by_month
 
 EXTRA_FEATURES = ["plate_x_inside"]
 OUTCOMES = {
@@ -81,5 +85,8 @@ if __name__ == "__main__":
     print(f"\ntiming recalibration: mean shift {shift.mean():+.4f} in, |shift| p95 {abs(shift).max():.4f} in "
           f"(R2={r2_score(df.loc[timing_scored, 'timing_dev_abs'], df.loc[timing_scored, 'timing_expected_full']):.4f})",
           flush=True)
+
+    for label, spec in OUTCOMES.items():
+        recalibrate_scored_by_month(df, label, spec["target"], binary=False)
 
     save_predictions(existing, df, new_cols)
