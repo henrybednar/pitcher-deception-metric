@@ -27,11 +27,13 @@ pitcher_season_covariates.csv and the pitch-level file. Writes driver_features.c
 
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import GroupKFold, GroupShuffleSplit, cross_val_score
 from sklearn.preprocessing import StandardScaler
+from statsmodels.stats.multitest import multipletests
 
 PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2025_2026.csv"
 CHUNKSIZE = 500_000
@@ -180,6 +182,15 @@ def build_driver_features(pitch_types: pd.DataFrame, covariates: pd.DataFrame,
     return features.merge(spin.drop(columns=["spin_mirror_pairs_n"]), on=["pitcher", "season"], how="left")
 
 
+def fdr_adjusted_p_values(X: pd.DataFrame, y: pd.Series) -> pd.Series:
+    """Per-feature p-values from a multiple OLS fit, adjusted across the features
+    (Benjamini-Hochberg). With 14 features per outcome, about one raw p
+    below 0.05 is expected by chance alone, so the adjusted value is the one to read."""
+    fit = sm.OLS(y, sm.add_constant(X)).fit()
+    p = fit.pvalues[X.columns]
+    return pd.Series(multipletests(p.values, method="fdr_bh")[1], index=X.columns)
+
+
 def run_driver_analysis(driver_df: pd.DataFrame, scores: pd.DataFrame, target_col: str) -> dict:
     """Random forest (grouped CV R^2, permutation importance) plus Ridge coefficients
     of a residual score on the driver features. Splits are grouped by pitcher, since
@@ -205,16 +216,19 @@ def run_driver_analysis(driver_df: pd.DataFrame, scores: pd.DataFrame, target_co
     ridge = Ridge(alpha=1.0)
     ridge.fit(StandardScaler().fit_transform(X), y)
 
+    q = fdr_adjusted_p_values(X, y)
     rows = [{"feature": FEATURE_LABELS.get(feat, feat),
              "importance": round(float(perm.importances_mean[i]), 5),
-             "coef": round(float(ridge.coef_[i]), 5)}
+             "coef": round(float(ridge.coef_[i]), 5),
+             "q": round(float(q[feat]), 5)}
             for i, feat in enumerate(feature_cols)]
     rows.sort(key=lambda r: -r["importance"])
     result = {"n": len(data), "r2_mean": round(float(cv_r2.mean()), 3),
               "r2_std": round(float(cv_r2.std()), 3), "features": rows}
     print(f"\nDriver analysis on {target_col}: n={len(data)}, R^2 mean={result['r2_mean']} (std={result['r2_std']})")
+    print(f"  {int((q < 0.05).sum())} of {len(feature_cols)} features survive the Benjamini-Hochberg correction (q < 0.05)")
     for r in rows[:8]:
-        print(f"  {r['feature']:50s} importance={r['importance']:.4f} coef={r['coef']:+.5f}")
+        print(f"  {r['feature']:50s} importance={r['importance']:.4f} coef={r['coef']:+.5f} q={r['q']:.4f}")
     return result
 
 
