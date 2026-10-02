@@ -121,3 +121,20 @@ def test_estimating_an_ideal_without_any_usable_ball_fails_loudly():
 
     with pytest.raises(ValueError, match="no top-quality balls"):
         sa.add_swing_alignment(frame)
+
+
+def test_timing_mask_keeps_contact_swings_with_a_deviation_and_drops_whiffs_and_takes():
+    from fit_swing_alignment import build_masks
+
+    df = pd.DataFrame({
+        "is_swing": [True, True, False, True, True],
+        "is_whiff": [0, 1, 0, 0, 0],
+        "timing_dev_abs": [3.0, 14.0, 5.0, np.nan, 7.0],      # a whiff's intercept is a closest-approach point
+        "align_dev_abs": [1.0, 2.0, 3.0, 4.0, np.nan],
+        "whiffmiss_log": [np.nan, 0.5, np.nan, np.nan, np.nan],
+    })
+
+    masks = build_masks(df)
+
+    assert masks["timing_mask"].tolist() == [True, False, False, False, True]
+    assert masks["whiffmiss_mask"].tolist() == [False, True, False, False, False]

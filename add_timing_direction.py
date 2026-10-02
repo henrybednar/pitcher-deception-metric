@@ -20,7 +20,7 @@ if __name__ == "__main__":
     print("loading per-pitch predictions...", flush=True)
     df = pd.read_csv("output/per_pitch_predictions.csv")
 
-    spec = dict(subset=lambda d: d["is_swing"] & d["timing_dir_raw"].notna(), target="timing_dir_raw")
+    spec = dict(subset=lambda d: d["is_swing"] & (d["is_whiff"] == 0) & d["timing_dir_raw"].notna(), target="timing_dir_raw")
     result, rel, half_tbl = process_outcome(df, "timingdir", spec, is_binary=False, baseline="stuffloc")
 
     # process_outcome's own ci_lo/ci_hi are on the 100/10 "index" scale (same
