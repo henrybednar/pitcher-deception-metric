@@ -128,6 +128,10 @@ __HEAD__
 .dx-row-total th, .dx-row-total td { border-top: 1px solid var(--border-strong); }
 .dx-table td.dx-pass { color: var(--good); font-family: var(--font-body); font-weight: 500; }
 .dx-table td.dx-fail { color: var(--bad); font-family: var(--font-body); font-weight: 500; }
+.dx-toggle.wrap { flex-wrap: wrap; }
+.dx-chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.dx-chart-title { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+.dx-table th.txt, .dx-table td.txt { text-align: left; font-family: var(--font-body); color: var(--text-secondary); }
 .dx-tableview summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); margin-bottom: 0.6rem; }
 .dx-tableview .dx-table { min-width: 560px; }
 .dx-method h3 { font-size: 15px; margin-top: 0.5rem; }
@@ -146,7 +150,7 @@ __HEAD__
 }
 </style>
 <div class="dxroot">
-<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Deception+ is a composite pitcher index built from {{N_COMPOSITE}} residual metrics: whiff, chase, weak contact, swing timing, and whiff miss distance. The page includes a scatter of Stuff+ against deception, a check on how the score tracks Stuff+, a validation table, a driver-importance chart, and a check on pitchers with a deception reputation.</h2>
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Deception+ is a composite pitcher index built from {{N_COMPOSITE}} residual metrics: whiff, chase, weak contact, swing timing, and whiff miss distance. The page includes a validation of the pitch models, a scatter of Stuff+ against deception, a check on how the score tracks Stuff+, a validation table, a driver-importance chart, and a check on pitchers with a deception reputation.</h2>
 <div class="dx-wrap">
 
   <div class="dx-hero">
@@ -190,6 +194,72 @@ __HEAD__
     <div class="dx-tile"><div class="dx-tile-label">Variance on the first principal component</div><div class="dx-tile-val">{{PC1}}</div></div>
     <div class="dx-tile"><div class="dx-tile-label">Qualified pitcher-seasons</div><div class="dx-tile-val">{{N_QUALIFIED}}</div></div>
     <div class="dx-tile"><div class="dx-tile-label">Scored pitcher-seasons (2+ components)</div><div class="dx-tile-val">{{N_SCORED}}</div></div>
+  </div>
+
+  <div class="dx-section">
+    <div>
+      <h2>How good are the pitch models?</h2>
+      <p class="dx-section-note dx-wide">Deception+ is actual minus expected, so the expectation models are the product. Each outcome has its own gradient-boosted model for every pitch type, and every prediction here is out of fold: folds are grouped by pitcher, so a pitcher's own pitches never help predict their own results, and the batter and catcher tendencies are rebuilt inside each fold from the training pitchers only.</p>
+    </div>
+    <div class="dx-read-grid">
+      <div class="dx-read">
+        <h3>What the models see</h3>
+        <p>Stuff: velocity, spin, movement, approach angles, release point, extension, arm angle, and late-flight physics. Location: plate position scaled to the batter's zone. Opponent: the batter's and catcher's own rates, built without the pitcher being scored. Context: count, park, handedness, season, in-game fatigue, times through the order, and game state.</p>
+      </div>
+      <div class="dx-read">
+        <h3>What is predicted</h3>
+        <p id="valTarget"></p>
+      </div>
+      <div class="dx-read">
+        <h3>How to read the charts</h3>
+        <p>AUC measures how well a model ranks pitches: 0.5 is chance and 1.0 is perfect. The score needs a stricter property, that predicted rates are right on average within every slice of pitches. The calibration chart checks it, and a slope of 1.0 means predictions are neither too flat nor too extreme. Log loss, in the table below, scores the predicted probabilities themselves against a constant guess of each pitch type's base rate.</p>
+      </div>
+      <div class="dx-read">
+        <h3>Where the models are weak</h3>
+        <p>Ground ball ranks pitches poorly (AUC {{VAL_AUC_GB}} across pitch types) and its predictions run slightly too extreme (slope {{VAL_SLOPE_GB}}). Timing and whiff miss distance explain little of their outcomes (R&sup2; {{VAL_R2_TIMING}} and {{VAL_R2_WHIFFMISS}} across pitch types), so most of their variation stays unexplained. Reliability and the forecast test decide what enters the score.</p>
+      </div>
+    </div>
+    <div class="dx-toggle wrap" id="valToggle">
+      <button data-metric="whiff" class="active">Whiff</button>
+      <button data-metric="chase">Chase</button>
+      <button data-metric="weak">Weak contact</button>
+      <button data-metric="timing">Timing</button>
+      <button data-metric="whiffmiss">Whiff miss</button>
+      <button data-metric="gb">Ground ball</button>
+      <button data-metric="calledstrike">Called strike</button>
+      <button data-metric="align">Alignment</button>
+    </div>
+    <div class="dx-chart-grid">
+      <div class="dx-card">
+        <p class="dx-chart-title" id="valAucTitle"></p>
+        <div style="position:relative; height:330px;">
+          <canvas id="valAucChart" role="img" aria-label="Bar chart of model discrimination for each pitch type, AUC for yes or no outcomes and R squared for continuous ones"></canvas>
+        </div>
+      </div>
+      <div class="dx-card">
+        <p class="dx-chart-title" id="valCalTitle"></p>
+        <div class="dx-legend">
+          <span><i style="background:var(--series-1)"></i>Model, one point per predicted decile</span>
+          <span><i style="background:var(--text-muted); width:16px; height:2px; border-radius:0;"></i>Perfect calibration</span>
+        </div>
+        <div style="position:relative; height:300px;">
+          <canvas id="valCalChart" role="img" aria-label="Calibration chart of predicted against actual values by predicted decile, with a diagonal for perfect calibration"></canvas>
+        </div>
+      </div>
+    </div>
+    <details class="dx-tableview">
+      <summary>Table view: the selected outcome by pitch type</summary>
+      <div class="dx-card dx-table-card">
+        <table class="dx-table" id="valTypeTable"><thead></thead><tbody></tbody></table>
+      </div>
+    </details>
+    <div class="dx-card dx-table-card">
+      <table class="dx-table" id="valSummaryTable">
+        <thead><tr><th scope="col">Outcome</th><th scope="col" class="txt">Predicts, on</th><th scope="col">Scored pitches</th><th scope="col">Fit</th><th scope="col">Log loss, model vs constant</th><th scope="col">Calibration slope</th><th scope="col">In Deception+</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="dx-section-note dx-wide">Called strike is predicted almost perfectly (AUC {{VAL_AUC_CALLEDSTRIKE}} across pitch types) because location nearly determines the call, which leaves little for a pitcher to add. For the {{N_COMPOSITE}} members of Deception+, the calibration slopes run {{VAL_SLOPE_MEMBERS}}, so the expectations neither shrink nor stretch their extremes. Calibration against the model's own predictions does not make the residual independent of everything outside the model, and the Stuff+ section below shows one variable it still tracks.</p>
   </div>
 
   <div class="dx-section">
@@ -393,6 +463,7 @@ __COMPONENT_ROWS__
   var LORE = __LORE_JSON__;
   var DRIVERS = __DRIVERS_JSON__;
   var STUFFPLUS = __STUFFPLUS_JSON__;
+  var VALIDATION = __VALIDATION_JSON__;
 
   var root = document.currentScript.previousElementSibling;
   function cssVar(name) {
@@ -592,6 +663,168 @@ __COMPONENT_ROWS__
     this.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active');
     setFifthsMetric(btn.dataset.metric);
+  });
+
+  var VAL_ORDER = ['whiff', 'chase', 'weak', 'timing', 'whiffmiss', 'gb', 'calledstrike', 'align'];
+  var PITCH_NAMES = { FF: 'Four-seam', SI: 'Sinker', FC: 'Cutter', SL: 'Slider', ST: 'Sweeper', CU: 'Curveball', KC: 'Knuckle curve', CH: 'Changeup', FS: 'Split-finger' };
+  var valMetric = 'whiff';
+
+  function fmtCount(n) { return n.toLocaleString('en-US'); }
+  function fitOf(o, row) { return o.kind === 'classify' ? row.auc : row.r2; }
+
+  function addRow(body, cells, firstIsHeader, textCols) {
+    var tr = document.createElement('tr');
+    cells.forEach(function(text, j) {
+      var cell = document.createElement(j === 0 && firstIsHeader ? 'th' : 'td');
+      if (j === 0 && firstIsHeader) cell.scope = 'row';
+      if (textCols && textCols.indexOf(j) !== -1) cell.className = 'txt';
+      cell.textContent = text;
+      tr.appendChild(cell);
+    });
+    body.appendChild(tr);
+  }
+
+  var valTipLabels = {
+    id: 'valTipLabels',
+    afterDatasetsDraw: function(chart) {
+      var ctx = chart.ctx, o = VALIDATION[valMetric];
+      ctx.save();
+      ctx.font = '600 11px ' + cssVar('--font-body');
+      ctx.fillStyle = cssVar('--text-secondary');
+      ctx.textAlign = 'left';
+      chart.getDatasetMeta(0).data.forEach(function(bar, i) {
+        ctx.fillText(fitOf(o, o.by_pitch_type[i]).toFixed(3), bar.x + 6, bar.y + 4);
+      });
+      ctx.restore();
+    }
+  };
+
+  var valAucChart = new Chart(document.getElementById('valAucChart'), {
+    type: 'bar',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: cssVar('--series-1'), borderRadius: 4, borderSkipped: 'start', maxBarThickness: 22 }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 48 } },
+      scales: {
+        x: { title: { display: true, text: '', color: cssVar('--text-secondary') },
+             ticks: { color: cssVar('--text-muted') }, grid: { color: cssVar('--border') } },
+        y: { ticks: { color: cssVar('--text-secondary'), font: { size: 12 } }, grid: { display: false } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: function(c) {
+            var o = VALIDATION[valMetric], r = o.by_pitch_type[c.dataIndex];
+            return o.kind === 'classify'
+              ? 'AUC ' + r.auc.toFixed(3) + ', log loss ' + r.logloss.toFixed(3) + ' vs ' + r.baseline_logloss.toFixed(3) + ' for a constant guess, ' + fmtCount(r.n) + ' pitches'
+              : 'R² ' + r.r2.toFixed(3) + ', error ' + r.rmse.toFixed(2) + ' vs ' + r.baseline_rmse.toFixed(2) + ' for a constant guess, ' + fmtCount(r.n) + ' pitches';
+          }
+        }}
+      }
+    },
+    plugins: [valTipLabels]
+  });
+
+  var valCalChart = new Chart(document.getElementById('valCalChart'), {
+    type: 'scatter',
+    data: { datasets: [
+      { label: 'Model', data: [], showLine: true, borderColor: cssVar('--series-1'), backgroundColor: cssVar('--series-1'), borderWidth: 2,
+        pointRadius: 4.5, pointHoverRadius: 6, pointHitRadius: 14, pointBorderColor: cssVar('--surface'), pointBorderWidth: 2, tension: 0 },
+      { label: 'Perfect calibration', data: [], showLine: true, borderColor: cssVar('--text-muted'), borderWidth: 1.5, pointRadius: 0, pointHitRadius: 0 }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: 8 },
+      scales: {
+        x: { title: { display: true, text: '', color: cssVar('--text-secondary') },
+             ticks: { color: cssVar('--text-muted'), callback: function(v) { return VALIDATION[valMetric].kind === 'classify' ? Math.round(v * 100) + '%' : v; } },
+             grid: { color: cssVar('--border') } },
+        y: { title: { display: true, text: '', color: cssVar('--text-secondary') },
+             ticks: { color: cssVar('--text-muted'), callback: function(v) { return VALIDATION[valMetric].kind === 'classify' ? Math.round(v * 100) + '%' : v; } },
+             grid: { color: cssVar('--border') } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { filter: function(item) { return item.datasetIndex === 0; }, callbacks: {
+          title: function(items) { return 'Predicted decile ' + (items[0].dataIndex + 1) + ' of 10'; },
+          label: function(c) {
+            var o = VALIDATION[valMetric], b = o.calibration.bins[c.dataIndex], d = o.kind === 'classify' ? 1 : 2;
+            var scale = o.kind === 'classify' ? 100 : 1, unit = o.kind === 'classify' ? '%' : '';
+            return 'predicted ' + (b.pred * scale).toFixed(d) + unit + ', actual ' + (b.actual * scale).toFixed(d) + unit + ', ' + fmtCount(b.n) + ' pitches';
+          }
+        }}
+      }
+    }
+  });
+
+  var valTypeTable = document.getElementById('valTypeTable');
+  function renderTypeTable(o) {
+    var head = valTypeTable.querySelector('thead'), body = valTypeTable.querySelector('tbody');
+    var cols = o.kind === 'classify' ? ['Pitch type', 'Pitches', 'AUC', 'Log loss', 'Constant-guess log loss']
+                                      : ['Pitch type', 'Pitches', 'R²', 'Error (RMSE)', 'Constant-guess error'];
+    head.textContent = '';
+    var tr = document.createElement('tr');
+    cols.forEach(function(text) { var th = document.createElement('th'); th.scope = 'col'; th.textContent = text; tr.appendChild(th); });
+    head.appendChild(tr);
+    body.textContent = '';
+    o.by_pitch_type.forEach(function(r) {
+      addRow(body, o.kind === 'classify'
+        ? [PITCH_NAMES[r.pitch_type] || r.pitch_type, fmtCount(r.n), r.auc.toFixed(3), r.logloss.toFixed(3), r.baseline_logloss.toFixed(3)]
+        : [PITCH_NAMES[r.pitch_type] || r.pitch_type, fmtCount(r.n), r.r2.toFixed(3), r.rmse.toFixed(2), r.baseline_rmse.toFixed(2)], true);
+    });
+  }
+
+  function setValMetric(metric) {
+    valMetric = metric;
+    var o = VALIDATION[metric], isClass = o.kind === 'classify', rows = o.by_pitch_type;
+    var fits = rows.map(function(r) { return fitOf(o, r); });
+
+    valAucChart.data.labels = rows.map(function(r) { return PITCH_NAMES[r.pitch_type] || r.pitch_type; });
+    valAucChart.data.datasets[0].data = fits.map(function(v) { return isClass ? [0.5, v] : [0, v]; });
+    valAucChart.options.scales.x.ticks.stepSize = 0.1;
+    valAucChart.options.scales.x.min = isClass ? 0.5 : 0;
+    valAucChart.options.scales.x.max = isClass ? 1 : Math.max(0.4, Math.ceil(Math.max.apply(null, fits) * 12) / 10);
+    valAucChart.options.scales.x.title.text = isClass ? 'AUC (0.5 is chance, 1.0 is perfect)' : 'R² (0 is the constant guess)';
+    valAucChart.update();
+    document.getElementById('valAucTitle').textContent = o.label + ': ' + (isClass ? 'how well each pitch-type model ranks pitches' : 'how much of the outcome each pitch-type model explains');
+
+    var bins = o.calibration.bins, all = [];
+    bins.forEach(function(b) { all.push(b.pred, b.actual); });
+    var lo = isClass ? 0 : Math.min.apply(null, all), hi = Math.max.apply(null, all);
+    var step = isClass ? 0.1 : Math.pow(10, Math.floor(Math.log(hi - lo) / Math.LN10)) / 2;
+    lo = Math.floor(lo / step) * step;
+    hi = Math.ceil(hi / step) * step;
+    valCalChart.data.datasets[0].data = bins.map(function(b) { return { x: b.pred, y: b.actual }; });
+    valCalChart.data.datasets[1].data = [{ x: lo, y: lo }, { x: hi, y: hi }];
+    ['x', 'y'].forEach(function(axis) {
+      valCalChart.options.scales[axis].min = lo;
+      valCalChart.options.scales[axis].max = hi;
+      valCalChart.options.scales[axis].title.text = (axis === 'x' ? 'Predicted ' : 'Actual ') + (isClass ? 'rate' : 'value');
+    });
+    valCalChart.update();
+    document.getElementById('valCalTitle').textContent = 'Calibration by predicted decile. Slope ' + o.calibration.slope.toFixed(3) + ' (1.0 is calibrated).';
+
+    document.getElementById('valTarget').textContent = o.label + ' predicts ' + o.predicts + ', scored on ' + o.on + '. ' + fmtCount(o.n) + ' scored pitches across ' + rows.length + ' pitch-type models.' + (o.in_score ? '' : ' Not part of Deception+.');
+    renderTypeTable(o);
+  }
+
+  var valSummaryBody = document.querySelector('#valSummaryTable tbody');
+  VAL_ORDER.forEach(function(key) {
+    var o = VALIDATION[key];
+    addRow(valSummaryBody, [
+      o.label, o.predicts + ', on ' + o.on, fmtCount(o.n),
+      o.kind === 'classify' ? 'AUC ' + o.overall.auc.toFixed(3) : 'R² ' + o.overall.r2.toFixed(3),
+      o.kind === 'classify' ? o.overall.logloss.toFixed(3) + ' vs ' + o.overall.baseline_logloss.toFixed(3) : 'n/a',
+      o.calibration.slope.toFixed(2), o.in_score ? 'Yes' : 'No'], true, [1]);
+  });
+
+  setValMetric('whiff');
+  document.getElementById('valToggle').addEventListener('click', function(e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    this.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    setValMetric(btn.dataset.metric);
   });
 
   function ordinal(n) {

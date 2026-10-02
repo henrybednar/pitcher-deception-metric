@@ -77,6 +77,8 @@ STEPS = [
          "does the previous pitch explain the residual? (pitch level)"),
     Step("stuffplus_relationship", ("stuffplus_relationship.py",), ("output/stuffplus_relationship.json",),
          "average result by Stuff+ fifth, fastballs against other pitches"),
+    Step("model_validation", ("model_validation.py",), ("output/model_validation.json",),
+         "out-of-fold AUC, log loss, calibration and R2 for every pitch model"),
     Step("export_data", ("export_artifact_data.py", "export_site_stats.py", "export_leaderboard_data.py"),
          ("output/artifact_data.json", "output/site_stats.json", "output/leaderboard_data.json"),
          "JSON and stats consumed by the pages"),

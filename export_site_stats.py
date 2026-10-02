@@ -99,6 +99,26 @@ def stuff_plus_correlations(ps: pd.DataFrame) -> dict:
     }
 
 
+def validation_text(validation: dict) -> dict:
+    """Page-text figures from model_validation.json: how far each model's fit ranges across pitch types,
+    and the calibration slopes."""
+    outcomes = validation["outcomes"]
+
+    def span(label: str, metric: str) -> str:
+        values = [r[metric] for r in outcomes[label]["by_pitch_type"]]
+        return f"{min(values):.2f} to {max(values):.2f}"
+
+    member_slopes = [outcomes[k]["calibration"]["slope"] for k in COMPOSITE_OUTCOMES]
+    return {
+        "VAL_AUC_GB": span("gb", "auc"),
+        "VAL_AUC_CALLEDSTRIKE": span("calledstrike", "auc"),
+        "VAL_R2_TIMING": span("timing", "r2"),
+        "VAL_R2_WHIFFMISS": span("whiffmiss", "r2"),
+        "VAL_SLOPE_MEMBERS": f"{min(member_slopes):.2f} to {max(member_slopes):.2f}",
+        "VAL_SLOPE_GB": f"{outcomes['gb']['calibration']['slope']:.2f}",
+    }
+
+
 def component_yoy(ps: pd.DataFrame, key: str) -> float:
     """Correlation of a component's index across seasons, both seasons held to the same qualifying
     minimum. Used to halve the 2026 threshold from when 2026 was a partial season; both seasons are
@@ -237,6 +257,8 @@ def main() -> None:
         driver_r2 = [m["r2_mean"] for m in json.load(f).values()]
     with open("output/sequencing_driver_report.json", encoding="utf-8") as f:
         seq_r2 = [m["r2"] for m in json.load(f).values()]
+    with open("output/model_validation.json", encoding="utf-8") as f:
+        validation = json.load(f)
 
     text = {
         "DATA_THROUGH": f"{data_through:%B} {data_through.day}, {data_through.year}",
@@ -297,6 +319,7 @@ def main() -> None:
         "STUFF_R_2026": fmt_r(stuff["by_season"][2026]),
         "STUFF_N": f"{stuff['n']:,}",
         "STUFF_R_MEMBERS": join_words([f"{QUALIFY_LABELS[k]} {fmt_r_short(r)}" for k, r in stuff["members"].items()]),
+        **validation_text(validation),
     }
 
     out = {"text": text, "components": components}

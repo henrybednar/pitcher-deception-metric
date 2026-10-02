@@ -4,7 +4,8 @@ Build the Deception+ dashboard page from templates/dashboard.html.
   python build_artifact.py             standalone file with relative links
   python build_artifact.py --artifact  fragment for the Claude artifact host
 
-Reads artifact_data.json, driver_analysis.json, stuffplus_relationship.json and site_stats.json.
+Reads artifact_data.json, driver_analysis.json, stuffplus_relationship.json, model_validation.json
+and site_stats.json.
 """
 
 import argparse
@@ -41,6 +42,8 @@ def main() -> None:
         driver_data = json.load(f)
     with open("output/stuffplus_relationship.json", encoding="utf-8") as f:
         stuff_data = json.load(f)
+    with open("output/model_validation.json", encoding="utf-8") as f:
+        validation_data = json.load(f)
     stats = load_stats()
 
     page = render_page(
@@ -54,6 +57,7 @@ def main() -> None:
             "__LORE_JSON__": compact_json(artifact_data["lore"]),
             "__DRIVERS_JSON__": compact_json(driver_data),
             "__STUFFPLUS_JSON__": compact_json(stuff_data["outcomes"]),
+            "__VALIDATION_JSON__": compact_json(validation_data["outcomes"]),
             "__COMPONENT_ROWS__": component_table_rows(stats["components"]),
             "__LEADERBOARD_URL__": page_links(args.artifact)["leaderboard"],
         },
