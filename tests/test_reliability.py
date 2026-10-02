@@ -301,3 +301,67 @@ def test_merge_fangraphs_columns_is_all_nan_when_no_fangraphs_export_was_dropped
 
     assert result[rc.FANGRAPHS_COLS].isna().all().all()
     assert len(result) == 2
+
+
+def test_posterior_sd_is_the_normal_normal_posterior_on_the_z_scale():
+    sd = rc.posterior_sd_z(np.array([0.0004, 0.0100]), design_effect=1.0, true_var=0.0004, league_std=0.01)
+
+    # equal signal and noise halves the variance, so the sd is sqrt(0.0002) / league_std
+    assert sd[0] == pytest.approx(np.sqrt(0.0002) / 0.01)
+    # a noisy sample falls back toward the between-pitcher spread
+    assert sd[1] == pytest.approx(np.sqrt(0.0004 * 0.01 / 0.0104) / 0.01)
+
+
+def test_posterior_sd_grows_with_the_design_effect():
+    base = rc.posterior_sd_z(np.array([0.001]), design_effect=1.0, true_var=0.0004, league_std=0.01)
+    inflated = rc.posterior_sd_z(np.array([0.001]), design_effect=2.0, true_var=0.0004, league_std=0.01)
+
+    assert inflated[0] > base[0]
+
+
+def weights_frame():
+    return pd.DataFrame({"a_index": [110.0, np.nan], "b_index": [90.0, 105.0], "c_index": [100.0, 120.0],
+                         "a_n": [200, 200], "b_n": [100, 100], "c_n": [50, 50]})
+
+
+def test_composite_weights_zero_out_absent_and_unreliable_components():
+    frame = weights_frame()
+
+    w = rc.composite_weights(frame, ["a_index", "b_index", "c_index"], ["a_n", "b_n", "c_n"], [0.8, 0.5, 0.1])
+
+    assert w[1, 0] == 0.0                       # component a is missing for the second row
+    assert (w[:, 2] == 0.0).all()               # component c is below the minimum reliability
+    assert w[0, 0] == pytest.approx(0.8 * 200 / 200)   # reliability times n over the median n
+
+
+def test_composite_weights_reproduce_the_composite_z():
+    frame = weights_frame()
+    cols, ns, rel = ["a_index", "b_index", "c_index"], ["a_n", "b_n", "c_n"], [0.8, 0.5, 0.6]
+
+    w = rc.composite_weights(frame, cols, ns, rel)
+    raw_z, _, eligible = rc.compute_composite(frame, cols, ns, rel)
+
+    z = (frame[cols].fillna(100).values - 100) / 10
+    assert raw_z[0] == pytest.approx((w[0] * z[0]).sum() / w[0].sum())
+    assert eligible.tolist() == [True, True]
+
+
+def test_composite_posterior_sd_of_equal_independent_components_shrinks_with_the_square_root():
+    w = np.array([[1.0, 1.0, 1.0, 1.0]])
+    sd = np.full((1, 4), 0.3)
+
+    assert rc.composite_posterior_sd(w, sd)[0] == pytest.approx(0.3 / 2)
+
+
+def test_composite_posterior_sd_ignores_components_with_no_weight():
+    w = np.array([[1.0, 0.0]])
+    sd = np.array([[0.3, np.nan]])
+
+    assert rc.composite_posterior_sd(w, sd)[0] == pytest.approx(0.3)
+
+
+def test_composite_interval_is_symmetric_on_the_deception_scale():
+    lo, hi = rc.composite_interval(np.array([110.0]), np.array([0.2]), pop_std=0.5)
+
+    half = 1.96 * 10 * 0.2 / 0.5
+    assert (lo[0], hi[0]) == pytest.approx((110.0 - half, 110.0 + half))

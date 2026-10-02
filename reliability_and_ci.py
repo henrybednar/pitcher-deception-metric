@@ -355,6 +355,13 @@ def shrink_and_scale(agg: pd.DataFrame, design_effect: float = 1.0):
     return out_shrunk, out_index, league_std, true_var, center
 
 
+def posterior_sd_z(sampling_var, design_effect: float, true_var: float, league_std: float) -> np.ndarray:
+    """Posterior standard deviation of a component's estimate on the z scale (index 10 points = 1 z).
+    The normal-normal posterior variance is true_var x s2 / (true_var + s2), reliability x sampling variance."""
+    s2 = np.asarray(sampling_var, dtype=float) * design_effect
+    return np.sqrt(true_var * s2 / (true_var + s2)) / league_std
+
+
 def analytic_interval(agg: pd.DataFrame, index: pd.Series, league_std: float, true_var: float,
                       design_effect: float) -> pd.DataFrame:
     """95% posterior interval for the empirical-Bayes estimate, on the index scale.
@@ -363,9 +370,7 @@ def analytic_interval(agg: pd.DataFrame, index: pd.Series, league_std: float, tr
     interval is never zero-width, even for a saturated sample (30 whiffs out of 30) where every
     bootstrap resample is identical. It also exists for pitcher-seasons with fewer than 3 games,
     which the bootstrap skips."""
-    s2 = agg["sampling_var"] * design_effect
-    posterior_var = true_var * s2 / (true_var + s2)
-    half = 1.96 * 10 * np.sqrt(posterior_var) / league_std
+    half = 1.96 * 10 * posterior_sd_z(agg["sampling_var"], design_effect, true_var, league_std)
     return pd.DataFrame({"pitcher": agg["pitcher"], "season": agg["season"],
                          "an_lo": index - half, "an_hi": index + half})
 
@@ -406,6 +411,30 @@ def bootstrap_ci(game_tbl: pd.DataFrame, league_std: float, true_var: float,
     return pd.DataFrame(results)
 
 
+def composite_weights(frame: pd.DataFrame, index_cols: list, n_cols: list, reliabilities: list) -> np.ndarray:
+    """Composite weights, rows x components, zero where a component is absent or too unreliable.
+    Each is the component's league-wide reliability times the pitcher's n over that component's median n."""
+    w = np.zeros((len(frame), len(index_cols)))
+    for i, (idx_col, n_col, r) in enumerate(zip(index_cols, n_cols, reliabilities)):
+        median_n = frame.loc[frame[idx_col].notna(), n_col].median()
+        rel_weight = r if pd.notna(r) and r >= MIN_COMPONENT_RELIABILITY else 0.0
+        w[:, i] = np.where(frame[idx_col].notna(), rel_weight * frame[n_col] / median_n, 0.0)
+    return w
+
+
+def composite_posterior_sd(weights: np.ndarray, component_sd_z: np.ndarray) -> np.ndarray:
+    """Posterior sd of the weighted-average composite z, treating the components' errors as independent."""
+    weighted = np.nan_to_num(weights * component_sd_z)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.sqrt((weighted ** 2).sum(axis=1)) / weights.sum(axis=1)
+
+
+def composite_interval(deception_plus: np.ndarray, composite_sd_z: np.ndarray, pop_std: float):
+    """95% interval on the Deception+ scale. A composite z of 1 is `pop_std` raw units, scaled to 10 points."""
+    half = 1.96 * 10 * composite_sd_z / pop_std
+    return deception_plus - half, deception_plus + half
+
+
 def compute_composite(frame: pd.DataFrame, index_cols: list, n_cols: list, reliabilities: list):
     """Composite z weighted by BOTH (a) each component's own population-level reliability, so a
     fundamentally noisy component (weak contact) can't count as much as a reliable one (timing)
@@ -414,11 +443,7 @@ def compute_composite(frame: pd.DataFrame, index_cols: list, n_cols: list, relia
     (many more opportunities per season) don't swamp ground ball/weak contact just because they have
     bigger raw counts. Returns (raw composite z, components present per row, eligible rows)."""
     z = (frame[index_cols].values - 100) / 10
-    w = np.zeros_like(z)
-    for i, (idx_col, n_col, r) in enumerate(zip(index_cols, n_cols, reliabilities)):
-        median_n = frame.loc[frame[idx_col].notna(), n_col].median()
-        rel_weight = r if pd.notna(r) and r >= MIN_COMPONENT_RELIABILITY else 0.0
-        w[:, i] = np.where(frame[idx_col].notna(), rel_weight * frame[n_col] / median_n, 0.0)
+    w = composite_weights(frame, index_cols, n_cols, reliabilities)
     n_comp = (~np.isnan(z)).sum(axis=1)
     z_filled = np.nan_to_num(z, nan=0.0)
     with np.errstate(invalid="ignore", divide="ignore"):
@@ -458,6 +483,7 @@ def process_outcome(df: pd.DataFrame, label: str, spec: dict, is_binary: bool, b
     full_agg[f"{label}_diff_adj_shrunk"] = full_shrunk
     full_agg[f"{label}_index"] = full_index
     full_agg = full_agg.rename(columns={"n": f"{label}_n"})
+    full_agg[f"{label}_post_sd_z"] = posterior_sd_z(full_agg["sampling_var"], design_effect, true_var, league_std)
 
     # --- split half ---
     half_scores = {}
@@ -490,7 +516,7 @@ def process_outcome(df: pd.DataFrame, label: str, spec: dict, is_binary: bool, b
           f"Spearman-Brown corrected full-season r={r_full_sb:.3f}, design_effect={design_effect:.2f}", flush=True)
 
     return full_agg[["pitcher", "season", f"{label}_n", f"{label}_diff_adj", f"{label}_diff_adj_shrunk",
-                      f"{label}_index", f"{label}_ci_lo", f"{label}_ci_hi"]], {
+                      f"{label}_index", f"{label}_ci_lo", f"{label}_ci_hi", f"{label}_post_sd_z"]], {
         "label": label, "r_half": r_half, "r_full_spearman_brown": r_full_sb, "n_half_reliable": len(reliable),
         "design_effect": design_effect,
     }, half_merged
@@ -564,6 +590,14 @@ if __name__ == "__main__":
     pop = pd.Series(raw_composite_z).loc[scaling_pop]
     pop_mean, pop_std = float(pop.mean()), max(float(pop.std()), MIN_STD)
     ps["deception_plus"] = np.where(eligible, 100 + 10 * (raw_composite_z - pop_mean) / pop_std, np.nan)
+
+    # Interval: the components' posterior variances combined with the composite weights, assuming the
+    # components' errors are independent. Weights are fixed at their point values.
+    member_idx, member_n = [f"{l}_index" for l in COMPOSITE_OUTCOMES], [f"{l}_n" for l in COMPOSITE_OUTCOMES]
+    weights = composite_weights(ps, member_idx, member_n, composite_reliabilities)
+    sd_z = composite_posterior_sd(weights, ps[[f"{l}_post_sd_z" for l in COMPOSITE_OUTCOMES]].values)
+    lo, hi = composite_interval(ps["deception_plus"].values, np.where(eligible, sd_z, np.nan), pop_std)
+    ps["deception_plus_ci_lo"], ps["deception_plus_ci_hi"] = lo, hi
 
     # --- composite split-half reliability, same weights (fixed from the
     # full-season estimate, not re-derived per half) applied to each half ---

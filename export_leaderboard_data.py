@@ -2,7 +2,7 @@
 Pitcher Deception Project: export leaderboard_data.json from the canonical pitcher_season.csv
 ==============================================================================================
 build_leaderboard.py only reads this JSON. It holds every scored pitcher-season with the
-component indexes, sample sizes, intervals, the role label from export_site_stats.pitcher_roles(), and the
+component indexes, sample sizes, 95% intervals for Deception+ and every component, the role label from export_site_stats.pitcher_roles(), and the
 signed timing readout in inches (timing_bias_inches). Ground ball is scored and shown but is not
 part of Deception+. See COMPOSITE_OUTCOMES in reliability_and_ci.py.
 """
@@ -19,12 +19,12 @@ ps = ps.merge(pitcher_roles(raw, usage=ps[["pitcher", "season", "games", "games_
               on=["pitcher", "season"], how="left")
 
 cols = [
-    "player_name", "season", "qualified", "deception_plus",
+    "player_name", "season", "qualified", "deception_plus", "deception_plus_ci_lo", "deception_plus_ci_hi",
     "whiff_index", "whiff_n", "whiff_ci_lo", "whiff_ci_hi",
-    "chase_index", "chase_n",
-    "gb_index", "gb_n",
-    "weak_index", "weak_n",
-    "timing_index", "timing_n",
+    "chase_index", "chase_n", "chase_ci_lo", "chase_ci_hi",
+    "gb_index", "gb_n", "gb_ci_lo", "gb_ci_hi",
+    "weak_index", "weak_n", "weak_ci_lo", "weak_ci_hi",
+    "timing_index", "timing_n", "timing_ci_lo", "timing_ci_hi",
     "whiffmiss_index", "whiffmiss_n", "whiffmiss_ci_lo", "whiffmiss_ci_hi",
     "timing_bias_inches", "timing_bias_ci_lo", "timing_bias_ci_hi", "timingdir_n",
     "stuff_plus", "role", "med_pitches_per_app",

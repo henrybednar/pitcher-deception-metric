@@ -114,6 +114,13 @@ def ground_ball_forecast_correlation(ps: pd.DataFrame) -> float:
     return float(joined["deception_plus"].corr(joined["gb_index"]))
 
 
+def clear_of_average_counts(ps: pd.DataFrame) -> tuple[int, int]:
+    """(qualified Deception+ scores whose 95% interval excludes 100, qualified scores with an interval)."""
+    q = ps[ps["qualified"] & ps["deception_plus_ci_lo"].notna() & ps["deception_plus_ci_hi"].notna()]
+    clear = (q["deception_plus_ci_lo"] > 100) | (q["deception_plus_ci_hi"] < 100)
+    return int(clear.sum()), len(q)
+
+
 def sequencing_feature_overlap(driver: pd.DataFrame, ps: pd.DataFrame) -> dict:
     """How the two sequencing driver features relate to each other and to the whiff residual, over the
     pitcher-seasons the driver regression uses. Velocity gap averages the speed change over every
@@ -245,6 +252,7 @@ def main() -> None:
 
     stuff = stuff_plus_correlations(ps)
     sequencing = sequencing_feature_overlap(pd.read_csv("output/driver_features.csv"), ps)
+    clear = clear_of_average_counts(ps)
 
     top = qualified.sort_values("deception_plus", ascending=False).head(25)
     top2 = top.head(2)
@@ -352,6 +360,9 @@ def main() -> None:
         "DELTA_CALLEDSTRIKE": fmt_delta(float(pv.loc["calledstrike", "cv_delta_r2"])),
         "UNSCORED_PCT": f"{unscored_pitch_share() * 100:.1f}%",
         "GB_FORECAST_R": fmt_r(ground_ball_forecast_correlation(ps)),
+        "DP_HALF": f"{((qualified['deception_plus_ci_hi'] - qualified['deception_plus_ci_lo']) / 2).median():.0f}",
+        "DP_CLEAR": f"{clear[0]:,}",
+        "DP_CLEAR_PCT": f"{clear[0] / clear[1]:.0%}",
         "SEQ_FEATURES_R": fmt_r(sequencing["between"]),
         "SEQ_GAP_WHIFF_R": fmt_r(sequencing["gap_whiff"]),
         "SEQ_REPEAT_WHIFF_R": fmt_r(sequencing["repeat_whiff"]),

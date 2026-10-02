@@ -61,3 +61,16 @@ def test_unscored_pitch_share_counts_pitches_with_no_pitch_type(tmp_path):
     pd.DataFrame({"pitch_type": ["FF", "SL", None, "CH"]}).to_csv(path, index=False)
 
     assert unscored_pitch_share(str(path)) == pytest.approx(0.25)
+
+
+def test_clear_of_average_share_counts_qualified_scores_whose_interval_excludes_100():
+    from export_site_stats import clear_of_average_counts
+
+    ps = pd.DataFrame({
+        "qualified": [True, True, True, True, False],
+        "deception_plus": [120.0, 80.0, 101.0, 99.0, 150.0],
+        "deception_plus_ci_lo": [110.0, 70.0, 90.0, 90.0, 140.0],
+        "deception_plus_ci_hi": [130.0, 90.0, 112.0, 99.5, 160.0],   # row 4 stops just short of 100
+    })
+
+    assert clear_of_average_counts(ps) == (3, 4)   # the unqualified row is ignored, and the 90-112 interval spans 100

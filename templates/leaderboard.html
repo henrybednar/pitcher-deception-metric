@@ -102,6 +102,7 @@ table.lb-table tbody tr:hover { background: var(--row-hover); }
 table.lb-table td.name { font-weight: 500; }
 table.lb-table td.mono { font-family: var(--font-mono); }
 table.lb-table td.composite { font-family: var(--font-mono); font-weight: 500; font-size: 14px; }
+.unsure { color: var(--text-muted); font-size: 11px; font-weight: 400; margin-left: 4px; }
 table.lb-table tr.unqualified td { opacity: 0.55; }
 .lb-badge { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); margin-left: 4px; }
 .lb-link { color: var(--accent); text-decoration: underline; white-space: nowrap; }
@@ -149,7 +150,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
     <div>
       <p class="lb-eyebrow">2025-26 &middot; Deception+ &middot; data through {{DATA_THROUGH}}</p>
       <h1>Deception+ leaderboard</h1>
-      <p class="lb-sub">Click a column to sort. Hover an index for its sample size and 95% interval. Rows below the minimum sample for one or more components are dimmed and hidden by default. <span class="narrow-only">Tap a row for the columns that do not fit. </span><a class="lb-link" href="__DASHBOARD_URL__">&larr; Dashboard and method</a></p>
+      <p class="lb-sub">Click a column to sort. Hover an index for its sample size and 95% interval. A <span class="unsure">&#9675;</span> beside a Deception+ score means its interval includes 100, so it is not clearly different from average. Rows below the minimum sample for one or more components are dimmed and hidden by default. <span class="narrow-only">Tap a row for the columns that do not fit. </span><a class="lb-link" href="__DASHBOARD_URL__">&larr; Dashboard and method</a></p>
     </div>
   </div>
 
@@ -216,8 +217,9 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
   var root = document.querySelector('.lbroot');
   function cssVar(name) { return getComputedStyle(root).getPropertyValue(name).trim(); }
 
-  var CI_PAIRS = { whiff_index: ['whiff_ci_lo', 'whiff_ci_hi'],
-                   whiffmiss_index: ['whiffmiss_ci_lo', 'whiffmiss_ci_hi'] };
+  var CI_PAIRS = { whiff_index: ['whiff_ci_lo', 'whiff_ci_hi'], chase_index: ['chase_ci_lo', 'chase_ci_hi'],
+                   gb_index: ['gb_ci_lo', 'gb_ci_hi'], weak_index: ['weak_ci_lo', 'weak_ci_hi'],
+                   timing_index: ['timing_ci_lo', 'timing_ci_hi'], whiffmiss_index: ['whiffmiss_ci_lo', 'whiffmiss_ci_hi'] };
   var N_COLS = { whiff_index: 'whiff_n', chase_index: 'chase_n', gb_index: 'gb_n', weak_index: 'weak_n', timing_index: 'timing_n',
                  whiffmiss_index: 'whiffmiss_n' };
 
@@ -266,6 +268,14 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
       var cls = r.qualified ? '' : ' unqualified';
       var roleTitle = r.med_pitches_per_app === null ? '' : 'median ' + r.med_pitches_per_app.toFixed(0) + ' pitches per appearance';
       var roleTag = r.role ? '<span class="role-tag" title="' + roleTitle + '">' + r.role + '</span>' : '';
+      function dpCell(r) {
+        var known = r.deception_plus_ci_lo !== null && r.deception_plus_ci_hi !== null;
+        var unsure = known && r.deception_plus_ci_lo <= 100 && r.deception_plus_ci_hi >= 100;
+        var title = known ? '95% interval [' + r.deception_plus_ci_lo.toFixed(1) + ', ' + r.deception_plus_ci_hi.toFixed(1) + ']' +
+                            (unsure ? ', includes 100' : '') : '';
+        return '<td class="composite" style="background:' + cellColor(r.deception_plus) + '" title="' + title + '">' + fmt(r.deception_plus) +
+               (unsure ? '<span class="unsure">&#9675;</span>' : '') + '</td>';
+      }
       function indexCell(key, extra) {
         var nCol = N_COLS[key];
         var title = r[nCol] !== null ? 'n=' + r[nCol] : '';
@@ -282,7 +292,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
       var cells = ['<td class="mono c4">' + (i + 1) + '</td>',
                    '<td class="name">' + r.name.split(', ').reverse().join(' ') + roleTag + '</td>',
                    '<td class="mono c3">' + r.season + '</td>',
-                   '<td class="composite" style="background:' + cellColor(r.deception_plus) + '">' + fmt(r.deception_plus) + '</td>',
+                   dpCell(r),
                    indexCell('whiff_index', ''), indexCell('chase_index', ' c6'), indexCell('weak_index', ' c3'),
                    indexCell('timing_index', ' c5'), indexCell('whiffmiss_index', ' c2'), indexCell('gb_index', ' c2'),
                    '<td class="mono c1" title="' + dirTitle + '">' + fmtDir(r.timing_bias_inches) + '</td>',
