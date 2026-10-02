@@ -29,3 +29,35 @@ def test_sequencing_feature_overlap_skips_pitcher_seasons_missing_a_feature_or_t
     result = sequencing_feature_overlap(driver, ps)
 
     assert result["between"] == pytest.approx(-1.0)                      # only pitchers 1 and 2 remain
+
+
+def test_fmt_p_keeps_three_decimals_below_the_five_percent_line_so_a_gate_at_one_percent_reads_clearly():
+    from export_site_stats import fmt_p
+
+    assert fmt_p(0.0119) == "0.012"       # used to print "0.01", which read as passing a p < 0.01 gate
+    assert fmt_p(0.007) == "0.007"
+    assert fmt_p(0.16) == "0.16"
+    assert fmt_p(0.0005) == "0.0005"
+    assert fmt_p(0.00003) == "<0.0001"
+
+
+def test_ground_ball_forecast_correlation_pairs_2025_deception_with_2026_ground_ball_by_pitcher():
+    from export_site_stats import ground_ball_forecast_correlation
+
+    ps = pd.DataFrame({
+        "pitcher": [1, 2, 3, 1, 2, 3, 4],
+        "season": [2025, 2025, 2025, 2026, 2026, 2026, 2026],
+        "deception_plus": [90.0, 100.0, 110.0, np.nan, np.nan, np.nan, np.nan],
+        "gb_index": [np.nan, np.nan, np.nan, 110.0, 100.0, 90.0, 120.0],   # pitcher 4 has no 2025 row
+    })
+
+    assert ground_ball_forecast_correlation(ps) == pytest.approx(-1.0)
+
+
+def test_unscored_pitch_share_counts_pitches_with_no_pitch_type(tmp_path):
+    from export_site_stats import unscored_pitch_share
+
+    path = tmp_path / "preds.csv"
+    pd.DataFrame({"pitch_type": ["FF", "SL", None, "CH"]}).to_csv(path, index=False)
+
+    assert unscored_pitch_share(str(path)) == pytest.approx(0.25)

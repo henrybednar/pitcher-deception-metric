@@ -48,11 +48,12 @@ def fmt_delta(x: float) -> str:
 
 
 def fmt_p(p: float) -> str:
+    """Three decimals below 0.05, so a p of 0.012 next to a 0.01 gate does not read as 0.01."""
     if p < 1e-4:
         return "<0.0001"
     if p < 0.001:
         return f"{p:.4f}"
-    if p < 0.01:
+    if p < 0.05:
         return f"{p:.3f}"
     return f"{p:.2f}"
 
@@ -97,6 +98,20 @@ def stuff_plus_correlations(ps: pd.DataFrame) -> dict:
         "by_season": {s: float(g["deception_plus"].corr(g["stuff_plus"])) for s, g in q.groupby("season")},
         "members": {k: float(q[f"{k}_index"].corr(q["stuff_plus"])) for k in COMPOSITE_OUTCOMES},
     }
+
+
+def unscored_pitch_share(predictions_path: str = "output/per_pitch_predictions.csv") -> float:
+    """Share of regular-season pitches left unscored: a pitch type with no model, a pitcher-season
+    averaging under 75 mph, or missing core tracking all blank the pitch type."""
+    return float(pd.read_csv(predictions_path, usecols=["pitch_type"])["pitch_type"].isna().mean())
+
+
+def ground_ball_forecast_correlation(ps: pd.DataFrame) -> float:
+    """Correlation of a pitcher's 2025 Deception+ with their 2026 ground-ball index."""
+    a = ps[ps["season"] == 2025][["pitcher", "deception_plus"]].dropna()
+    b = ps[ps["season"] == 2026][["pitcher", "gb_index"]].dropna()
+    joined = a.merge(b, on="pitcher")
+    return float(joined["deception_plus"].corr(joined["gb_index"]))
 
 
 def sequencing_feature_overlap(driver: pd.DataFrame, ps: pd.DataFrame) -> dict:
@@ -334,6 +349,9 @@ def main() -> None:
         "STUFF_R_2026": fmt_r(stuff["by_season"][2026]),
         "STUFF_N": f"{stuff['n']:,}",
         "STUFF_R_MEMBERS": join_words([f"{QUALIFY_LABELS[k]} {fmt_r_short(r)}" for k, r in stuff["members"].items()]),
+        "DELTA_CALLEDSTRIKE": fmt_delta(float(pv.loc["calledstrike", "cv_delta_r2"])),
+        "UNSCORED_PCT": f"{unscored_pitch_share() * 100:.1f}%",
+        "GB_FORECAST_R": fmt_r(ground_ball_forecast_correlation(ps)),
         "SEQ_FEATURES_R": fmt_r(sequencing["between"]),
         "SEQ_GAP_WHIFF_R": fmt_r(sequencing["gap_whiff"]),
         "SEQ_REPEAT_WHIFF_R": fmt_r(sequencing["repeat_whiff"]),
