@@ -21,6 +21,8 @@ __HEAD__
   --good: #e34948;
   --bad: #2a78d6;
   --div-mid: #d8d6cf;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
   --font-display: "Oswald", system-ui, sans-serif;
   --font-body: "Source Sans 3", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -49,6 +51,8 @@ __HEAD__
     --good: #e66767;
     --bad: #3987e5;
     --div-mid: #383835;
+    --series-1: #3987e5;
+    --series-2: #d95926;
   }
 }
 :root[data-theme="dark"] .dxroot {
@@ -69,6 +73,8 @@ __HEAD__
   --good: #e66767;
   --bad: #3987e5;
   --div-mid: #383835;
+  --series-1: #3987e5;
+  --series-2: #d95926;
 }
 .dxroot * { box-sizing: border-box; }
 .dxroot h1, .dxroot h2, .dxroot h3 { font-family: var(--font-display); font-weight: 500; text-wrap: balance; margin: 0; color: var(--text-primary); }
@@ -122,6 +128,8 @@ __HEAD__
 .dx-row-total th, .dx-row-total td { border-top: 1px solid var(--border-strong); }
 .dx-table td.dx-pass { color: var(--good); font-family: var(--font-body); font-weight: 500; }
 .dx-table td.dx-fail { color: var(--bad); font-family: var(--font-body); font-weight: 500; }
+.dx-tableview summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); margin-bottom: 0.6rem; }
+.dx-tableview .dx-table { min-width: 560px; }
 .dx-method h3 { font-size: 15px; margin-top: 0.5rem; }
 .dx-method p, .dx-method li { font-size: 14px; color: var(--text-secondary); max-width: 78ch; }
 .dx-limits { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 6px; }
@@ -138,14 +146,14 @@ __HEAD__
 }
 </style>
 <div class="dxroot">
-<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Deception+ is a composite pitcher index built from {{N_COMPOSITE}} residual metrics: whiff, chase, weak contact, swing timing, and whiff miss distance. The page includes a scatter of Stuff+ against deception, a validation table, a driver-importance chart, and a check on pitchers with a deception reputation.</h2>
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Deception+ is a composite pitcher index built from {{N_COMPOSITE}} residual metrics: whiff, chase, weak contact, swing timing, and whiff miss distance. The page includes a scatter of Stuff+ against deception, a check on how the score tracks Stuff+, a validation table, a driver-importance chart, and a check on pitchers with a deception reputation.</h2>
 <div class="dx-wrap">
 
   <div class="dx-hero">
     <div>
       <p class="dx-eyebrow">2025-26 Statcast pitch-level model &middot; data through {{DATA_THROUGH}}</p>
-      <h1>Deception+: pitcher results beyond what the pitch predicts</h1>
-      <p class="dx-hero-sub">Deception+ scores how far a pitcher's actual whiff, chase, weak contact, swing timing, and whiff miss distance results land above or below what the pitch itself predicts. The prediction uses velocity, spin, movement, release, location, the batter, the catcher, the count, and the park. 100 is league average and 10 points is one standard deviation, the same scale as Stuff+. <a href="__LEADERBOARD_URL__" class="dx-link">Sortable leaderboard &rarr;</a></p>
+      <h1>Deception+: pitcher results beyond what the pitch's measured traits predict</h1>
+      <p class="dx-hero-sub">Deception+ scores how far a pitcher's actual whiff, chase, weak contact, swing timing, and whiff miss distance results land above or below what the pitch's measured traits predict. The prediction uses velocity, spin, movement, release, location, the batter, the catcher, the count, and the park. 100 is league average and 10 points is one standard deviation, the same scale as Stuff+. <a href="__LEADERBOARD_URL__" class="dx-link">Sortable leaderboard &rarr;</a></p>
     </div>
     <div class="dx-hero-fig">
       <div class="dx-hero-num">{{TOP1_SCORE}}</div>
@@ -158,11 +166,11 @@ __HEAD__
     <div class="dx-read-grid">
       <div class="dx-read">
         <h3>What the score is</h3>
-        <p>The gap between what happened and what a model expected from the pitch, the batter, the catcher, the count, and the park. All {{N_COMPOSITE}} gaps are combined, each weighted by how reliable it is.</p>
+        <p>The gap between what happened and what a model expected from the pitch's measured traits, the batter, the catcher, the count, and the park. All {{N_COMPOSITE}} gaps are combined, each weighted by how reliable it is.</p>
       </div>
       <div class="dx-read">
         <h3>What it does not show</h3>
-        <p>A high score means a pitcher beat the results their pitch traits predicted. It does not say why. Sequencing, tunneling, spin mirroring, tempo, and arm slot were all tested as explanations and none accounts for the gap (R&sup2; {{DRIVER_R2_RANGE}} at the season level, {{SEQ_R2_RANGE}} at the pitch level). Calling the gap deception is a hypothesis.</p>
+        <p>A high score means a pitcher beat the results their pitch's measured traits predicted. It does not say why, and it is not independent of pitch quality: it correlates {{STUFF_R}} with Stuff+ (see below). Sequencing, tunneling, spin mirroring, tempo, and arm slot were all tested as explanations and none accounts for the gap (R&sup2; {{DRIVER_R2_RANGE}} at the season level, {{SEQ_R2_RANGE}} at the pitch level). Calling the gap deception is a hypothesis.</p>
       </div>
       <div class="dx-read">
         <h3>Relievers score higher</h3>
@@ -188,7 +196,7 @@ __HEAD__
     <div class="dx-section-head">
       <div>
         <h2>Stuff+ against deception</h2>
-        <p class="dx-section-note">Each point is one pitcher-season with at least 100 swings ({{N_POINTS}} points). Highlighted points are pitchers with a reputation for an unusual delivery. Stuff+ comes from FanGraphs, was entered by hand, and appears only on this axis. The model never uses it.</p>
+        <p class="dx-section-note">Each point is one pitcher-season with at least 100 swings ({{N_POINTS}} points). Highlighted points are pitchers with a reputation for an unusual delivery. Stuff+ comes from FanGraphs and was entered by hand. The model never uses it.</p>
       </div>
       <div class="dx-toggle" id="scatterToggle">
         <button data-metric="composite" class="active">Deception+</button>
@@ -209,6 +217,41 @@ __HEAD__
         <canvas id="scatterChart" role="img" aria-label="Scatter plot of FanGraphs Stuff+ against the deception index for {{N_POINTS}} pitcher-seasons"></canvas>
       </div>
     </div>
+  </div>
+
+  <div class="dx-section">
+    <div class="dx-section-head">
+      <div>
+        <h2>Does it just track Stuff+?</h2>
+        <p class="dx-section-note">Partly. Among {{STUFF_N}} qualified pitcher-seasons with a Stuff+ figure, Deception+ correlates r={{STUFF_R}} with Stuff+ ({{STUFF_R_2025}} in 2025, {{STUFF_R_2026}} in 2026), and each member does too ({{STUFF_R_MEMBERS}}). The model controls for each pitch's own measured velocity, spin, movement, release, and location, and Stuff+ contains information beyond those measurements, so the score still tracks it.</p>
+      </div>
+      <div class="dx-toggle" id="fifthsToggle">
+        <button data-metric="whiff" class="active">Whiff</button>
+        <button data-metric="chase">Chase</button>
+        <button data-metric="weak">Weak contact</button>
+        <button data-metric="timing">Timing</button>
+        <button data-metric="whiffmiss">Whiff miss</button>
+      </div>
+    </div>
+    <div class="dx-card">
+      <div class="dx-legend">
+        <span><i style="background:var(--series-1); border-radius:2px;"></i>Fastballs (four-seam and sinker)</span>
+        <span><i style="background:var(--series-2); border-radius:2px;"></i>Other pitches</span>
+      </div>
+      <div style="position:relative; height:340px;">
+        <canvas id="fifthsChart" role="img" aria-label="Grouped bar chart of the average actual minus expected result in each fifth of pitch-type Stuff+, fastballs against other pitches"></canvas>
+      </div>
+    </div>
+    <p class="dx-section-note dx-wide">Each bar is the average actual minus expected result for pitcher-season samples of one pitch type, ranked into fifths by that pitch type's own Stuff+ (a slider is ranked against other sliders). <span id="fifthsUnitNote"></span> Sweepers are left out because the FanGraphs export has no sweeper Stuff+. For whiff, fastballs show little relationship across the fifths while off-speed and breaking pitches climb steadily. For chase, both groups climb, so fastball gaps cannot be the whole story. FanGraphs judges secondary pitches partly by their velocity and movement gaps to the pitcher's primary fastball, which this model does not see. Part of the relationship is repeatable: Stuff+ from the other season predicts the residual about as well as Stuff+'s own year-to-year persistence implies. Adding fastball gaps to the model in a test cut the off-speed and breaking whiff relationship by about a third but lowered Deception+ reliability and forecast power, so it was not adopted. The audit log has the numbers.</p>
+    <details class="dx-tableview">
+      <summary>Table view</summary>
+      <div class="dx-card dx-table-card">
+        <table class="dx-table" id="fifthsTable">
+          <thead><tr><th scope="col">Stuff+ fifth</th><th scope="col">Fastballs: mean Stuff+</th><th scope="col">Fastballs: result</th><th scope="col">Other pitches: mean Stuff+</th><th scope="col">Other pitches: result</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
   </div>
 
   <div class="dx-section">
@@ -271,6 +314,7 @@ __COMPONENT_ROWS__
       <li>Bat tracking is used for contact depth, horizontal reach and whiff miss distance. Savant's vertical alignment (over or under) is not in the pitch-level export, and bat speed, swing length, and attack angle are not scored.</li>
       <li>Each hitter's ideal contact point is estimated from their hardest-hit balls. It is not Savant's own, so timing follows Savant's on-time share closely but is not a copy (pitcher-season correlation {{TIMING_ONTIME_R}}).</li>
       <li>The residual has not been shown to be deception. It is whatever the model does not explain.</li>
+      <li>Deception+ correlates {{STUFF_R}} with Stuff+. Part of that is information Stuff+ has and the model lacks, mainly fastball gaps for off-speed and breaking pitches, and part looks like repeatable signal. The score is not independent of pitch quality.</li>
       <li>Two completed regular seasons of data (2025 and 2026), so there are no aging curves and only one year-over-year test.</li>
       <li>The noisiest member is {{LEAST_LABEL}} (reliability {{LEAST_R}}). Composite reliability is {{COMPOSITE_R}}, so check the interval before ranking two close pitchers.</li>
       <li>About 1.7% of pitches are not scored: unclassified pitch types, knuckleballs, eephus and other pitch types that share no model, every pitch from a pitcher-season averaging under 75 mph (position players), and pitches missing core tracking values.</li>
@@ -329,13 +373,15 @@ __COMPONENT_ROWS__
       <p>Whiff miss distance and horizontal alignment were tested against the same gate as every other component: split-half reliability of about 0.3, a forecast p below 0.01, and no loss of stability in the composite. Whiff miss distance joined. Horizontal alignment did not clear the forecast test and adding it lowered the composite's year-over-year correlation, so it is tested but kept out of Deception+ and off the metric views.</p>
       <h3>Duplicate feature</h3>
       <p>The driver analysis had two identical pace columns (bases empty and runners on) because the source pull never split them. One was dropped. R&sup2; did not change.</p>
+      <h3>Stuff+ relationship</h3>
+      <p>Deception+ correlates about 0.40 with Stuff+ although every model controls for the pitch's own measured traits. Four explanations were tested. Tail compression: the recalibration slope of actual on predicted is 0.998 for whiff, 1.02 for chase, 0.98 for weak contact, 1.00 for timing and 0.995 for whiff miss, so the models are not shrinking their extremes. Repertoire quality: for whiff, +10 points of a pitch type's own Stuff+ goes with +0.83 points of residual, and +0.80 with the rest of the pitcher's Stuff+ held fixed (the rest of the repertoire adds +0.10, p=0.51). Same-season leakage: Stuff+ from the other season predicts the residual at 0.68 to 0.86 of the same-season slope, close to Stuff+'s own year-to-year correlation of 0.81, so the relationship follows a stable property of the pitch. Fastball gaps: adding each pitch's velocity and movement gap to the pitcher's primary fastball raised held-out whiff AUC by 0.0017 to 0.0052 in five of eight pitch-type models and by at most 0.0009 for chase, and cut the off-speed and breaking whiff relationship from +1.56 to +1.01 points per 10 Stuff+ points. In the full pipeline it lowered the correlation with Stuff+ from 0.399 to 0.336 but also lowered split-half reliability from 0.740 to 0.700, year-over-year correlation from 0.598 to 0.563, and the forecast &Delta;R&sup2; from +0.050 to +0.038, and weak contact would fail its forecast gate (p=0.052). The signal moved into the expectation was repeatable, so the features were not adopted.</p>
       <h3>Sequencing</h3>
       <p>The season-level driver check is a weak test because it averages away pitch-to-pitch variation. A pitch-level version asks whether the preceding pitch in the same at-bat (velocity, movement, and location change, pitch-type switch, a pair-level spin-mirror score, and tunnel separation) predicts the current pitch's residual. It uses up to 300,000 pitches per outcome and splits by pitcher. R&sup2; ranged from {{SEQ_R2_RANGE}} across the outcomes. None of these features is in a model's expectation, so any sequencing effect would stay in the residual and show up here.</p>
     </details>
   </div>
 
   <div class="dx-footnote">
-    Pitch data comes from Baseball Savant (Statcast). Stuff+ figures come from FanGraphs, were entered by hand, and appear only on the scatter plot's x-axis. This project is independent and not affiliated with MLB, Baseball Savant, or FanGraphs. <a href="__LEADERBOARD_URL__" class="dx-link">Sortable leaderboard &rarr;</a>
+    Pitch data comes from Baseball Savant (Statcast). Stuff+ figures come from FanGraphs, were entered by hand, and are never used by the model. This project is independent and not affiliated with MLB, Baseball Savant, or FanGraphs. <a href="__LEADERBOARD_URL__" class="dx-link">Sortable leaderboard &rarr;</a>
   </div>
 
 </div>
@@ -346,6 +392,7 @@ __COMPONENT_ROWS__
   var POINTS = __POINTS_JSON__;
   var LORE = __LORE_JSON__;
   var DRIVERS = __DRIVERS_JSON__;
+  var STUFFPLUS = __STUFFPLUS_JSON__;
 
   var root = document.currentScript.previousElementSibling;
   function cssVar(name) {
@@ -451,6 +498,100 @@ __COMPONENT_ROWS__
     this.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active');
     setDriverMetric(btn.dataset.metric);
+  });
+
+  var FIFTH_LABELS = ['Lowest', '2nd', '3rd', '4th', 'Highest'];
+  var UNIT_WORDS = { pp: 'percentage points', 'in': 'inches', log: 'log units' };
+  var UNIT_DIGITS = { pp: 1, 'in': 2, log: 3 };
+  var fifthsMetric = 'whiff';
+
+  function signed(v, digits) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(digits); }
+
+  var topFifthLabels = {
+    id: 'topFifthLabels',
+    afterDatasetsDraw: function(chart) {
+      var ctx = chart.ctx, digits = UNIT_DIGITS[STUFFPLUS[fifthsMetric].unit];
+      ctx.save();
+      ctx.font = '600 11px ' + cssVar('--font-body');
+      ctx.fillStyle = cssVar('--text-secondary');
+      ctx.strokeStyle = cssVar('--surface');
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      ctx.textAlign = 'center';
+      chart.data.datasets.forEach(function(ds, i) {
+        var last = ds.data.length - 1, bar = chart.getDatasetMeta(i).data[last], v = ds.data[last];
+        if (!bar || v === null || v === undefined) return;
+        var text = signed(v, digits), y = v >= 0 ? bar.y - 6 : bar.y + 15;
+        ctx.strokeText(text, bar.x, y);
+        ctx.fillText(text, bar.x, y);
+      });
+      ctx.restore();
+    }
+  };
+
+  var fifthsChart = new Chart(document.getElementById('fifthsChart'), {
+    type: 'bar',
+    data: { labels: FIFTH_LABELS, datasets: [
+      { label: 'Fastballs', data: [], backgroundColor: cssVar('--series-1'), borderRadius: 4, maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.9 },
+      { label: 'Other pitches', data: [], backgroundColor: cssVar('--series-2'), borderRadius: 4, maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.9 }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 20, bottom: 4, right: 8 } },
+      scales: {
+        x: { title: { display: true, text: 'Stuff+ fifth within pitch type', color: cssVar('--text-secondary') },
+             ticks: { color: cssVar('--text-muted') }, grid: { display: false } },
+        y: { title: { display: true, text: '', color: cssVar('--text-secondary') },
+             ticks: { color: cssVar('--text-muted') },
+             grid: { color: function(c) { return c.tick.value === 0 ? cssVar('--border-strong') : cssVar('--border'); } } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          title: function(items) { return 'Stuff+ fifth: ' + FIFTH_LABELS[items[0].dataIndex].toLowerCase(); },
+          label: function(c) {
+            var o = STUFFPLUS[fifthsMetric], r = o[c.datasetIndex === 0 ? 'fastball' : 'nonfastball'][c.dataIndex];
+            var d = UNIT_DIGITS[o.unit] + 1;
+            return c.dataset.label + ': ' + signed(r.resid, d) + ' (se ' + r.se.toFixed(d) + ', mean Stuff+ ' + r.mean_stuff.toFixed(0) + ', ' + r.cells + ' samples)';
+          }
+        }}
+      }
+    },
+    plugins: [topFifthLabels]
+  });
+
+  var fifthsUnitNote = document.getElementById('fifthsUnitNote');
+  var fifthsBody = document.querySelector('#fifthsTable tbody');
+  function setFifthsMetric(metric) {
+    fifthsMetric = metric;
+    var o = STUFFPLUS[metric], digits = UNIT_DIGITS[o.unit];
+    fifthsChart.data.datasets[0].data = o.fastball.map(function(r) { return r.resid; });
+    fifthsChart.data.datasets[1].data = o.nonfastball.map(function(r) { return r.resid; });
+    fifthsChart.options.scales.y.title.text = METRIC_LABEL[metric] + ': actual minus expected (' + UNIT_WORDS[o.unit] + ')';
+    fifthsChart.update();
+    fifthsUnitNote.textContent = 'The unit is ' + UNIT_WORDS[o.unit] + '.';
+    fifthsBody.textContent = '';
+    FIFTH_LABELS.forEach(function(label, i) {
+      var f = o.fastball[i], n = o.nonfastball[i], tr = document.createElement('tr');
+      var cells = [label, f.mean_stuff.toFixed(0), signed(f.resid, digits + 1) + ' (se ' + f.se.toFixed(digits + 1) + ')',
+                   n.mean_stuff.toFixed(0), signed(n.resid, digits + 1) + ' (se ' + n.se.toFixed(digits + 1) + ')'];
+      cells.forEach(function(text, j) {
+        var cell = document.createElement(j === 0 ? 'th' : 'td');
+        if (j === 0) cell.scope = 'row';
+        cell.textContent = text;
+        tr.appendChild(cell);
+      });
+      fifthsBody.appendChild(tr);
+    });
+  }
+  setFifthsMetric('whiff');
+
+  document.getElementById('fifthsToggle').addEventListener('click', function(e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    this.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    setFifthsMetric(btn.dataset.metric);
   });
 
   function ordinal(n) {

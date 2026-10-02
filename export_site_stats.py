@@ -86,6 +86,19 @@ def timing_vs_savant(ps: pd.DataFrame) -> float:
     return float(joined["timing_index"].corr(joined["on_time_percent"]))
 
 
+def stuff_plus_correlations(ps: pd.DataFrame) -> dict:
+    """Correlation of Deception+ and each composite member's index with FanGraphs Stuff+, over qualified
+    pitcher-seasons that have a Stuff+ figure: overall, by season, and per member. Stuff+ is only read
+    here, never used in scoring."""
+    q = ps[ps["qualified"] & ps["stuff_plus"].notna()]
+    return {
+        "n": len(q),
+        "composite": float(q["deception_plus"].corr(q["stuff_plus"])),
+        "by_season": {s: float(g["deception_plus"].corr(g["stuff_plus"])) for s, g in q.groupby("season")},
+        "members": {k: float(q[f"{k}_index"].corr(q["stuff_plus"])) for k in COMPOSITE_OUTCOMES},
+    }
+
+
 def component_yoy(ps: pd.DataFrame, key: str) -> float:
     """Correlation of a component's index across seasons, both seasons held to the same qualifying
     minimum. Used to halve the 2026 threshold from when 2026 was a partial season; both seasons are
@@ -180,6 +193,8 @@ def main() -> None:
     yoy_by_component = {k: component_yoy(ps, k) for k, _ in COMPONENTS}
     design_effects = [float(rr.loc[k, "design_effect"]) for k, _ in COMPONENTS]
     label_of = dict(COMPONENTS)
+
+    stuff = stuff_plus_correlations(ps)
 
     top = qualified.sort_values("deception_plus", ascending=False).head(25)
     top2 = top.head(2)
@@ -277,6 +292,11 @@ def main() -> None:
         "REL_CHASE": fmt_r(rel["chase"]),
         "DRIVER_R2_RANGE": f"{min(driver_r2):.2f} to {max(driver_r2):.2f}",
         "SEQ_R2_RANGE": f"{min(seq_r2):.4f} to {max(seq_r2):.4f}",
+        "STUFF_R": fmt_r(stuff["composite"]),
+        "STUFF_R_2025": fmt_r(stuff["by_season"][2025]),
+        "STUFF_R_2026": fmt_r(stuff["by_season"][2026]),
+        "STUFF_N": f"{stuff['n']:,}",
+        "STUFF_R_MEMBERS": join_words([f"{QUALIFY_LABELS[k]} {fmt_r_short(r)}" for k, r in stuff["members"].items()]),
     }
 
     out = {"text": text, "components": components}

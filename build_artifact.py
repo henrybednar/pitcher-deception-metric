@@ -4,7 +4,7 @@ Build the Deception+ dashboard page from templates/dashboard.html.
   python build_artifact.py             standalone file with relative links
   python build_artifact.py --artifact  fragment for the Claude artifact host
 
-Reads artifact_data.json, driver_analysis.json and site_stats.json.
+Reads artifact_data.json, driver_analysis.json, stuffplus_relationship.json and site_stats.json.
 """
 
 import argparse
@@ -20,8 +20,8 @@ from site_common import (
 
 TITLE = "Deception+"
 DESCRIPTION = (
-    "Deception+ scores how far a pitcher's whiff, chase, ground ball, weak contact, swing timing, "
-    "and called strike rates land above what the pitch itself predicts. Statcast 2025-26."
+    "Deception+ scores how far a pitcher's whiff, chase, weak contact, swing timing, and whiff miss "
+    "distance results land above what the pitch's measured traits predict. Statcast 2025-26."
 )
 
 
@@ -39,6 +39,8 @@ def main() -> None:
         artifact_data = json.load(f)
     with open("output/driver_analysis.json", encoding="utf-8") as f:
         driver_data = json.load(f)
+    with open("output/stuffplus_relationship.json", encoding="utf-8") as f:
+        stuff_data = json.load(f)
     stats = load_stats()
 
     page = render_page(
@@ -51,6 +53,7 @@ def main() -> None:
             "__POINTS_JSON__": compact_json(artifact_data["points"]),
             "__LORE_JSON__": compact_json(artifact_data["lore"]),
             "__DRIVERS_JSON__": compact_json(driver_data),
+            "__STUFFPLUS_JSON__": compact_json(stuff_data["outcomes"]),
             "__COMPONENT_ROWS__": component_table_rows(stats["components"]),
             "__LEADERBOARD_URL__": page_links(args.artifact)["leaderboard"],
         },

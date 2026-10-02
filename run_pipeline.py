@@ -75,6 +75,8 @@ STEPS = [
          "does a 2025 score predict the 2026 outcome rate?"),
     Step("sequencing_driver_analysis", ("sequencing_driver_analysis.py",), ("output/sequencing_driver_report.json",),
          "does the previous pitch explain the residual? (pitch level)"),
+    Step("stuffplus_relationship", ("stuffplus_relationship.py",), ("output/stuffplus_relationship.json",),
+         "average result by Stuff+ fifth, fastballs against other pitches"),
     Step("export_data", ("export_artifact_data.py", "export_site_stats.py", "export_leaderboard_data.py"),
          ("output/artifact_data.json", "output/site_stats.json", "output/leaderboard_data.json"),
          "JSON and stats consumed by the pages"),
