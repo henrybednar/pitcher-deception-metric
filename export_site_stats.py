@@ -99,6 +99,20 @@ def stuff_plus_correlations(ps: pd.DataFrame) -> dict:
     }
 
 
+def sequencing_feature_overlap(driver: pd.DataFrame, ps: pd.DataFrame) -> dict:
+    """How the two sequencing driver features relate to each other and to the whiff residual, over the
+    pitcher-seasons the driver regression uses. Velocity gap averages the speed change over every
+    consecutive pitch pair, repeats included, so it overlaps with repeat rate by construction."""
+    cols = ["avg_velocity_gap_from_prev", "repeat_pct"]
+    joined = driver.merge(ps[["pitcher", "season", "whiff_diff_adj_shrunk"]], on=["pitcher", "season"])
+    joined = joined.dropna(subset=cols + ["whiff_diff_adj_shrunk"])
+    return {
+        "between": float(joined[cols[0]].corr(joined[cols[1]])),
+        "gap_whiff": float(joined[cols[0]].corr(joined["whiff_diff_adj_shrunk"])),
+        "repeat_whiff": float(joined[cols[1]].corr(joined["whiff_diff_adj_shrunk"])),
+    }
+
+
 def validation_text(validation: dict) -> dict:
     """Page-text figures from model_validation.json: how far each model's fit ranges across pitch types,
     and the calibration slopes."""
@@ -215,6 +229,7 @@ def main() -> None:
     label_of = dict(COMPONENTS)
 
     stuff = stuff_plus_correlations(ps)
+    sequencing = sequencing_feature_overlap(pd.read_csv("output/driver_features.csv"), ps)
 
     top = qualified.sort_values("deception_plus", ascending=False).head(25)
     top2 = top.head(2)
@@ -319,6 +334,9 @@ def main() -> None:
         "STUFF_R_2026": fmt_r(stuff["by_season"][2026]),
         "STUFF_N": f"{stuff['n']:,}",
         "STUFF_R_MEMBERS": join_words([f"{QUALIFY_LABELS[k]} {fmt_r_short(r)}" for k, r in stuff["members"].items()]),
+        "SEQ_FEATURES_R": fmt_r(sequencing["between"]),
+        "SEQ_GAP_WHIFF_R": fmt_r(sequencing["gap_whiff"]),
+        "SEQ_REPEAT_WHIFF_R": fmt_r(sequencing["repeat_whiff"]),
         **validation_text(validation),
     }
 
