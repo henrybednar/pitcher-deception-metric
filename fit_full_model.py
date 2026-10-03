@@ -42,6 +42,12 @@ from physics_features import PHYSICS_FEATURES
 from tendencies import build_totals, tendency_for_rows
 
 MIN_N_FOR_MODEL = 5000
+# A pitcher's expectation depends on which other pitchers share their cross-validation fold, and with one
+# fixed assignment that dependence shows up as noise in the score: two random assignments gave component
+# indexes that differed by an SD of 2.5 to 3.0 index points (corr 0.96 to 0.97, largest gaps 12 to 32), so
+# each run carries about 2 points of its own. The scored outcomes average the out-of-fold predictions of
+# three random grouped splits, which cuts that by about 1/sqrt(3). Every prediction stays out of fold.
+FOLD_SEEDS = (0, 1, 2)
 STUFF_FEATURES = [
     "release_speed", "release_spin_rate", "ivb_in", "arm_side_break_in",
     "vaa", "haa", "release_extension", "effective_speed", "arm_angle",
@@ -116,16 +122,28 @@ def make_model(kind: str, feature_cols: list[str]):
 
 
 def fit_oof(sub: pd.DataFrame, y: np.ndarray, groups: np.ndarray, feature_cols: list[str], kind: str,
-            totals: dict[str, pd.DataFrame] | None = None, n_splits: int = 5) -> np.ndarray:
+            totals: dict[str, pd.DataFrame] | None = None, n_splits: int = 5,
+            fold_seeds: tuple[int, ...] | None = None) -> np.ndarray:
     """Out-of-fold predictions grouped by pitcher. With totals, the batter and catcher tendencies
-    are rebuilt inside every fold."""
+    are rebuilt inside every fold.
+
+    fold_seeds=None uses one deterministic grouped split. A tuple of seeds fits one random grouped split per
+    seed and averages the predictions, each of which is out of fold on its own, so the average is too."""
+    splitters = ([GroupKFold(n_splits=n_splits)] if fold_seeds is None
+                 else [GroupKFold(n_splits=n_splits, shuffle=True, random_state=seed) for seed in fold_seeds])
+    return np.mean([fit_oof_once(sub, y, groups, feature_cols, kind, totals, splitter) for splitter in splitters], axis=0)
+
+
+def fit_oof_once(sub: pd.DataFrame, y: np.ndarray, groups: np.ndarray, feature_cols: list[str], kind: str,
+                 totals: dict[str, pd.DataFrame] | None, splitter: GroupKFold) -> np.ndarray:
+    """One pass of out-of-fold predictions over the splitter's folds."""
     oof = np.full(len(sub), np.nan)
     # A fixed category set for season, decided once from the whole subset rather than per fold: a
     # fold's train and test splits must agree on which code means which year, and casting on `sub`
     # itself (instead of this copy) would risk changing how groupby("season") elsewhere in the
     # pipeline behaves on the shared, uncopied dataframe.
     season_dtype = pd.CategoricalDtype(sorted(sub["season"].unique())) if "season" in feature_cols else None
-    for train_idx, test_idx in GroupKFold(n_splits=n_splits).split(sub, y, groups=groups):
+    for train_idx, test_idx in splitter.split(sub, y, groups=groups):
         train_pitchers = np.unique(groups[train_idx])
         train_rows, test_rows = sub.iloc[train_idx], sub.iloc[test_idx]
         X_train, X_test = train_rows[feature_cols].copy(), test_rows[feature_cols].copy()
@@ -144,7 +162,7 @@ def fit_oof(sub: pd.DataFrame, y: np.ndarray, groups: np.ndarray, feature_cols: 
 
 
 def fit_tier(df: pd.DataFrame, out_col: str, target_col: str, subset_mask: pd.Series, kind: str,
-             feature_cols: list[str], with_tendencies: bool = True) -> None:
+             feature_cols: list[str], with_tendencies: bool = True, fold_seeds: tuple[int, ...] | None = None) -> None:
     """Writes out_col for every scored pitch type. Rare types join POOLED_WITH's model, or else share an OTHER model."""
     df[out_col] = np.nan
     outcome_rows = subset_mask & df["pitch_type"].notna()
@@ -172,17 +190,17 @@ def fit_tier(df: pd.DataFrame, out_col: str, target_col: str, subset_mask: pd.Se
             sub = sub.assign(pitch_type=sub["pitch_type"].astype("category"))
             cols = feature_cols + ["pitch_type"]
         y = sub[target_col].to_numpy(float)
-        pred = fit_oof(sub, y, sub["pitcher"].to_numpy(), cols, kind, totals)
+        pred = fit_oof(sub, y, sub["pitcher"].to_numpy(), cols, kind, totals, fold_seeds=fold_seeds)
         df.loc[mask, out_col] = pred
         score = f"AUC={roc_auc_score(y, pred):.3f}" if kind == "classify" else f"R2={r2_score(y, pred):.3f}"
         print(f"  {out_col}/{name}: n={mask.sum():,}, {score}", flush=True)
 
 
 def fit_full_outcome(df: pd.DataFrame, label: str, target_col: str, subset_mask: pd.Series, kind: str,
-                     extra_features: list[str] | None = None) -> None:
+                     extra_features: list[str] | None = None, fold_seeds: tuple[int, ...] | None = None) -> None:
     """Writes {label}_expected_full."""
     feature_cols = STUFF_FEATURES + LOCATION_FEATURES + (extra_features or []) + CONTEXT_FEATURES
-    fit_tier(df, f"{label}_expected_full", target_col, subset_mask, kind, feature_cols)
+    fit_tier(df, f"{label}_expected_full", target_col, subset_mask, kind, feature_cols, fold_seeds=fold_seeds)
 
 
 def recalibrate_oof_isotonic(sub: pd.DataFrame, target_col: str, expected_col: str, n_splits: int = 5) -> np.ndarray:
@@ -243,7 +261,7 @@ if __name__ == "__main__":
     new_cols = []
     for label, spec in OUTCOMES.items():
         print(f"\n=== {label.upper()} (full tier: stuff+location+opponent+catcher+context) ===", flush=True)
-        fit_full_outcome(df, label, spec["target"], df[spec["subset"]], spec["kind"])
+        fit_full_outcome(df, label, spec["target"], df[spec["subset"]], spec["kind"], fold_seeds=FOLD_SEEDS)
         recalibrate_scored_by_month(df, label, spec["target"], binary=True)
         new_cols.append(f"{label}_expected_full")
     save_predictions(existing, df, new_cols)

@@ -41,7 +41,7 @@ import pandas as pd
 from sklearn.metrics import r2_score
 
 from build_pitch_table import PITCH_LEVEL_FILE, load_pitch_data, read_aligned_predictions, save_predictions
-from fit_full_model import fit_full_outcome, prepare_context, recalibrate_oof_isotonic, recalibrate_scored_by_month
+from fit_full_model import FOLD_SEEDS, fit_full_outcome, prepare_context, recalibrate_oof_isotonic, recalibrate_scored_by_month
 
 EXTRA_FEATURES = ["plate_x_inside"]
 OUTCOMES = {
@@ -72,7 +72,8 @@ if __name__ == "__main__":
     new_cols = ["timing_dev", "timing_dev_abs", "align_dev", "align_dev_abs", "whiffmiss_log"]
     for label, spec in OUTCOMES.items():
         print(f"\n=== {label.upper()} (full tier: stuff+location+batter+catcher+context) ===", flush=True)
-        fit_full_outcome(df, label, spec["target"], df[spec["subset"]], "regress", extra_features=spec["full_extra"])
+        fit_full_outcome(df, label, spec["target"], df[spec["subset"]], "regress", extra_features=spec["full_extra"],
+                         fold_seeds=FOLD_SEEDS)
         new_cols.append(f"{label}_expected_full")
 
     # timing_mask alone still includes pitch types fit_full_outcome couldn't model (too rare, no
