@@ -67,8 +67,11 @@ FEATURE_LABELS = {
 
 
 def load_columns(path: str, cols: list[str]) -> pd.DataFrame:
-    chunks = pd.read_csv(path, usecols=cols, chunksize=CHUNKSIZE, low_memory=False)
-    return pd.concat(chunks, ignore_index=True)
+    """The requested columns for regular-season pitches, like the scores. Spring training and the postseason
+    are 3.9% and 1.9% of 2025 pitches and would otherwise leak into the season-level features."""
+    chunks = pd.read_csv(path, usecols=list(cols) + ["game_type"], chunksize=CHUNKSIZE, low_memory=False)
+    frame = pd.concat(chunks, ignore_index=True)
+    return frame[frame["game_type"] == "R"].drop(columns="game_type").reset_index(drop=True)
 
 
 def weighted_std(values: np.ndarray, weights: np.ndarray) -> float:

@@ -80,3 +80,54 @@ def test_fangraphs_team_labels_map_to_statcast_abbreviations():
     assert merge_data.statcast_team("SFG") == "SF"
     assert merge_data.statcast_team("CHW") == "CWS"
     assert merge_data.statcast_team("HOU") == "HOU"
+
+
+def pitch_file(tmp_path, rows):
+    path = tmp_path / "pitches.csv"
+    pd.DataFrame(rows).to_csv(path, index=False)
+    return str(path)
+
+
+def test_sequencing_features_count_only_regular_season_pitches(tmp_path):
+    base = {"game_pk": 1, "pitcher": 10, "at_bat_number": 1, "season": 2025}
+    path = pitch_file(tmp_path, [
+        {**base, "game_type": "R", "pitch_number": 1, "pitch_type": "FF", "release_speed": 95.0},
+        {**base, "game_type": "R", "pitch_number": 2, "pitch_type": "SL", "release_speed": 85.0},
+        # a spring-training at-bat with a repeat and a tiny gap must not enter the averages
+        {**base, "game_pk": 2, "game_type": "S", "pitch_number": 1, "pitch_type": "FF", "release_speed": 95.0},
+        {**base, "game_pk": 2, "game_type": "S", "pitch_number": 2, "pitch_type": "FF", "release_speed": 95.0},
+    ])
+
+    out = merge_data.compute_sequencing_features(path)
+
+    row = out[out["pitch_type"] == "SL"].iloc[0]
+    assert row["avg_velocity_gap_from_prev"] == pytest.approx(10.0)
+    assert row["repeat_pct"] == 0.0
+    assert out[out["pitch_type"] == "FF"].empty                      # the only FF with a previous pitch was in spring training
+
+
+def test_pitch_characteristics_average_only_regular_season_pitches(tmp_path):
+    rows = []
+    for game_type, speed in (("R", 90.0), ("R", 92.0), ("S", 70.0)):
+        rows.append({"pitcher": 10, "pitch_type": "FF", "season": 2025, "game_type": game_type, "release_speed": speed,
+                     **{c: 1.0 for c in merge_data.CHAR_COLS if c != "release_speed"}})
+    path = pitch_file(tmp_path, rows)
+
+    out = merge_data.compute_pitch_characteristics(path)
+
+    assert out["release_speed_mean"].iloc[0] == pytest.approx(91.0)
+
+
+def test_names_normalize_to_lowercase_ascii_without_punctuation():
+    assert merge_data.normalize_name("José  Berríos") == "jose berrios"
+    assert merge_data.normalize_name("J.T. Brubaker") == "jt brubaker"
+    assert merge_data.normalize_name("Jean-Carlos O'Neil") == "jean carlos oneil"
+
+
+def test_pitch_mix_entropy_is_zero_for_one_pitch_and_one_bit_for_an_even_split():
+    rates = pd.DataFrame({"pitcher": [1, 2, 2], "season": 2025, "pitches": [100, 50, 50]})
+
+    out = merge_data.compute_pitch_mix_entropy(rates).set_index("pitcher")["pitch_mix_entropy"]
+
+    assert out[1] == pytest.approx(0.0)
+    assert out[2] == pytest.approx(1.0)

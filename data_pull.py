@@ -206,7 +206,7 @@ if __name__ == "__main__":
         all_pitches.append(pitches)
 
         print("computing outcome rates...")
-        rates = compute_outcome_rates(pitches)
+        rates = compute_outcome_rates(pitches[pitches["game_type"] == "R"])   # regular season only, like the scores
         rates["season"] = year
         all_rates.append(rates)
 

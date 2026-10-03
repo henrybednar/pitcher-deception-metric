@@ -62,3 +62,42 @@ def test_clustered_p_values_match_the_single_row_fit_when_pitchers_are_not_repea
     naive = fdr_adjusted_p_values(X, y)
 
     assert clustered.to_numpy() == pytest.approx(naive.to_numpy(), abs=0.05)   # one row per cluster is the robust fit
+
+
+def test_load_columns_keeps_regular_season_rows_and_drops_the_game_type_column(tmp_path):
+    from driver_features import load_columns
+
+    path = tmp_path / "pitches.csv"
+    pd.DataFrame({"pitcher": [1, 2, 3], "game_type": ["R", "S", "L"], "spin_axis": [200.0, 190.0, 180.0]}).to_csv(path, index=False)
+
+    out = load_columns(str(path), ["pitcher", "spin_axis"])
+
+    assert out["pitcher"].tolist() == [1]
+    assert "game_type" not in out.columns
+
+
+def test_weighted_std_weights_each_pitch_type_by_its_pitches():
+    from driver_features import weighted_std
+
+    assert weighted_std(np.array([10.0, 20.0]), np.array([1.0, 1.0])) == pytest.approx(5.0)
+    assert weighted_std(np.array([10.0, 20.0]), np.array([9.0, 1.0])) == pytest.approx(3.0)
+    assert np.isnan(weighted_std(np.array([10.0]), np.array([5.0])))
+
+
+def test_cross_pitch_features_skip_pitchers_with_one_pitch_type_and_thin_pitch_types():
+    from driver_features import build_cross_pitch_features
+
+    pitch_types = pd.DataFrame({
+        "pitcher": [1, 1, 2, 3, 3], "season": 2025, "pitches": [100, 100, 300, 200, 5],
+        "arm_angle_mean": [40.0, 50.0, 45.0, 30.0, 60.0], "release_pos_x_mean": [1.0, 1.0, 1.0, 1.0, 5.0],
+        "release_pos_z_mean": [5.0, 5.2, 5.0, 5.0, 4.0], "vaa_mean": [-4.0, -5.0, -4.5, -4.0, -8.0],
+        "avg_velocity_gap_from_prev": [5.0, 7.0, 6.0, 4.0, 9.0], "repeat_pct": [0.4, 0.2, 0.5, 0.3, 0.1],
+        "release_extension_mean": [6.0, 6.2, 6.1, 6.0, 5.0],
+    })
+
+    out = build_cross_pitch_features(pitch_types).set_index("pitcher")
+
+    assert list(out.index) == [1]                               # pitcher 2 has one type, pitcher 3's second type has under 20 pitches
+    assert out.loc[1, "n_pitch_types"] == 2
+    assert out.loc[1, "arm_angle_cross_pitch_std"] == pytest.approx(5.0)
+    assert out.loc[1, "avg_velocity_gap_from_prev"] == pytest.approx(6.0)

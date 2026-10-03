@@ -17,6 +17,10 @@ Applied once, inside load_pitch_data(), before any feature or target is built.
    those pitches are left out of scoring instead of guessed at. Arm angle is exempt: it is missing
    on 2% of pitches, which is enough for the model to learn from.
 
+4. Hit-by-pitch, bunt attempts and pitchouts also get pitch_type NaN (blank_noncompetitive_pitches). A hit
+   batter is not a chase decision, so it counted as a pitch the hitter chose not to swing at, and a bunt
+   attempt is not a swing in the sense whiff, chase and timing mean. About 0.5% of pitches.
+
 Rows whose pitch_type is NaN keep their other columns, so features that describe the whole
 data set (sequencing partners, tendencies) can still see them.
 """
@@ -47,6 +51,7 @@ REQUIRED_TRACKING = [
 PITCH_TYPE_ALIASES = {"SV": "ST", "FO": "FS"}
 SCORED_PITCH_TYPES = frozenset({"FF", "SI", "FC", "SL", "ST", "CU", "KC", "CH", "FS"})
 MIN_PITCHER_MEAN_SPEED = 75.0
+NONCOMPETITIVE_DESCRIPTIONS = frozenset({"hit_by_pitch", "foul_bunt", "missed_bunt", "bunt_foul_tip", "pitchout", "swinging_pitchout"})
 
 
 def replace_nonfinite(df: pd.DataFrame) -> pd.DataFrame:
@@ -78,6 +83,12 @@ def blank_unscored_pitch_types(df: pd.DataFrame) -> pd.DataFrame:
     slow = df.groupby(["pitcher", "season"])["release_speed"].transform("mean") < MIN_PITCHER_MEAN_SPEED
     unscored = ~df["pitch_type"].isin(SCORED_PITCH_TYPES) | slow
     df["pitch_type"] = df["pitch_type"].mask(unscored)
+    return df
+
+
+def blank_noncompetitive_pitches(df: pd.DataFrame) -> pd.DataFrame:
+    """pitch_type -> NaN for hit-by-pitch, bunt attempts and pitchouts. Needs `description`."""
+    df["pitch_type"] = df["pitch_type"].mask(df["description"].isin(NONCOMPETITIVE_DESCRIPTIONS))
     return df
 
 

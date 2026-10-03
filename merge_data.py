@@ -42,18 +42,19 @@ CHAR_COLS = [
     "release_extension", "release_pos_x", "release_pos_z", "arm_angle",
     "effective_speed",
 ]
-AGG_USECOLS = ["pitcher", "pitch_type", "season"] + CHAR_COLS
+AGG_USECOLS = ["pitcher", "pitch_type", "season", "game_type"] + CHAR_COLS
 CHUNKSIZE = 500_000
 
 
 def compute_pitch_characteristics(path: str) -> pd.DataFrame:
     """Chunked mean/std aggregation — avoids loading the full multi-hundred-MB
-    pitch-level file (100+ columns) into memory at once."""
+    pitch-level file (100+ columns) into memory at once. Regular-season pitches only, like the scores."""
     sums = {}
     sumsqs = {}
     counts = {}
 
     for chunk in pd.read_csv(path, usecols=AGG_USECOLS, chunksize=CHUNKSIZE, low_memory=False):
+        chunk = chunk[chunk["game_type"] == "R"]
         grouped = chunk.groupby(["pitcher", "pitch_type", "season"])
         chunk_sum = grouped[CHAR_COLS].sum(min_count=1)
         chunk_sumsq = grouped[CHAR_COLS].apply(lambda g: (g ** 2).sum(min_count=1))
@@ -90,13 +91,13 @@ def compute_pitch_characteristics(path: str) -> pd.DataFrame:
 #    in the same at-bat (classic tunneling/deception signal)
 # ---------------------------------------------------------------------------
 SEQ_USECOLS = ["game_pk", "pitcher", "at_bat_number", "pitch_number", "pitch_type",
-               "release_speed", "season"]
+               "release_speed", "season", "game_type"]
 
 
 def compute_sequencing_features(path: str) -> pd.DataFrame:
     seq_chunks = []
     for chunk in pd.read_csv(path, usecols=SEQ_USECOLS, chunksize=CHUNKSIZE, low_memory=False):
-        seq_chunks.append(chunk)
+        seq_chunks.append(chunk[chunk["game_type"] == "R"])
     df = pd.concat(seq_chunks, ignore_index=True)
     df = df.sort_values(["pitcher", "game_pk", "at_bat_number", "pitch_number"])
 

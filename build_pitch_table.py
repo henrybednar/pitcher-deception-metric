@@ -28,8 +28,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from pitch_hygiene import (alias_pitch_types, apply_domain_gates, blank_incomplete_tracking, blank_unscored_pitch_types,
-                           replace_nonfinite)
+from pitch_hygiene import (alias_pitch_types, apply_domain_gates, blank_incomplete_tracking, blank_noncompetitive_pitches,
+                           blank_unscored_pitch_types, replace_nonfinite)
 from physics_features import add_physics_features
 from pitch_pairs import TRAJECTORY_COLS, add_pair_features
 from swing_alignment import add_swing_alignment
@@ -113,6 +113,7 @@ def load_pitch_data(path: str) -> pd.DataFrame:
     df = add_pair_features(df)
     df = add_physics_features(df)
     df = blank_unscored_pitch_types(df)
+    df = blank_noncompetitive_pitches(df)
     df = blank_incomplete_tracking(df)
 
     # Deterministic 50/50 split by game, independent of chronology, isolates

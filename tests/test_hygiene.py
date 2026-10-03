@@ -78,3 +78,15 @@ def test_pair_features_do_not_cross_at_bats():
     out = add_pair_features(frame).sort_values("pitch_number")
 
     assert out["velo_diff_prev"].iloc[2] != out["velo_diff_prev"].iloc[2]  # NaN: new at-bat, no partner
+
+
+def test_hit_by_pitches_bunt_attempts_and_pitchouts_are_left_out_of_scoring():
+    df = pd.DataFrame({
+        "description": ["ball", "hit_by_pitch", "foul_bunt", "missed_bunt", "bunt_foul_tip", "pitchout", "swinging_pitchout", "swinging_strike"],
+        "pitch_type": ["FF"] * 8,
+    })
+
+    out = ph.blank_noncompetitive_pitches(df)
+
+    assert out["pitch_type"].isna().tolist() == [False, True, True, True, True, True, True, False]
+    assert out["description"].tolist() == df["description"].tolist()           # the other columns stay for features that see the whole sequence
