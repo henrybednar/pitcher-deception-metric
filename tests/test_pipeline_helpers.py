@@ -412,3 +412,26 @@ def test_month_recalibration_of_a_continuous_outcome_shifts_without_clipping():
 
     assert adjusted.max() > 1.0                                  # a unit-interval clip would have flattened these
     assert (df["actual"] - adjusted).groupby(df["year_month"]).mean().abs().max() < 1e-9
+
+
+def test_fit_oof_with_several_fold_seeds_averages_the_single_seed_predictions(small_pitch_frame):
+    df = small_pitch_frame.copy()
+    sub = df[df["pitch_type"] == "FF"]
+    y = sub["target"].to_numpy(float)
+    groups = sub["pitcher"].to_numpy()
+    cols = STUFF_FEATURES + LOCATION_FEATURES
+
+    first = fit_full_model.fit_oof(sub, y, groups, cols, "regress", fold_seeds=(0,))
+    second = fit_full_model.fit_oof(sub, y, groups, cols, "regress", fold_seeds=(1,))
+    both = fit_full_model.fit_oof(sub, y, groups, cols, "regress", fold_seeds=(0, 1))
+
+    assert both == pytest.approx((first + second) / 2)
+    assert not np.isnan(both).any()
+    assert not np.allclose(first, second)                      # different seeds really give different pitcher-to-fold assignments
+
+
+def test_fit_oof_without_fold_seeds_keeps_the_deterministic_grouped_split(small_pitch_frame):
+    sub = small_pitch_frame[small_pitch_frame["pitch_type"] == "FF"]
+    y, groups, cols = sub["target"].to_numpy(float), sub["pitcher"].to_numpy(), STUFF_FEATURES + LOCATION_FEATURES
+
+    assert fit_full_model.fit_oof(sub, y, groups, cols, "regress") == pytest.approx(fit_full_model.fit_oof(sub, y, groups, cols, "regress"))
