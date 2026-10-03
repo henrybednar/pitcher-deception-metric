@@ -15,6 +15,7 @@ import json
 
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 from reliability_and_ci import COMPOSITE_OUTCOMES, QUALIFY_MIN_N
 
@@ -98,6 +99,55 @@ def stuff_plus_correlations(ps: pd.DataFrame) -> dict:
         "by_season": {s: float(g["deception_plus"].corr(g["stuff_plus"])) for s, g in q.groupby("season")},
         "members": {k: float(q[f"{k}_index"].corr(q["stuff_plus"])) for k in COMPOSITE_OUTCOMES},
     }
+
+
+BOOTSTRAP_DRAWS = 1000
+
+
+def year_over_year_summary(ps: pd.DataFrame, n_boot: int = BOOTSTRAP_DRAWS, seed: int = 0) -> dict:
+    """Year-over-year correlation of Deception+ among pitchers qualified in both seasons: the figure, a 95%
+    interval from resampling pitchers, and the figure for the higher- and lower-volume halves. A pitcher's volume
+    is the smaller of their two seasons' mean member sample size relative to that member's median. The headline
+    tile uses every scored pitcher-season instead, which is lower (0.60 against 0.64) because small samples are noisier."""
+    members = COMPOSITE_OUTCOMES
+    q = ps[ps["qualified"] & ps["deception_plus"].notna()].copy()
+    medians = {m: q[f"{m}_n"].median() for m in members}
+    q["volume"] = sum(q[f"{m}_n"] / medians[m] for m in members) / len(members)
+    both = (q.pivot_table(index="pitcher", columns="season", values=["deception_plus", "volume"]).dropna())
+    first, second = both["deception_plus"].iloc[:, 0].to_numpy(), both["deception_plus"].iloc[:, 1].to_numpy()
+    volume = both["volume"].min(axis=1).to_numpy()
+    rng = np.random.default_rng(seed)
+    draws = [np.corrcoef(first[i], second[i])[0, 1] for i in (rng.integers(0, len(first), len(first)) for _ in range(n_boot))]
+    high = volume >= np.median(volume)
+    return {"r": float(np.corrcoef(first, second)[0, 1]), "n": int(len(first)),
+            "lo": float(np.percentile(draws, 2.5)), "hi": float(np.percentile(draws, 97.5)),
+            "high_volume_r": float(np.corrcoef(first[high], second[high])[0, 1]),
+            "low_volume_r": float(np.corrcoef(first[~high], second[~high])[0, 1])}
+
+
+def stuff_plus_correlation_interval(ps: pd.DataFrame, n_boot: int = BOOTSTRAP_DRAWS, seed: int = 0) -> tuple[float, float]:
+    """95% interval for the Deception+ and Stuff+ correlation over qualified pitcher-seasons, resampling whole
+    pitchers: most pitchers contribute both seasons, so resampling rows would understate the uncertainty."""
+    q = ps[ps["qualified"] & ps["stuff_plus"].notna() & ps["deception_plus"].notna()].sort_values("pitcher")
+    x, y = q["stuff_plus"].to_numpy(), q["deception_plus"].to_numpy()
+    codes, starts = np.unique(q["pitcher"].to_numpy(), return_index=True)
+    spans = [np.arange(a, b) for a, b in zip(starts, list(starts[1:]) + [len(q)])]
+    rng = np.random.default_rng(seed)
+    draws = []
+    for _ in range(n_boot):
+        idx = np.concatenate([spans[i] for i in rng.integers(0, len(spans), len(spans))])
+        draws.append(np.corrcoef(x[idx], y[idx])[0, 1])
+    return float(np.percentile(draws, 2.5)), float(np.percentile(draws, 97.5))
+
+
+def handedness_gap(ps: pd.DataFrame, hands: pd.Series) -> dict:
+    """Left-handed minus right-handed mean Deception+ among qualified pitcher-seasons, with a Welch test.
+    Handedness is a model input, so a gap is either real or a leftover miscalibration."""
+    q = ps[ps["qualified"] & ps["deception_plus"].notna()]
+    hand = q["pitcher"].map(hands)
+    left, right = q.loc[hand == "L", "deception_plus"], q.loc[hand == "R", "deception_plus"]
+    return {"gap": float(left.mean() - right.mean()), "p": float(stats.ttest_ind(left, right, equal_var=False).pvalue),
+            "n_left": int(len(left)), "n_right": int(len(right))}
 
 
 def unscored_pitch_share(predictions_path: str = "output/per_pitch_predictions.csv") -> float:
@@ -220,10 +270,12 @@ def main() -> None:
 
     raw = pd.read_csv(
         "raw/statcast_pitch_level_2025_2026.csv",
-        usecols=["pitcher", "season", "game_pk", "game_date"],
+        usecols=["pitcher", "season", "game_pk", "game_date", "game_type", "p_throws"],
         low_memory=False,
     )
+    raw = raw[raw["game_type"] == "R"]                      # roles and the cutoff follow the scored regular season
     data_through = pd.to_datetime(raw["game_date"]).max()
+    hands = raw.drop_duplicates("pitcher").set_index("pitcher")["p_throws"]
 
     ps = ps.merge(pitcher_roles(raw, usage=ps[["pitcher", "season", "games", "games_started"]]),
                   on=["pitcher", "season"], how="left")
@@ -253,6 +305,9 @@ def main() -> None:
     stuff = stuff_plus_correlations(ps)
     sequencing = sequencing_feature_overlap(pd.read_csv("output/driver_features.csv"), ps)
     clear = clear_of_average_counts(ps)
+    yoy_q = year_over_year_summary(ps)
+    stuff_lo, stuff_hi = stuff_plus_correlation_interval(ps)
+    hand = handedness_gap(ps, hands)
 
     top = qualified.sort_values("deception_plus", ascending=False).head(25)
     top2 = top.head(2)
@@ -361,6 +416,18 @@ def main() -> None:
         "UNSCORED_PCT": f"{unscored_pitch_share() * 100:.1f}%",
         "GB_FORECAST_R": fmt_r(ground_ball_forecast_correlation(ps)),
         "DP_HALF": f"{((qualified['deception_plus_ci_hi'] - qualified['deception_plus_ci_lo']) / 2).median():.0f}",
+        "YOY_QUAL_R": fmt_r(yoy_q["r"]),
+        "YOY_QUAL_N": f"{yoy_q['n']:,}",
+        "YOY_QUAL_LO": f"{yoy_q['lo']:.2f}",
+        "YOY_QUAL_HI": f"{yoy_q['hi']:.2f}",
+        "YOY_HIGH_VOL_R": f"{yoy_q['high_volume_r']:.2f}",
+        "YOY_LOW_VOL_R": f"{yoy_q['low_volume_r']:.2f}",
+        "STUFF_R_CI": f"{stuff_lo:.2f} to {stuff_hi:.2f}",
+        "LHP_GAP": f"{hand['gap']:+.1f}",
+        "LHP_P": fmt_p(hand["p"]),
+        "LHP_N": f"{hand['n_left']:,}",
+        "RHP_N": f"{hand['n_right']:,}",
+        "P_WEAK": fmt_p(float(pv.loc["weak", "f_pvalue"])),
         "DP_CLEAR": f"{clear[0]:,}",
         "DP_CLEAR_PCT": f"{clear[0] / clear[1]:.0%}",
         "SEQ_FEATURES_R": fmt_r(sequencing["between"]),

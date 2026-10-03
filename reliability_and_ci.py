@@ -143,7 +143,9 @@ CONTINUOUS_OUTCOMES = {
 # Deception+, and each member is weighted by its league-wide split-half reliability.
 # Membership is a decision made from the evidence, not an automatic rule. A candidate
 # joins when it clears split-half reliability of about 0.3 and a 2025-to-2026 forecast
-# p below 0.01, and does not make the composite less stable. On 2025-26 data:
+# p below 0.01, and does not make the composite less stable. Weak contact is the exception on reliability
+# (0.26, forecast p 0.0076): it is in on the forecast gate, and the composite is about as stable without it
+# (year-over-year within 0.01), so it matters little either way. On 2025-26 data:
 #   timing     (contact-only depth deviation)  reliability 0.618, year-over-year 0.483, forecast dR2 +0.099   in
 #   whiffmiss  (log miss distance on whiffs)   reliability 0.676, year-over-year 0.469, forecast dR2 +0.044   in
 # Outside the composite, all still modeled, scored and tested (composite reliability 0.750, year-over-year
