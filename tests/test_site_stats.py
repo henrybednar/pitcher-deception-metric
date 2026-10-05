@@ -165,3 +165,21 @@ def test_membership_text_formats_each_variant_with_its_difference_and_interval()
     assert text["MEM_GB_REL"] == "0.711" and text["MEM_GB_YOY"] == "0.594"
     assert text["MEM_CS_DIFF"] == "-0.027" and text["MEM_CS_CI"] == "-0.044 to -0.010"
     assert set(text) >= {"MEM_NO_WHIFFMISS_DIFF", "MEM_NO_WEAK_CI", "MEM_NO_TIMING_REL", "MEM_ALIGN_YOY"}
+
+
+def test_projection_text_reports_the_errors_and_whether_the_second_season_gain_includes_zero():
+    from export_site_stats import projection_text
+
+    base = {"backtest": {"pairs": 1089, "triples": 402, "rmse_projection": 7.28, "rmse_raw_score": 8.29, "rmse_league_average": 9.28,
+                         "coverage_80": 0.8, "triples_rmse_one_season": 7.101, "triples_rmse_two_seasons": 7.01,
+                         "two_season_gain": 0.095, "two_season_gain_lo": -0.043, "two_season_gain_hi": 0.229},
+            "coefficients": {"one_season": {"intercept": 40.0, "this": 0.594}, "two_seasons": {"intercept": 31.8, "this": 0.489, "previous": 0.182}},
+            "latest_season": 2026}
+
+    text = projection_text(base)
+
+    assert text["PROJ_NEXT_SEASON"] == "2027" and text["PROJ_N"] == "1,089" and text["PROJ_RMSE"] == "7.3"
+    assert "includes zero" in text["PROJ_TWO_NOTE"]
+    assert text["PROJ_COEF_TWO"].startswith("31.8 + 0.49")
+    base["backtest"]["two_season_gain_lo"] = 0.02
+    assert "excludes zero" in projection_text(base)["PROJ_TWO_NOTE"]

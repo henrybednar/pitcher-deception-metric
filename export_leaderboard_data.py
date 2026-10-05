@@ -2,7 +2,8 @@
 Pitcher Deception Project: export leaderboard_data.json from the canonical pitcher_season.csv
 ==============================================================================================
 build_leaderboard.py only reads this JSON. It holds every scored pitcher-season with the
-component indexes, sample sizes, 95% intervals for Deception+ and every component, the role label from export_site_stats.pitcher_roles(), and the
+component indexes, sample sizes, 95% intervals for Deception+ and every component, the next-season projection with its 80% range
+and basis (projection.py), the role label from export_site_stats.pitcher_roles(), and the
 signed timing readout in inches (timing_bias_inches). Ground ball is scored and shown but is not
 part of Deception+. See COMPOSITE_OUTCOMES in reliability_and_ci.py.
 """
@@ -18,6 +19,8 @@ raw = pd.read_csv("raw/statcast_pitch_level_2024_2026.csv", usecols=["pitcher", 
 raw = raw[raw["game_type"] == "R"]
 ps = ps.merge(pitcher_roles(raw, usage=ps[["pitcher", "season", "games", "games_started"]]),
               on=["pitcher", "season"], how="left")
+ps = ps.merge(pd.read_csv("output/projection.csv").rename(columns={"projection": "proj", "proj_lo": "proj_lo", "proj_hi": "proj_hi"}),
+              on=["pitcher", "season"], how="left")
 
 cols = [
     "player_name", "season", "qualified", "deception_plus", "deception_plus_ci_lo", "deception_plus_ci_hi",
@@ -28,12 +31,12 @@ cols = [
     "timing_index", "timing_n", "timing_ci_lo", "timing_ci_hi",
     "whiffmiss_index", "whiffmiss_n", "whiffmiss_ci_lo", "whiffmiss_ci_hi",
     "timing_bias_inches", "timing_bias_ci_lo", "timing_bias_ci_hi", "timingdir_n",
-    "stuff_plus", "role", "med_pitches_per_app",
+    "stuff_plus", "role", "med_pitches_per_app", "proj", "proj_lo", "proj_hi", "proj_basis",
 ]
 out = ps.dropna(subset=["deception_plus"])[cols].rename(columns={"player_name": "name"})
 
 INT_COLS = {"season", "whiff_n", "chase_n", "gb_n", "weak_n", "timing_n", "timingdir_n",
-            "whiffmiss_n", "stuff_plus"}
+            "whiffmiss_n", "stuff_plus", "proj_basis"}
 INCH_COLS = {"timing_bias_inches", "timing_bias_ci_lo", "timing_bias_ci_hi"}
 for c in out.columns:
     if c in INT_COLS:

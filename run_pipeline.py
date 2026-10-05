@@ -73,6 +73,8 @@ STEPS = [
          "what explains each residual? (season level)"),
     Step("predictive_validity", ("predictive_validity.py",), ("output/predictive_validity_report.csv",),
          "does a season's score predict the next season's outcome rate?"),
+    Step("projection", ("projection.py",), ("output/projection.csv", "output/projection.json"),
+         "projected Deception+ for the next season from the last two (out of sample)"),
     Step("membership_check", ("membership_check.py",), ("output/membership_check.json",),
          "does the composite's membership hold? (each member dropped, each candidate added)"),
     Step("sequencing_driver_analysis", ("sequencing_driver_analysis.py",), ("output/sequencing_driver_report.json",),

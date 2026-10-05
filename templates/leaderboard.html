@@ -148,7 +148,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
 
   <div class="lb-head">
     <div>
-      <p class="lb-eyebrow">2025-26 &middot; Deception+ &middot; data through {{DATA_THROUGH}}</p>
+      <p class="lb-eyebrow">2024-26 &middot; Deception+ &middot; data through {{DATA_THROUGH}}</p>
       <h1>Deception+ leaderboard</h1>
       <p class="lb-sub">Click a column to sort. Hover an index for its sample size and 95% interval. A <span class="unsure">&#9675;</span> beside a Deception+ score means its interval includes 100, so it is not clearly different from average. Rows below the minimum sample for one or more components are dimmed and hidden by default. <span class="narrow-only">Tap a row for the columns that do not fit. </span><a class="lb-link" href="__DASHBOARD_URL__">&larr; Dashboard and method</a></p>
     </div>
@@ -188,8 +188,9 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
           <th data-key="name" style="text-align:left;">Player</th>
           <th data-key="season" class="c3">Season</th>
           <th data-key="deception_plus">Deception+</th>
+          <th data-key="proj" class="c6" title="Projected Deception+ for the following season, from this season and the one before it. Out of sample. Hover a value for its 80% range.">Next season</th>
           <th data-key="whiff_index">Whiff</th>
-          <th data-key="chase_index" class="c6">Chase</th>
+          <th data-key="chase_index" class="c5">Chase</th>
           <th data-key="weak_index" class="c3">Weak contact</th>
           <th data-key="timing_index" class="c5">Timing</th>
           <th data-key="whiffmiss_index" class="c2">Whiff miss</th>
@@ -205,6 +206,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
   <div class="lb-footnote">
     <p>Each index is the pitcher's actual rate minus the rate a model expects from the pitch's measured traits (velocity, spin, movement, location), the batter, the catcher, the count, the park, and pitcher-batter handedness. Small samples are shrunk toward the average. 100 is the average scored pitcher-season for each index and the average qualified pitcher-season for Deception+, and 10 points is one standard deviation. Deception+ is a reliability-weighted average of {{N_COMPOSITE}} components: whiff, chase, weak contact, timing and whiff miss distance.</p>
     <p>Timing is the gap between where the bat met the ball and the hitter's estimated ideal contact depth, so early and late contact both count. It is scored on swings that made contact. Whiff miss distance is Statcast's distance between ball and barrel at closest approach on swings and misses. *Ground ball is scored and shown but is not part of Deception+, because it is a different skill from the other components (its index correlates at most {{GB_CORR_MAX}} with them). Timing dir is the signed timing gap in inches on contact swings, against a stuff-and-location baseline: positive means contact farther out front than the hitter's ideal (earlier) and negative means deeper (later). It is not shaded because it is not on the 100 scale.</p>
+    <p>Next season is a projection of the pitcher's Deception+ for the following season ({{PROJ_NEXT_SEASON}} on the latest rows) from this season and the one before it, pulled toward 100. Its typical miss against what happened is {{PROJ_RMSE}} points, against {{PROJ_RMSE_RAW}} for using this season's score as the guess; hover a value for its 80% range.</p>
     <p>Role, the tag beside each name, comes from each pitcher's real share of appearances that were starts: {{ROLE_GS_MIN}} or more is a starter (SP), under {{ROLE_GS_MAX}} is a reliever (RP), and anything between is mixed (MR). Where that isn't available, role falls back to a proxy from median pitches per appearance: {{ROLE_SP_MIN}} or more is a starter, under {{ROLE_RP_MAX}} is a reliever.</p>
     <p>Deception+ has a full-season reliability of r={{COMPOSITE_R}} (split-half, Spearman-Brown corrected) and a year-over-year correlation of r={{YOY_R}} across every scored pitcher and pair of consecutive seasons ({{YOY_QUAL_R}} among the {{YOY_QUAL_N}} pairs where the pitcher qualified in both seasons). Among its members {{MOST_LABEL}} is the most reliable (r={{MOST_R}}) and {{LEAST_LABEL}} the least (r={{LEAST_R}}). Called strike was removed from the score and this table because it is stable within a season but does not carry over between seasons (year-over-year r={{YOY_CALLEDSTRIKE}}). Deception+ correlates r={{STUFF_R}} with Stuff+, so the score is not independent of pitch quality. The dashboard has its numbers and shows where that relationship sits.</p>
     <p>Pitch data comes from Baseball Savant (Statcast). Stuff+ comes from FanGraphs and was entered by hand. This project is independent and not affiliated with MLB, Baseball Savant, or FanGraphs. The <a class="lb-link" href="__DASHBOARD_URL__">dashboard</a> has the full method, the validation table, and the audit log.</p>
@@ -277,6 +279,12 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
         return '<td class="composite" style="background:' + cellColor(r.deception_plus) + '" title="' + title + '">' + fmt(r.deception_plus) +
                (unsure ? '<span class="unsure">&#9675;</span>' : '') + '</td>';
       }
+      function projCell(r) {
+        if (r.proj === null || r.proj === undefined) return '<td class="mono c6">-</td>';
+        var title = (r.season + 1) + ' projection from ' + (r.proj_basis === 2 ? (r.season - 1) + ' and ' + r.season : 'this season alone') +
+                    ', 80% range [' + r.proj_lo.toFixed(1) + ', ' + r.proj_hi.toFixed(1) + ']';
+        return '<td class="mono c6" style="background:' + cellColor(r.proj) + '" title="' + title + '">' + fmt(r.proj) + '</td>';
+      }
       function indexCell(key, extra) {
         var nCol = N_COLS[key];
         var title = r[nCol] !== null ? 'n=' + r[nCol] : '';
@@ -293,17 +301,17 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
       var cells = ['<td class="mono c4">' + (i + 1) + '</td>',
                    '<td class="name">' + r.name.split(', ').reverse().join(' ') + roleTag + '</td>',
                    '<td class="mono c3">' + r.season + '</td>',
-                   dpCell(r),
-                   indexCell('whiff_index', ''), indexCell('chase_index', ' c6'), indexCell('weak_index', ' c3'),
+                   dpCell(r), projCell(r),
+                   indexCell('whiff_index', ''), indexCell('chase_index', ' c5'), indexCell('weak_index', ' c3'),
                    indexCell('timing_index', ' c5'), indexCell('whiffmiss_index', ' c2'), indexCell('gb_index', ' c2'),
                    '<td class="mono c1" title="' + dirTitle + '">' + fmtDir(r.timing_bias_inches) + '</td>',
                    '<td class="mono c1">' + stuff + '</td>'];
       function item(c, label, value) { return '<span class="di ' + c + '"><b>' + label + '</b> ' + value + '</span>'; }
-      var detail = item('c4', 'Rank', '#' + (i + 1)) + item('c3', 'Season', r.season) + item('c3', 'Weak contact', fmt(r.weak_index)) + item('c5', 'Timing', fmt(r.timing_index)) + item('c6', 'Chase', fmt(r.chase_index)) +
+      var detail = item('c4', 'Rank', '#' + (i + 1)) + item('c3', 'Season', r.season) + item('c6', 'Next season', fmt(r.proj)) + item('c3', 'Weak contact', fmt(r.weak_index)) + item('c5', 'Timing', fmt(r.timing_index)) + item('c5', 'Chase', fmt(r.chase_index)) +
                    item('c2', 'Whiff miss', fmt(r.whiffmiss_index)) + item('c2', 'Ground ball*', fmt(r.gb_index)) +
                    item('c1', 'Timing dir', fmtDir(r.timing_bias_inches)) + item('c1', 'Stuff+', stuff);
       html.push('<tr class="row' + cls + '">' + cells.join('') + '</tr>');
-      html.push('<tr class="detail' + cls + '"><td colspan="12">' + detail + '</td></tr>');
+      html.push('<tr class="detail' + cls + '"><td colspan="13">' + detail + '</td></tr>');
     });
     body.innerHTML = html.join('');
 

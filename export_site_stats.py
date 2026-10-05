@@ -196,6 +196,30 @@ def membership_text(check: dict) -> dict:
     return text
 
 
+def projection_text(projection: dict) -> dict:
+    """Page-text figures from projection.json: the fitted coefficients, the out-of-sample errors of the projection against
+    the raw score and against guessing 100, and what the second season adds."""
+    b, c = projection["backtest"], projection["coefficients"]
+    one, two = c["one_season"], c["two_seasons"]
+    includes_zero = b["two_season_gain_lo"] <= 0 <= b["two_season_gain_hi"]
+    return {
+        "PROJ_NEXT_SEASON": str(projection["latest_season"] + 1),
+        "PROJ_N": f"{b['pairs']:,}",
+        "PROJ_TRIPLES": f"{b['triples']:,}",
+        "PROJ_RMSE": f"{b['rmse_projection']:.1f}",
+        "PROJ_RMSE_RAW": f"{b['rmse_raw_score']:.1f}",
+        "PROJ_RMSE_LEAGUE": f"{b['rmse_league_average']:.1f}",
+        "PROJ_COVER": f"{b['coverage_80']:.0%}",
+        "PROJ_RMSE_ONE": f"{b['triples_rmse_one_season']:.2f}",
+        "PROJ_RMSE_TWO": f"{b['triples_rmse_two_seasons']:.2f}",
+        "PROJ_TWO_GAIN": f"{b['two_season_gain']:+.2f} points, 95% interval {b['two_season_gain_lo']:+.2f} to {b['two_season_gain_hi']:+.2f}",
+        "PROJ_TWO_NOTE": ("that interval includes zero, so the earlier season is the weaker part of the projection" if includes_zero
+                          else "that interval excludes zero"),
+        "PROJ_COEF_ONE": f"{one['intercept']:.1f} + {one['this']:.2f} × this season",
+        "PROJ_COEF_TWO": f"{two['intercept']:.1f} + {two['this']:.2f} × this season + {two['previous']:.2f} × the season before",
+    }
+
+
 def validation_text(validation: dict) -> dict:
     """Page-text figures from model_validation.json: how far each model's fit ranges across pitch types,
     and the calibration slopes."""
@@ -358,6 +382,8 @@ def main() -> None:
         validation = json.load(f)
     with open("output/membership_check.json", encoding="utf-8") as f:
         membership = json.load(f)
+    with open("output/projection.json", encoding="utf-8") as f:
+        projection = json.load(f)
 
     text = {
         "DATA_THROUGH": f"{data_through:%B} {data_through.day}, {data_through.year}",
@@ -442,6 +468,7 @@ def main() -> None:
         "SEQ_REPEAT_WHIFF_R": fmt_r(sequencing["repeat_whiff"]),
         **validation_text(validation),
         **membership_text(membership),
+        **projection_text(projection),
     }
 
     out = {"text": text, "components": components}
