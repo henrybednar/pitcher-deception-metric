@@ -41,14 +41,15 @@ def test_cross_fitted_projections_beat_the_raw_score_and_give_a_second_projectio
 
 def test_a_pitchers_projection_does_not_depend_on_that_pitchers_own_outcomes():
     rows = pj.season_rows(three_seasons(n=80))
-    altered = rows.copy()
-    altered.loc[altered["pitcher"].eq(0), "nxt"] += 500.0                      # pitcher 0's own next-season results change
-
     before = pj.cross_fitted_projections(rows, seeds=(0,), n_splits=5)
-    after = pj.cross_fitted_projections(altered, seeds=(0,), n_splits=5)
 
-    own = rows["pitcher"].eq(0)
-    assert after.loc[own, "proj1"].to_numpy() == pytest.approx(before.loc[own, "proj1"].to_numpy(), abs=1e-9)
+    for pitcher in range(6):          # several pitchers, so a leak shows up whichever folds they happen to land in
+        altered = rows.copy()
+        altered.loc[altered["pitcher"].eq(pitcher), "nxt"] += 500.0          # this pitcher's own next-season results change
+        after = pj.cross_fitted_projections(altered, seeds=(0,), n_splits=5)
+
+        own = rows["pitcher"].eq(pitcher)
+        assert after.loc[own, "proj1"].to_numpy() == pytest.approx(before.loc[own, "proj1"].to_numpy(), abs=1e-9)
     assert not np.allclose(after.loc[~own, "proj1"], before.loc[~own, "proj1"])       # everyone else's coefficients did move
 
 

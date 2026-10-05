@@ -12,10 +12,11 @@ build scripts. export_leaderboard_data.py imports pitcher_roles() from here.
 """
 
 import json
+import re
 
 import numpy as np
 import pandas as pd
-from scipy import stats
+import statsmodels.api as sm
 
 from reliability_and_ci import COMPOSITE_OUTCOMES, QUALIFY_MIN_N
 from season_pairs import cluster_bootstrap_interval, consecutive_pairs, correlation_by_pair, pooled_correlation
@@ -134,13 +135,17 @@ def stuff_plus_correlation_interval(ps: pd.DataFrame, n_boot: int = BOOTSTRAP_DR
 
 
 def handedness_gap(ps: pd.DataFrame, hands: pd.Series) -> dict:
-    """Left-handed minus right-handed mean Deception+ among qualified pitcher-seasons, with a Welch test.
+    """Left-handed minus right-handed mean Deception+ among qualified pitcher-seasons, with a p-value whose errors
+    cluster on pitcher (a pitcher contributes up to three seasons, so rows are not independent draws). The gap is
+    the coefficient of a regression on a left-hander indicator, which is exactly the difference in row means.
     Handedness is a model input, so a gap is either real or a leftover miscalibration."""
     q = ps[ps["qualified"] & ps["deception_plus"].notna()]
     hand = q["pitcher"].map(hands)
-    left, right = q.loc[hand == "L", "deception_plus"], q.loc[hand == "R", "deception_plus"]
-    return {"gap": float(left.mean() - right.mean()), "p": float(stats.ttest_ind(left, right, equal_var=False).pvalue),
-            "n_left": int(len(left)), "n_right": int(len(right))}
+    q, hand = q[hand.isin(["L", "R"])], hand[hand.isin(["L", "R"])]
+    left = (hand == "L").astype(float).to_numpy()
+    fit = sm.OLS(q["deception_plus"].to_numpy(), sm.add_constant(left)).fit(cov_type="cluster", cov_kwds={"groups": q["pitcher"].to_numpy()})
+    return {"gap": float(fit.params[1]), "p": float(fit.pvalues[1]),
+            "n_left": int((hand == "L").sum()), "n_right": int((hand == "R").sum())}
 
 
 def unscored_pitch_share(predictions_path: str = "output/per_pitch_predictions.csv") -> float:
@@ -247,6 +252,16 @@ def component_yoy(ps: pd.DataFrame, key: str) -> float:
     matched.)"""
     eligible = ps[ps[f"{key}_n"].fillna(0) >= QUALIFY_MIN_N[key]]
     return pooled_correlation(consecutive_pairs(eligible, [f"{key}_index"]), f"{key}_index")
+
+
+def check_page_text(text: dict, components: list) -> None:
+    """Refuse to publish a figure that came out as nan or inf (an empty sample, a merge that found nothing). Every
+    placeholder value on the pages and every cell of the validation table is checked."""
+    bad = {k: v for k, v in text.items() if re.search(r"(?i)\b(nan|inf)\b", str(v))}
+    for c in components:
+        bad.update({f"{c['key']}.{k}": v for k, v in c.items() if isinstance(v, str) and re.search(r"(?i)\b(nan|inf)\b", v)})
+    if bad:
+        raise ValueError(f"page text has non-finite figures, refusing to write site_stats.json: {bad}")
 
 
 def pretty_name(name: str) -> str:
@@ -471,6 +486,7 @@ def main() -> None:
         **projection_text(projection),
     }
 
+    check_page_text(text, components)
     out = {"text": text, "components": components}
     with open("output/site_stats.json", "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)

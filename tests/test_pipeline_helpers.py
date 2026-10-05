@@ -36,7 +36,7 @@ def test_read_aligned_predictions_refuses_a_different_row_order(predictions_file
     df = aligned_frame()
     df.iloc[::-1].to_csv(predictions_file, index=False)
 
-    with pytest.raises(AssertionError, match="misaligned"):
+    with pytest.raises(ValueError, match="misaligned"):
         build_pitch_table.read_aligned_predictions(df)
 
 
@@ -44,7 +44,7 @@ def test_read_aligned_predictions_refuses_a_different_row_count(predictions_file
     df = aligned_frame()
     df.iloc[:-1].to_csv(predictions_file, index=False)
 
-    with pytest.raises(AssertionError, match="row count"):
+    with pytest.raises(ValueError, match="row count"):
         build_pitch_table.read_aligned_predictions(df)
 
 
@@ -452,3 +452,9 @@ def test_fit_oof_without_fold_seeds_keeps_the_deterministic_grouped_split(small_
     y, groups, cols = sub["target"].to_numpy(float), sub["pitcher"].to_numpy(), STUFF_FEATURES + LOCATION_FEATURES
 
     assert fit_full_model.fit_oof(sub, y, groups, cols, "regress") == pytest.approx(fit_full_model.fit_oof(sub, y, groups, cols, "regress"))
+
+
+def test_the_half_split_follows_game_parity_so_both_halves_of_a_pitchers_games_exist():
+    out = build_pitch_table.add_half(pd.DataFrame({"game_pk": [101, 102, 103, 104, 105]}))
+
+    assert out["half"].tolist() == [1, 0, 1, 0, 1]

@@ -180,3 +180,15 @@ def test_first_pitch_flags_refuse_rows_that_do_not_line_up(tmp_path):
 
     with pytest.raises(ValueError):
         sr.first_pitch_flags(str(path), pd.DataFrame({"pitcher": [2, 1], "season": 2025}))
+
+
+def test_stuff_plus_member_correlations_are_each_members_own_index_against_stuff_plus_not_against_deception_plus():
+    stuff = np.arange(60, dtype=float)
+    ps = pd.DataFrame({"qualified": True, "season": [2025, 2026] * 30, "stuff_plus": stuff,
+                       "deception_plus": np.random.default_rng(0).normal(100, 10, 60)})
+    for member, sign in (("whiff", 1.0), ("chase", -1.0), ("weak", 1.0), ("timing", -1.0), ("whiffmiss", 1.0)):
+        ps[f"{member}_index"] = sign * stuff
+
+    members = stuff_plus_correlations(ps)["members"]
+
+    assert members == pytest.approx({"whiff": 1.0, "chase": -1.0, "weak": 1.0, "timing": -1.0, "whiffmiss": 1.0})

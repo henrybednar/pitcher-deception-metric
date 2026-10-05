@@ -139,7 +139,7 @@ def test_stuff_plus_interval_brackets_the_correlation_and_resamples_whole_pitche
     assert hi - lo < 0.3
 
 
-def test_handedness_gap_is_left_minus_right_with_a_welch_test():
+def test_handedness_gap_is_left_minus_right_with_a_pitcher_clustered_test():
     from export_site_stats import handedness_gap
 
     rng = np.random.default_rng(2)
@@ -152,6 +152,20 @@ def test_handedness_gap_is_left_minus_right_with_a_welch_test():
     assert gap["gap"] == pytest.approx(ps["deception_plus"][:100].mean() - ps["deception_plus"][100:].mean())
     assert (gap["n_left"], gap["n_right"]) == (100, 300)
     assert 0.0 < gap["p"] < 1.0
+
+
+def test_handedness_p_value_is_wider_when_a_pitchers_seasons_repeat_the_same_score():
+    from export_site_stats import handedness_gap
+
+    rng = np.random.default_rng(4)
+    talent = np.concatenate([rng.normal(101, 6, 60), rng.normal(100, 6, 180)])
+    hands = pd.Series(["L"] * 60 + ["R"] * 180, index=np.arange(240))
+    three = pd.concat([pd.DataFrame({"pitcher": np.arange(240), "season": s, "qualified": True, "deception_plus": talent + rng.normal(0, 0.5, 240)})
+                       for s in (2024, 2025, 2026)], ignore_index=True)
+    one = three[three["season"] == 2024]
+
+    assert handedness_gap(three, hands)["p"] > handedness_gap(one, hands)["p"] * 0.9      # tripling the rows does not triple the evidence
+    assert handedness_gap(three, hands)["n_left"] == 180
 
 
 def test_membership_text_formats_each_variant_with_its_difference_and_interval():
@@ -183,3 +197,13 @@ def test_projection_text_reports_the_errors_and_whether_the_second_season_gain_i
     assert text["PROJ_COEF_TWO"].startswith("31.8 + 0.49")
     base["backtest"]["two_season_gain_lo"] = 0.02
     assert "excludes zero" in projection_text(base)["PROJ_TWO_NOTE"]
+
+
+def test_check_page_text_refuses_nan_and_inf_figures_but_not_words_that_contain_them():
+    from export_site_stats import check_page_text
+
+    check_page_text({"TOP1_NAME": "Infante, Gregory", "X": "Hannan 0.5", "R": "0.610"}, [{"key": "whiff", "label": "Whiff", "p": "<0.0001"}])
+    with pytest.raises(ValueError, match="STUFF_R"):
+        check_page_text({"STUFF_R": "nan"}, [])
+    with pytest.raises(ValueError, match="whiff.yoy"):
+        check_page_text({}, [{"key": "whiff", "yoy": "inf"}])

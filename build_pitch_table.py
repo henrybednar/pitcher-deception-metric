@@ -79,6 +79,13 @@ def add_year_month(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def add_half(df: pd.DataFrame) -> pd.DataFrame:
+    """Deterministic 50/50 split by game (game_pk parity), independent of chronology, so split-half reliability
+    isolates measurement noise from true-talent drift across the season."""
+    df["half"] = (df["game_pk"] % 2).astype(int)
+    return df
+
+
 def load_pitch_data(path: str) -> pd.DataFrame:
     """Read the pitch-level file and build every feature and target.
 
@@ -116,9 +123,7 @@ def load_pitch_data(path: str) -> pd.DataFrame:
     df = blank_noncompetitive_pitches(df)
     df = blank_incomplete_tracking(df)
 
-    # Deterministic 50/50 split by game, independent of chronology, isolates
-    # measurement noise from true-talent drift across the season.
-    df["half"] = (df["game_pk"] % 2).astype(int)
+    df = add_half(df)
     df = add_pitch_count_in_appearance(df)
     df = add_times_faced_this_game(df)
     df = add_game_state_features(df)
@@ -163,11 +168,13 @@ def add_game_state_features(df: pd.DataFrame) -> pd.DataFrame:
 def read_aligned_predictions(df: pd.DataFrame) -> pd.DataFrame:
     """Read per_pitch_predictions.csv and refuse to go on unless its rows line up with df by position."""
     existing = pd.read_csv(PREDICTIONS_FILE)
-    assert len(existing) == len(df), f"row count mismatch: {len(existing):,} vs {len(df):,}"
+    if len(existing) != len(df):
+        raise ValueError(f"row count mismatch: {len(existing):,} vs {len(df):,}")
     left, right = existing[ALIGN_COLS].reset_index(drop=True), df[ALIGN_COLS].reset_index(drop=True)
     differs = pd.concat([(left[c] != right[c]) & ~(left[c].isna() & right[c].isna()) for c in ALIGN_COLS], axis=1)
     n_mismatch = int(differs.any(axis=1).sum())
-    assert n_mismatch == 0, f"{n_mismatch:,} rows misaligned, refusing to merge by position"
+    if n_mismatch:
+        raise ValueError(f"{n_mismatch:,} rows misaligned, refusing to merge by position")
     print("row alignment verified, safe to merge by position.", flush=True)
     return existing
 

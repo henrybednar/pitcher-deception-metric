@@ -59,3 +59,20 @@ def test_adding_a_member_with_no_persistent_talent_lowers_reliability_and_year_o
     assert result["+gb"]["diff_hi"] < 0
     assert result["-whiff"]["reliability"] < result["shipped"]["reliability"]       # dropping real signal costs stability too
     assert result["shipped"]["n_pairs"] == 800 and set(result["shipped"]["yoy_by_pair"]) == {"2024-2025", "2025-2026"}
+
+
+def test_split_half_reliability_applies_the_spearman_brown_correction_to_the_half_to_half_correlation():
+    rng = np.random.default_rng(3)
+    n = 500
+    talent = rng.normal(0, 1, n)
+    half = pd.DataFrame({"pitcher": np.arange(n), "season": 2025})
+    for label in ("whiff", "chase"):
+        for h in (0, 1):
+            half[f"{label}_index_h{h}"] = 100 + 10 * (talent + rng.normal(0, 1.5, n))
+            half[f"{label}_n_h{h}"] = 100.0
+
+    reliability = mc.split_half_reliability(half, np.ones(n, dtype=bool), ["whiff", "chase"], {"whiff": 0.5, "chase": 0.5})
+
+    r = np.corrcoef(half["whiff_index_h0"] + half["chase_index_h0"], half["whiff_index_h1"] + half["chase_index_h1"])[0, 1]
+    assert reliability == pytest.approx(2 * r / (1 + r), abs=1e-9)
+    assert reliability > r

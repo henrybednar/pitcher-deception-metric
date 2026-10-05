@@ -17,8 +17,8 @@ def game_table(expected_means: list[float], n_per_game: int = 20) -> pd.DataFram
 def test_pitch_variance_is_clipped_for_saturated_predictions():
     variance = rc.binary_pitch_variance(pd.Series([0.0, 1.0, 0.3]))
 
-    floor = rc.BINARY_P_CLIP * (1 - rc.BINARY_P_CLIP)
-    assert variance.tolist() == pytest.approx([floor, floor, 0.3 * 0.7])
+    # predicted rates are clipped to 0.01-0.99 (README: Fixes), so a saturated prediction still carries variance
+    assert variance.tolist() == pytest.approx([0.01 * 0.99, 0.01 * 0.99, 0.3 * 0.7])
 
 
 def test_season_variance_is_the_summed_pitch_variance_over_n_squared():
@@ -365,3 +365,19 @@ def test_composite_interval_is_symmetric_on_the_deception_scale():
 
     half = 1.96 * 10 * 0.2 / 0.5
     assert (lo[0], hi[0]) == pytest.approx((110.0 - half, 110.0 + half))
+
+
+def test_the_grand_mean_weights_each_pitcher_by_one_over_tau2_plus_sampling_variance():
+    rng = np.random.default_rng(7)
+    n = 300
+    sv = rng.uniform(0.0002, 0.01, n)
+    talent = rng.normal(0.01, 0.03, n)
+    agg = pd.DataFrame({"pitcher": range(n), "n": np.full(n, 100), "diff": talent + rng.normal(0, np.sqrt(sv)), "sampling_var": sv})
+
+    _, _, _, true_var, center = rc.shrink_and_scale(agg)
+
+    weights = 1.0 / (true_var + sv)
+    assert true_var > 1e-4
+    assert center == pytest.approx(np.sum(weights * agg["diff"]) / np.sum(weights))
+    sampling_only = np.sum(agg["diff"] / sv) / np.sum(1.0 / sv)
+    assert abs(center - sampling_only) > 1e-5          # the two weightings give different answers on this data
