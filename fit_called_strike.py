@@ -27,7 +27,7 @@ leaving little room for umpire identity to register. Not adopted; see README's F
 """
 
 from build_pitch_table import PITCH_LEVEL_FILE, load_pitch_data, read_aligned_predictions, save_predictions
-from fit_full_model import fit_full_outcome, prepare_context
+from fit_full_model import FOLD_SEEDS, fit_full_outcome, prepare_context
 
 TAKE_DESC = {"ball", "called_strike", "blocked_ball"}
 
@@ -42,5 +42,5 @@ if __name__ == "__main__":
     existing = read_aligned_predictions(df)
 
     print("\n=== CALLED STRIKE (full tier: stuff+location+batter+catcher+context) ===", flush=True)
-    fit_full_outcome(df, "calledstrike", "is_called_strike", df["is_take"], "classify")
+    fit_full_outcome(df, "calledstrike", "is_called_strike", df["is_take"], "classify", fold_seeds=FOLD_SEEDS)
     save_predictions(existing, df, ["is_take", "is_called_strike", "calledstrike_expected_full"])

@@ -150,6 +150,9 @@ def test_fit_tier_with_tendencies_enabled_builds_batter_catcher_and_same_hand_fe
     df = small_pitch_frame
     rng = np.random.default_rng(7)
     df["batter"] = rng.integers(0, 15, len(df))
+    df["batter_pitch_type"] = df["batter"].astype(str) + "_" + df["pitch_type"].astype(str)
+    df["batter_strikes"] = df["batter"].astype(str) + "_" + rng.integers(0, 3, len(df)).astype(str)
+    df["batter_zone"] = df["batter"].astype(str) + "_" + rng.choice(["True", "False"], len(df))
     df["fielder_2"] = rng.integers(100, 105, len(df))
     df["season"] = 2025
     mask = pd.Series(True, index=df.index)
@@ -158,6 +161,20 @@ def test_fit_tier_with_tendencies_enabled_builds_batter_catcher_and_same_hand_fe
 
     assert df["expected"].notna().all()
     assert np.corrcoef(df["expected"], df["target"])[0, 1] > 0.5
+
+
+def test_prepare_context_keys_each_batter_by_pitch_type_count_and_zone_for_the_matchup_tendencies():
+    df = pd.DataFrame({"batter": [5, 5, 6], "pitch_type": ["FF", "SL", "FF"], "stand": ["L", "L", "R"],
+                       "home_team": ["BOS", "BOS", "NYY"], "p_throws": ["R", "R", "R"],
+                       "is_in_zone": [True, False, True], "strikes": [0, 2, 1]})
+
+    out = fit_full_model.prepare_context(df)
+
+    assert out["batter_pitch_type"].tolist() == ["5_FF", "5_SL", "6_FF"]
+    assert out["batter_strikes"].tolist() == ["5_0", "5_2", "6_1"]
+    assert out["batter_zone"].tolist() == ["5_True", "5_False", "6_True"]
+    keys = {key for key, _ in fit_full_model.TENDENCY_KEYS.values()}
+    assert {"batter_pitch_type", "batter_strikes", "batter_zone"} <= keys
 
 
 def test_plate_height_is_normalized_to_the_zone_and_nan_for_a_broken_zone():

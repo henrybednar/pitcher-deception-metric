@@ -46,8 +46,12 @@ MIN_N_FOR_MODEL = 5000
 # fixed assignment that dependence shows up as noise in the score: two random assignments gave component
 # indexes that differed by an SD of 2.5 to 3.0 index points (corr 0.96 to 0.97, largest gaps 12 to 32), so
 # each run carries about 2 points of its own. The scored outcomes average the out-of-fold predictions of
-# three random grouped splits, which cuts that by about 1/sqrt(3). Every prediction stays out of fold.
-FOLD_SEEDS = (0, 1, 2)
+# several random grouped splits, which cuts that by about 1/sqrt(n). Every prediction stays out of fold.
+# Whiff, two replicates each of different seeds: the SD of the difference between replicates in the whiff
+# index was 1.46 points with three seeds, 1.06 with six, and 1.28 with three seeds on ten folds (which
+# takes as long as six seeds on five). Out-of-fold log loss, 0.4212 / 0.4205 / 0.4211. Year-over-year of
+# the whiff index did not move (0.51 to 0.52 in all three), since a pitcher's two seasons share a fold.
+FOLD_SEEDS = (0, 1, 2, 3, 4, 5)
 STUFF_FEATURES = [
     "release_speed", "release_spin_rate", "ivb_in", "arm_side_break_in",
     "vaa", "haa", "release_extension", "effective_speed", "arm_angle",
@@ -84,10 +88,22 @@ POOLED_WITH = {"KC": "CU"}
 # 95% interval +0.0003 to +0.0013) and is neutral for chase (interval includes zero); kept as an
 # addition alongside the blended batter_tendency, not a replacement, since catchers have no
 # platoon-split analog and the blended number still carries real signal on its own.
+# batter_pitch_type_tendency is the batter's rate for that outcome against the same pitch type, which the
+# pooled tendency averages away (a hitter who chases sliders is not one who chases fastballs). Held out
+# by pitcher on whiff and chase, one seed: log loss 0.4252 to 0.4247 for whiff (gain +0.00053, 95%
+# interval +0.00026 to +0.00078) and 0.4159 to 0.4139 for chase (+0.0020, +0.0018 to +0.0023).
+# batter_count_tendency (batter by strikes) and batter_zone_tendency (batter by in or out of the zone) were
+# added the same way, each on top of the one before it: chase +0.0015 (+0.0012 to +0.0018) from the count,
+# whiff +0.0010 (+0.0007 to +0.0012) from the zone. The reverse pairings gained nothing (whiff from the
+# count +0.0002, interval including zero; chase from the zone is the batter tendency again, since every chase
+# pitch is out of the zone), and the catcher by pitch type lost 0.0001 on chase.
 TENDENCY_KEYS = {
     "batter_tendency": ("batter", False),
     "catcher_tendency": ("fielder_2", False),
     "batter_tendency_same_hand": ("batter", True),
+    "batter_pitch_type_tendency": ("batter_pitch_type", False),
+    "batter_count_tendency": ("batter_strikes", False),
+    "batter_zone_tendency": ("batter_zone", False),
 }
 
 
@@ -106,6 +122,10 @@ def prepare_context(df: pd.DataFrame) -> pd.DataFrame:
     df["not_in_zone"] = ~df["is_in_zone"]
     df["stand"] = df["stand"].astype("category")
     df["home_team"] = df["home_team"].astype("category")
+    batter = df["batter"].astype(str)
+    df["batter_pitch_type"] = batter + "_" + df["pitch_type"].astype(str)
+    df["batter_strikes"] = batter + "_" + df["strikes"].astype(str)
+    df["batter_zone"] = batter + "_" + df["is_in_zone"].astype(str)
     return add_same_hand(df)
 
 

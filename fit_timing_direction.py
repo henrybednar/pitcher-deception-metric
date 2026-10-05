@@ -25,7 +25,7 @@ correlated 0.29 with the whiff index, 0.43 with whiff miss distance and 0.36 wit
 """
 
 from build_pitch_table import PITCH_LEVEL_FILE, load_pitch_data, read_aligned_predictions, save_predictions
-from fit_full_model import LOCATION_FEATURES, STUFF_FEATURES, fit_tier
+from fit_full_model import FOLD_SEEDS, LOCATION_FEATURES, STUFF_FEATURES, fit_tier
 from fit_swing_alignment import build_masks
 
 if __name__ == "__main__":
@@ -38,5 +38,5 @@ if __name__ == "__main__":
     print("\n=== TIMING DIRECTION (signed, stuff+location) ===", flush=True)
     timing_mask = df["timing_mask"]
     fit_tier(df, "timingdir_expected_stuffloc", "timing_dir_raw", timing_mask, "regress",
-             STUFF_FEATURES + LOCATION_FEATURES + ["plate_x_inside"], with_tendencies=False)
+             STUFF_FEATURES + LOCATION_FEATURES + ["plate_x_inside"], with_tendencies=False, fold_seeds=FOLD_SEEDS)
     save_predictions(existing, df, ["timing_dir_raw", "timingdir_expected_stuffloc"])

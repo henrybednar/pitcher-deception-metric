@@ -44,21 +44,21 @@ This analysis builds on Deception+, a from-scratch pitcher deception metric scor
 
 \textbf{Key Findings:}
 \begin{itemize}
-\item Driver models explain a modest but statistically real share of each residual: $R^2 = 0.053$ (whiff, $n=1,489$ pitcher-seasons from 955 pitchers) and $R^2 = 0.067$ (timing, $n=1,456$ from 937 pitchers), both significant overall ($F=5.92$, $p<0.0001$ and $F=7.37$, $p<0.0001$)
-\item With 14 features tested per model, results are read after a Benjamini--Hochberg correction, with standard errors clustered on pitcher because most pitchers appear in both seasons: 3 of 14 features survive for the whiff residual (4 are nominally significant at $p<0.05$) and 3 of 14 for the timing residual (all 3 nominally significant features survive)
-\item Velocity gap from the previous pitch and same-pitch-type repeat rate are both significant and positive in \emph{both} models (repeat rate: whiff $+0.0230$, $p=0.0006$; timing $+0.479$, $p<0.0001$), but each is only weakly related to the residual on its own ($r=+0.05$ to $+0.20$), and the two features partly offset each other, so they are best read together as a weak signal about how a pitcher switches between pitches, not as evidence that repeating pitches creates deception
-\item Vertical-approach-angle consistency across a pitcher's repertoire has the same sign in both models but sits on the correction threshold: it survives for timing only just ($q=0.047$) and not for whiff ($q=0.061$), and it has crossed the $0.05$ line between reruns of the scoring model that differed only in fold assignment. It is a lead to test directly, not a finding
-\item Deception+'s own held-out year-ahead forecast test, not a mere year-effect coefficient, confirms both outcomes studied here are temporally stable: whiff cross-validated $\Delta R^2=+0.061$ ($p<0.0001$), timing $\Delta R^2=+0.105$ ($p<0.0001$)
+\item Driver models explain a modest but statistically real share of each residual: $R^2 = 0.057$ (whiff, $n=1,489$ pitcher-seasons from 955 pitchers) and $R^2 = 0.066$ (timing, $n=1,456$ from 937 pitchers), both significant overall ($F=6.33$, $p<0.0001$ and $F=7.24$, $p<0.0001$)
+\item With 14 features tested per model, results are read after a Benjamini--Hochberg correction, with standard errors clustered on pitcher because most pitchers appear in both seasons: 3 of 14 features survive for the whiff residual (5 are nominally significant at $p<0.05$) and 3 of 14 for the timing residual (all 3 nominally significant features survive)
+\item Velocity gap from the previous pitch and same-pitch-type repeat rate are both significant and positive in \emph{both} models (repeat rate: whiff $+0.0242$, $p=0.0004$; timing $+0.485$, $p<0.0001$), but each is only weakly related to the residual on its own ($r=+0.05$ to $+0.20$), and the two features partly offset each other, so they are best read together as a weak signal about how a pitcher switches between pitches, not as evidence that repeating pitches creates deception
+\item Vertical-approach-angle consistency across a pitcher's repertoire has the same sign in both models but sits on the correction threshold: it survives for timing ($q=0.026$) and just misses for whiff ($q=0.050$), after sitting at $0.047$ and $0.061$ in the previous run of the scoring model, and it has crossed the $0.05$ line between reruns that differed only in fold assignment or model features. It is a lead to test directly, not a finding
+\item Deception+'s own held-out year-ahead forecast test, not a mere year-effect coefficient, confirms both outcomes studied here are temporally stable: whiff cross-validated $\Delta R^2=+0.063$ ($p<0.0001$), timing $\Delta R^2=+0.106$ ($p<0.0001$)
 \end{itemize}
 
 \section*{Research Methodology \& Analytical Framework}
 
 \subsection*{Analytical Approach}
 \begin{itemize}
-\item Deception+ scores every pitch against a per-pitch gradient-boosted expectation (stuff, plate location, batter and catcher tendency, count, park, platoon, season, in-game fatigue, times through the order, and game state), fit with 5-fold cross-validation grouped by pitcher so a pitcher's own pitches never inform their own expectation. Each expectation averages three random grouped splits and is recalibrated for the league-wide level of each month.
+\item Deception+ scores every pitch against a per-pitch gradient-boosted expectation (stuff, plate location, batter tendency overall, against same-handed pitchers, by pitch type, by count and by zone, catcher tendency, count, park, platoon, season, in-game fatigue, times through the order, and game state), fit with 5-fold cross-validation grouped by pitcher so a pitcher's own pitches never inform their own expectation. Each expectation averages six random grouped splits and is recalibrated for the league-wide level of each month.
 \item The residual (actual minus expected) is empirical-Bayes shrunk toward the league mean using a Paule--Mandel between-pitcher variance estimate, then scored on a 100/10 index.
 \item This report regresses that shrunk residual on 14 pitcher-season traits engineered independently of the scoring model: release-point, arm-angle and vertical-approach-angle spread across a pitcher's repertoire, velocity gap and repeat rate from the previous pitch, tunnel differential, spin-axis mirror score, pace, pitch-mix entropy, and repertoire size.
-\item \textbf{Complete Coefficient Analysis}: ordinary least squares with standard errors, $p$-values, and 95\% confidence intervals for every feature in both models. Standard errors cluster on pitcher: about 55\% of pitchers contribute both a 2025 and a 2026 row, and a pitcher's two rows are strongly dependent (their whiff residuals correlate 0.49 across seasons), so classical errors overstate the evidence. $R^2$, $F$ and the coefficients are the plain OLS values. (The project's existing driver analysis uses Ridge regression and Random Forest permutation importance for a predictive read; this report adds the classical significance-testing layer the coefficient-table format below needs.)
+\item \textbf{Complete Coefficient Analysis}: ordinary least squares with standard errors, $p$-values, and 95\% confidence intervals for every feature in both models. Standard errors cluster on pitcher: about 56\% of pitchers contribute both a 2025 and a 2026 row, and a pitcher's two rows are strongly dependent (their whiff residuals correlate 0.49 across seasons), so classical errors overstate the evidence. $R^2$, $F$ and the coefficients are the plain OLS values. (The project's existing driver analysis uses Ridge regression and Random Forest permutation importance for a predictive read; this report adds the classical significance-testing layer the coefficient-table format below needs.)
 \item \textbf{Multiple-testing correction}: 14 features are tested in each model, so about 0.7 would reach $p<0.05$ by chance alone. Features are classed by their Benjamini--Hochberg adjusted $q$ across the 14 clustered tests of each model. A feature with $p<0.05$ but $q\ge0.05$ is reported as nominal and not as a finding.
 \item Deliberately excluded: Savant's own swing-outcome stats (miss distance, early/late/tied-up/flailed percentages), since they are outcomes of the same swings the residual already scores, and the pitch-tempo pull's duplicate pace column, confirmed a byte-for-byte copy of the first. The season-level traits use regular-season pitches only, like the scores.
 \end{itemize}
@@ -67,98 +67,98 @@ This analysis builds on Deception+, a from-scratch pitcher deception metric scor
 \begin{itemize}
 \item Two complete regular seasons (2025--2026), data through September 27, 2026
 \item 1,505 pitcher-seasons scored overall; 1,031 qualified
-\item \textbf{Whiff Driver Model}: $R^2=0.053$, Adjusted $R^2=0.044$, $F=5.92$ (14 features, $df=1,474$, $n=1,489$, 955 pitchers)
-\item \textbf{Timing Driver Model}: $R^2=0.067$, Adjusted $R^2=0.058$, $F=7.37$ (14 features, $df=1,441$, $n=1,456$, 937 pitchers)
+\item \textbf{Whiff Driver Model}: $R^2=0.057$, Adjusted $R^2=0.048$, $F=6.33$ (14 features, $df=1,474$, $n=1,489$, 955 pitchers)
+\item \textbf{Timing Driver Model}: $R^2=0.066$, Adjusted $R^2=0.057$, $F=7.24$ (14 features, $df=1,441$, $n=1,456$, 937 pitchers)
 \item \textbf{Temporal Validation}: both outcomes pass a genuine held-out year-ahead forecast test (see Temporal Stability Analysis)
 \end{itemize}
 
 \section*{Coefficient Analysis --- Whiff Residual Driver Model}
 
 \subsection*{Model Equation}
-Whiff residual $= -0.0606 +0.0016\times(\text{Pace between pitches}) +0.0019\times(\text{Velocity gap from previous pitch})$
-$\quad +0.0230\times(\text{Same-pitch-type repeat rate}) -0.0043\times(\text{VAA consistency across repertoire})$
-$\quad +0.0020\times(\text{Release extension}) -0.0001\times(\text{Spin-axis mirror score}) + ...\ (8\text{ more terms})$
+Whiff residual $= -0.0619 +0.0016\times(\text{Pace between pitches}) +0.0019\times(\text{Velocity gap from previous pitch})$
+$\quad +0.0242\times(\text{Same-pitch-type repeat rate}) -0.0045\times(\text{VAA consistency across repertoire})$
+$\quad +0.0021\times(\text{Release extension}) -0.0001\times(\text{Spin-axis mirror score}) + ...\ (8\text{ more terms})$
 
 \subsection*{Tier 1: Survive the Multiple-Testing Correction ($q<0.05$)}
 
 \feat{Pace between pitches (tempo\_bases\_empty\_sec)}
 \begin{itemize}
-\item Coefficient: $+0.00157$ \;|\; $p$-value: $<0.0001$*** \;|\; $q$: $<0.0001$ \;|\; 95\% CI: $[0.00106, 0.00209]$
-\item Working slower between pitches predicts a higher whiff residual. The residual's own standard deviation across qualified pitcher-seasons is $0.0145$, so a 5-second pace difference moves the prediction by about half a residual standard deviation.
+\item Coefficient: $+0.00160$ \;|\; $p$-value: $<0.0001$*** \;|\; $q$: $<0.0001$ \;|\; 95\% CI: $[0.00108, 0.00212]$
+\item Working slower between pitches predicts a higher whiff residual. The residual's own standard deviation across these pitcher-seasons is $0.0144$, so a 5-second pace difference moves the prediction by about half a residual standard deviation.
 \end{itemize}
 
 \feat{Velocity gap from previous pitch (avg\_velocity\_gap\_from\_prev)}
 \begin{itemize}
-\item Coefficient: $+0.00186$ \;|\; $p$-value: $0.0003$*** \;|\; $q$: $0.0019$ \;|\; 95\% CI: $[0.00086, 0.00286]$
+\item Coefficient: $+0.00193$ \;|\; $p$-value: $0.0002$*** \;|\; $q$: $0.0011$ \;|\; 95\% CI: $[0.00093, 0.00293]$
 \item Bigger speed changes between consecutive pitches predict more whiffs than stuff and location alone would, consistent with classic pitch-sequencing theory.
 \end{itemize}
 
 \feat{Same-pitch-type repeat rate (repeat\_pct)}
 \begin{itemize}
-\item Coefficient: $+0.02295$ \;|\; $p$-value: $0.0006$*** \;|\; $q$: $0.0029$ \;|\; 95\% CI: $[0.00980, 0.03610]$
-\item Significant in the model, but weak on its own ($r=+0.08$ with the whiff residual) and partly redundant with velocity gap (the two features correlate at $r=-0.37$). Read the two together; see Cross-Model Strategic Insights.
+\item Coefficient: $+0.02422$ \;|\; $p$-value: $0.0004$*** \;|\; $q$: $0.0016$ \;|\; 95\% CI: $[0.01094, 0.03749]$
+\item Significant in the model, but weak on its own ($r=+0.09$ with the whiff residual) and partly redundant with velocity gap (the two features correlate at $r=-0.37$). Read the two together; see Cross-Model Strategic Insights.
 \end{itemize}
 
 \subsection*{Tier 2: Nominally Significant Only ($p<0.05$, $q\ge0.05$)}
 
 \feat{VAA consistency across repertoire (vaa\_cross\_pitch\_std)}
 \begin{itemize}
-\item Coefficient: $-0.00433$ \;|\; $p$-value: $0.017$* \;|\; $q$: $0.061$ \;|\; 95\% CI: $[-0.00789, -0.00076]$
-\item Less spread in vertical approach angle across a pitcher's pitch types, a more consistent tunnel, goes with a higher residual. It does not clear the correction here, and it moved across the $q=0.05$ line between model reruns, so it is a lead and not a finding.
+\item Coefficient: $-0.00449$ \;|\; $p$-value: $0.014$* \;|\; $q$: $0.050$ \;|\; 95\% CI: $[-0.00808, -0.00089]$
+\item Less spread in vertical approach angle across a pitcher's pitch types, a more consistent tunnel, goes with a higher residual. It does not clear the correction here ($q=0.050$, on the line), and it moved across the $q=0.05$ line between model reruns, so it is a lead and not a finding.
+\end{itemize}
+
+\feat{Spin-axis mirror score (spin\_mirror\_score\_mean)}
+\begin{itemize}
+\item Coefficient: $-0.00007$ \;|\; $p$-value: $0.030$* \;|\; $q$: $0.084$ \;|\; 95\% CI: $[-0.00014, -0.00001]$
+\item A lower mirror score, consecutive pitches sharing a more similar or mirrored spin axis, goes with a higher residual. The direction matches the tunneling idea, but the effect is small, it does not clear the correction, and its $p$-value was $0.051$ in the previous run of the scoring model, so it is nominal only.
 \end{itemize}
 
 \subsection*{Tier 3: Not Distinguishable From Zero}
 
 Permutation importance is shown for reference only. The random forest behind it has a cross-validated $R^2$ of about $0.01$, so the ranking among these features is noise and is not evidence of an effect.
 
-\feat{Spin-axis mirror score (spin\_mirror\_score\_mean)}
-\begin{itemize}
-\item Coefficient: $-0.00007$ \;|\; $p$-value: $0.051$ \;|\; $q$: $0.144$ \;|\; Permutation importance: $0.00596$
-\item A lower mirror score, consecutive pitches sharing a more similar or mirrored spin axis, goes with a higher residual. The direction matches the tunneling idea, but the effect is small and sits just above $p=0.05$.
-\end{itemize}
-
 \feat{Release extension (release\_extension\_mean)}
 \begin{itemize}
-\item Coefficient: $+0.00204$ \;|\; $p$-value: $0.086$ \;|\; $q$: $0.195$ \;|\; Permutation importance: $-0.00576$
+\item Coefficient: $+0.00212$ \;|\; $p$-value: $0.072$ \;|\; $q$: $0.145$ \;|\; Permutation importance: $-0.00468$
 \item More extension toward the plate goes with a modestly higher residual, but not reliably.
 \end{itemize}
 
 \feat{Repertoire size (n\_pitch\_types)}
 \begin{itemize}
-\item Coefficient: $+0.00074$ \;|\; $p$-value: $0.097$ \;|\; $q$: $0.195$ \;|\; Permutation importance: $0.00073$
+\item Coefficient: $+0.00083$ \;|\; $p$-value: $0.063$ \;|\; $q$: $0.145$ \;|\; Permutation importance: $0.00051$
 \item A bigger repertoire trends toward more deception credit, but not reliably.
 \end{itemize}
 
 \feat{Season-average arm angle (arm\_angle\_szn\_avg)}
 \begin{itemize}
-\item Coefficient: $+0.00005$ \;|\; $p$-value: $0.49$ \;|\; $q$: $0.73$ \;|\; Permutation importance: $0.00261$
+\item Coefficient: $+0.00006$ \;|\; $p$-value: $0.48$ \;|\; $q$: $0.75$ \;|\; Permutation importance: $0.00464$
 \item Arm slot carries no distinguishable effect on the whiff residual.
 \end{itemize}
 
 \section*{Coefficient Analysis --- Timing Residual Driver Model}
 
 \subsection*{Model Equation}
-Timing residual $= -0.3419 +0.0622\times(\text{Velocity gap from previous pitch}) +0.4786\times(\text{Same-pitch-type repeat rate})$
-$\quad -0.0742\times(\text{VAA consistency across repertoire}) + ...\ (11\text{ more terms})$
+Timing residual $= -0.3559 +0.0619\times(\text{Velocity gap from previous pitch}) +0.4853\times(\text{Same-pitch-type repeat rate})$
+$\quad -0.0779\times(\text{VAA consistency across repertoire}) + ...\ (11\text{ more terms})$
 
 \subsection*{Tier 1: Survive the Multiple-Testing Correction ($q<0.05$)}
 
 \feat{Velocity gap from previous pitch (avg\_velocity\_gap\_from\_prev)}
 \begin{itemize}
-\item Coefficient: $+0.06220$ \;|\; $p$-value: $<0.0001$*** \;|\; $q$: $<0.0001$ \;|\; 95\% CI: $[0.04567, 0.07872]$
-\item The single most reliable predictor in either model. Timing's own residual standard deviation is $0.232$, so this effect is proportionally similar in size to the whiff-model version of the same feature.
+\item Coefficient: $+0.06189$ \;|\; $p$-value: $<0.0001$*** \;|\; $q$: $<0.0001$ \;|\; 95\% CI: $[0.04547, 0.07832]$
+\item The single most reliable predictor in either model. Timing's own residual standard deviation is $0.229$, so this effect is proportionally similar in size to the whiff-model version of the same feature.
 \end{itemize}
 
 \feat{Same-pitch-type repeat rate (repeat\_pct)}
 \begin{itemize}
-\item Coefficient: $+0.47857$ \;|\; $p$-value: $<0.0001$*** \;|\; $q$: $<0.0001$ \;|\; 95\% CI: $[0.26926, 0.68789]$
+\item Coefficient: $+0.48530$ \;|\; $p$-value: $<0.0001$*** \;|\; $q$: $<0.0001$ \;|\; 95\% CI: $[0.27382, 0.69678]$
 \item Confirms the whiff-model finding in an independent outcome: repeating a pitch type more often predicts bigger contact-timing misses, not smaller ones.
 \end{itemize}
 
 \feat{VAA consistency across repertoire (vaa\_cross\_pitch\_std)}
 \begin{itemize}
-\item Coefficient: $-0.07423$ \;|\; $p$-value: $0.0100$** \;|\; $q$: $0.047$ \;|\; 95\% CI: $[-0.13068, -0.01777]$
-\item Same sign as in the whiff model, but a narrow survivor: $q=0.047$ is barely under $0.05$, and the feature failed the correction in an earlier rerun of the scoring model. Treat it as a lead.
+\item Coefficient: $-0.07791$ \;|\; $p$-value: $0.0056$** \;|\; $q$: $0.026$ \;|\; 95\% CI: $[-0.13303, -0.02279]$
+\item Same sign as in the whiff model and it clears the correction here ($q=0.026$), but it was a narrow survivor in the previous run of the scoring model ($q=0.047$) and failed the correction in an earlier one. Treat it as a lead.
 \end{itemize}
 
 \subsection*{Tier 2: Nominally Significant Only ($p<0.05$, $q\ge0.05$)}
@@ -171,13 +171,13 @@ Permutation importance is shown for reference only. The random forest behind it 
 
 \feat{Release-point (x) consistency (release\_pos\_x\_cross\_pitch\_std)}
 \begin{itemize}
-\item Coefficient: $-0.25586$ \;|\; $p$-value: $0.092$ \;|\; $q$: $0.32$ \;|\; Permutation importance: $0.00116$
-\item The closest any remaining timing feature comes to conventional significance ($p=0.09$), and among the highest permutation importances.
+\item Coefficient: $-0.24844$ \;|\; $p$-value: $0.099$ \;|\; $q$: $0.35$ \;|\; Permutation importance: $0.00035$
+\item The closest any remaining timing feature comes to conventional significance ($p=0.10$), which is not close.
 \end{itemize}
 
 \feat{Average vertical approach angle (vaa\_mean)}
 \begin{itemize}
-\item Coefficient: $+0.00888$ \;|\; $p$-value: $0.47$ \;|\; $q$: $0.65$ \;|\; Permutation importance: $0.00238$
+\item Coefficient: $+0.00943$ \;|\; $p$-value: $0.44$ \;|\; $q$: $0.61$ \;|\; Permutation importance: $0.00108$
 \item A pitcher's average approach angle itself (as opposed to its \emph{consistency} across pitch types) has a small permutation importance and no distinguishable coefficient.
 \end{itemize}
 
@@ -187,13 +187,13 @@ Permutation importance is shown for reference only. The random forest behind it 
 
 \feat{Velocity Gap From Previous Pitch}
 \begin{itemize}
-\item Both Models: significant and positive after correction (whiff $+0.00186$, $p=0.0003$, $q=0.002$; timing $+0.06220$, $p<0.0001$)
+\item Both Models: significant and positive after correction (whiff $+0.00193$, $p=0.0002$, $q=0.001$; timing $+0.06189$, $p<0.0001$)
 \item Strategic Value: the single most consistently validated driver across both the rate and the magnitude dimension of swing-and-miss deception.
 \end{itemize}
 
 \feat{Same-Pitch-Type Repeat Rate}
 \begin{itemize}
-\item Both Models: significant and positive after correction (whiff $p=0.0006$, $q=0.003$; timing $p<0.0001$)
+\item Both Models: significant and positive after correction (whiff $p=0.0004$, $q=0.002$; timing $p<0.0001$)
 \item Strategic Value: significant in two independent scored outcomes, but weak on its own and entangled with velocity gap; see Findings That Need Careful Reading below.
 \end{itemize}
 
@@ -201,23 +201,23 @@ Permutation importance is shown for reference only. The random forest behind it 
 
 \feat{Why Velocity Gap and Repeat Rate Both Come Out Positive}
 \begin{itemize}
-\item Both Models: positive, significant coefficients for both features (repeat rate: whiff $p=0.0006$, timing $p<0.0001$). They can look contradictory, since mixing speeds and repeating the same pitch seem to be opposite behaviors.
+\item Both Models: positive, significant coefficients for both features (repeat rate: whiff $p=0.0004$, timing $p<0.0001$). They can look contradictory, since mixing speeds and repeating the same pitch seem to be opposite behaviors.
 \item The apparent contradiction comes from how the features are built. Velocity gap averages the speed change over all consecutive pitches, repeats included (a repeat adds about zero), so it mixes how often a pitcher switches with how big the jump is when they do. The two features correlate at $r=-0.37$.
-\item Each is only weakly related to the whiff residual on its own ($r=+0.05$ for velocity gap, $+0.08$ for repeat rate; roughly 1.4\% of its variance together). Because the two offset each other, each coefficient looks stronger with both in the regression: the standardized coefficients implied by those three correlations are about $0.09$ and $0.12$. That pattern is called cooperative suppression, and it is not a contradiction.
+\item Each is only weakly related to the whiff residual on its own ($r=+0.05$ for velocity gap, $+0.09$ for repeat rate; roughly 1.6\% of its variance together). Because the two offset each other, each coefficient looks stronger with both in the regression: the standardized coefficients implied by those three correlations are about $0.10$ and $0.12$. That pattern is called cooperative suppression, and it is not a contradiction.
 \item A cleaner measure splits the feature into switch rate and gap per switch. An earlier check found the per-switch gap correlates about $+0.12$ with the whiff residual, stronger than either raw feature; that split is not yet part of the pipeline.
 \item Strategic Implication: this is not evidence that repeating pitches creates deception, or that mixing them does. The effect is small, observational, and partly an artifact of feature construction. It also cannot separate ``thrown again because it's dominant'' from ``dominant because it's thrown again.''
 \end{itemize}
 
 \feat{VAA Consistency Is Suggestive, Not Established}
 \begin{itemize}
-\item Both Models: negative and nominally significant (whiff $-0.00433$, $p=0.017$, $q=0.061$; timing $-0.07423$, $p=0.010$, $q=0.047$). It fails the correction for whiff and survives for timing only just.
+\item Both Models: negative and nominally significant (whiff $-0.00449$, $p=0.014$, $q=0.050$; timing $-0.07791$, $p=0.006$, $q=0.026$). It sits on the line for whiff and clears it for timing.
 \item Strategic Implication: pitchers whose different pitch types share a similar approach angle may get more deception credit, in line with this project's spin-axis-gap finding in the scoring model. Two same-signed results that straddle $q=0.05$ are a reason to test it directly, not a result.
 \end{itemize}
 
 \feat{Pace Does Not Generalize}
 \begin{itemize}
-\item Whiff Model: significant and positive ($+0.00157$, $p<0.0001$)
-\item Timing Model: not significant, and the opposite sign ($-0.00229$, $p=0.61$)
+\item Whiff Model: significant and positive ($+0.00160$, $p<0.0001$)
+\item Timing Model: not significant, and the opposite sign ($-0.00175$, $p=0.69$)
 \item Strategic Implication: these are two different residuals, not two readings of the same effect. A driver that matters for whether a hitter whiffs does not automatically matter for how far off their timing is when they do make contact.
 \end{itemize}
 
@@ -227,20 +227,20 @@ Unlike a single in-sample year-effect coefficient, Deception+ already runs a gen
 
 \subsection*{Whiff Model Forecast Validity}
 \begin{itemize}
-\item Cross-validated $\Delta R^2$: $+0.0611$ \;|\; $F$-test $p$-value: $<0.0001$ \;|\; In-sample $\Delta R^2$: $+0.0596$
+\item Cross-validated $\Delta R^2$: $+0.0631$ \;|\; $F$-test $p$-value: $<0.0001$ \;|\; In-sample $\Delta R^2$: $+0.0612$
 \item Interpretation: a pitcher's 2025 whiff score predicts real, out-of-sample 2026 whiff rate beyond what 2026's own expectation already explains.
 \end{itemize}
 
 \subsection*{Timing Model Forecast Validity}
 \begin{itemize}
-\item Cross-validated $\Delta R^2$: $+0.1051$ \;|\; $F$-test $p$-value: $<0.0001$ \;|\; In-sample $\Delta R^2$: $+0.1017$
+\item Cross-validated $\Delta R^2$: $+0.1061$ \;|\; $F$-test $p$-value: $<0.0001$ \;|\; In-sample $\Delta R^2$: $+0.1018$
 \item Interpretation: the strongest forecast validity of any scored component in the project.
 \end{itemize}
 
 \subsection*{Contrast: Two Components That Fail This Test}
 \begin{itemize}
-\item Called Strike: cross-validated $\Delta R^2 = +0.0013$, $p=0.012$ (borderline)
-\item Horizontal Alignment: cross-validated $\Delta R^2 = -0.0001$, $p=0.117$ (not significant)
+\item Called Strike: cross-validated $\Delta R^2 = +0.0010$, $p=0.021$ (above the $0.01$ gate)
+\item Horizontal Alignment: cross-validated $\Delta R^2 = -0.0001$, $p=0.090$ (not significant)
 \item This is exactly why the project's composite metric excludes both.
 \end{itemize}
 
@@ -252,23 +252,24 @@ Unlike a single in-sample year-effect coefficient, Deception+ already runs a gen
 
 \textbf{Whiff Model:}
 \begin{itemize}
-\item Pace between pitches: $+0.00157$ ($p<0.0001$***)
-\item Velocity gap from previous pitch: $+0.00186$ ($p=0.0003$***)
-\item Same-pitch-type repeat rate: $+0.02295$ ($p=0.0006$***)
+\item Pace between pitches: $+0.00160$ ($p<0.0001$***)
+\item Velocity gap from previous pitch: $+0.00193$ ($p=0.0002$***)
+\item Same-pitch-type repeat rate: $+0.02422$ ($p=0.0004$***)
 \end{itemize}
 
 \textbf{Timing Model:}
 \begin{itemize}
-\item Velocity gap from previous pitch: $+0.06220$ ($p<0.0001$***)
-\item Same-pitch-type repeat rate: $+0.47857$ ($p<0.0001$***)
-\item VAA consistency across repertoire: $-0.07423$ ($p=0.0100$*, $q=0.047$, a narrow survivor)
+\item Velocity gap from previous pitch: $+0.06189$ ($p<0.0001$***)
+\item Same-pitch-type repeat rate: $+0.48530$ ($p<0.0001$***)
+\item VAA consistency across repertoire: $-0.07791$ ($p=0.0056$**, $q=0.026$, a survivor that was narrower in the previous run)
 \end{itemize}
 
 \subsection*{Nominally Significant Only ($p<0.05$, does not survive the correction)}
 
 \textbf{Whiff Model:}
 \begin{itemize}
-\item VAA consistency across repertoire: $-0.00433$ ($p=0.0173$*, $q=0.061$)
+\item VAA consistency across repertoire: $-0.00449$ ($p=0.0144$*, $q=0.050$)
+\item Spin-axis mirror score: $-0.00007$ ($p=0.0298$*, $q=0.084$)
 \end{itemize}
 
 \textbf{Timing Model:} none.
@@ -278,8 +279,8 @@ Unlike a single in-sample year-effect coefficient, Deception+ already runs a gen
 \textbf{Whiff Model:}
 \begin{itemize}
 \item Total features analyzed: 14
-\item Nominally significant features ($p<0.05$): 4 of 14; surviving the correction ($q<0.05$): 3 of 14
-\item Largest raw coefficient (depends on feature units): Same-pitch-type repeat rate ($+0.0230$, $p=0.0006$)
+\item Nominally significant features ($p<0.05$): 5 of 14; surviving the correction ($q<0.05$): 3 of 14
+\item Largest raw coefficient (depends on feature units): Same-pitch-type repeat rate ($+0.0242$, $p=0.0004$)
 \item Most reliable predictor: Pace between pitches ($p<0.0001$)
 \end{itemize}
 
@@ -287,7 +288,7 @@ Unlike a single in-sample year-effect coefficient, Deception+ already runs a gen
 \begin{itemize}
 \item Total features analyzed: 14
 \item Nominally significant features ($p<0.05$): 3 of 14; surviving the correction ($q<0.05$): 3 of 14
-\item Largest raw coefficient (depends on feature units): Same-pitch-type repeat rate ($+0.479$, $p<0.0001$)
+\item Largest raw coefficient (depends on feature units): Same-pitch-type repeat rate ($+0.485$, $p<0.0001$)
 \item Most reliable predictor: Velocity gap from previous pitch ($p<0.0001$)
 \end{itemize}
 
@@ -295,8 +296,8 @@ Unlike a single in-sample year-effect coefficient, Deception+ already runs a gen
 
 \begin{enumerate}
 \item \textbf{Sequencing Features Carry a Weak Signal}: pitch-to-pitch velocity change and repeat rate are both significant and positive in two separate scored outcomes, but each is only weakly related to the residual ($r=+0.05$ to $+0.20$) and the two partly offset each other. They are better read as a weak signal about how a pitcher switches between pitches than as proof that mixing or repeating pitches creates deception.
-\item \textbf{Tunneling Consistency Is a Lead, Not a Finding}: pitchers whose different pitch types share a similar vertical approach angle earn more deception credit in both whiff and timing ($p=0.017$ and $0.010$, same sign), in line with this project's own spin-axis-gap finding from the underlying scoring model, but the correction splits the two ($q=0.061$ and $0.047$) and the result moved across the line between reruns. The spin-axis mirror score, the other tunneling measure, does not survive.
-\item \textbf{Season-Level Traits Explain Little of the Residual}: $R^2$ of $0.053$ to $0.067$ means over 90\% of the scored residual is still unexplained by these 14 traits. This is an explanatory layer on top of Deception+, not a predictive one, and should be read as such.
+\item \textbf{Tunneling Consistency Is a Lead, Not a Finding}: pitchers whose different pitch types share a similar vertical approach angle earn more deception credit in both whiff and timing ($p=0.014$ and $0.006$, same sign), in line with this project's own spin-axis-gap finding from the underlying scoring model, but the correction puts the two on either side of the line ($q=0.050$ and $0.026$) and the result moved across it between reruns. The spin-axis mirror score, the other tunneling measure, is nominal for whiff ($p=0.030$, $q=0.084$) and absent for timing.
+\item \textbf{Season-Level Traits Explain Little of the Residual}: $R^2$ of $0.057$ to $0.066$ means over 90\% of the scored residual is still unexplained by these 14 traits. This is an explanatory layer on top of Deception+, not a predictive one, and should be read as such.
 \item \textbf{Temporal Stability Is Verified, Not Assumed}: whiff and timing both pass a genuine held-out year-ahead forecast test; called strike and horizontal alignment do not, which is exactly why Deception+'s composite excludes them.
 \item \textbf{Treat the Sequencing Findings as Correlational}: this analysis cannot separate ``thrown again because it's good'' from ``good because it's thrown again.'' A pitch-level, within-pitcher test is a natural next step.
 \end{enumerate}
@@ -305,10 +306,10 @@ Unlike a single in-sample year-effect coefficient, Deception+ already runs a gen
 \begin{itemize}
 \item \textbf{Small, season-level sample}: $n \approx 1{,}450$--$1{,}490$ pitcher-seasons from about 940--955 pitchers. Results describe between-pitcher patterns across a full season, not week-to-week variation within one.
 \item \textbf{Moderate multicollinearity}: pitch-mix entropy carries the highest variance inflation factor in both models (VIF $\approx 5.5$), reflecting its real mathematical relationship to repeat rate. No feature in either model exceeds the conventional VIF $=10$ concern threshold, but the entropy and repeat-rate coefficients are best read together rather than in isolation.
-\item \textbf{Exploratory, even after correction}: the Benjamini--Hochberg adjustment covers the 14 tests inside each model. The project has tested many other things (component candidates, other drivers, sequencing features), so even a result that survives, such as pace between pitches or velocity gap, deserves replication on another season before it is relied on. Vertical-approach-angle consistency shows how fragile a marginal result is: $q=0.026$ with classical errors, $q=0.061$ clustered for whiff, and $q=0.047$ for timing.
-\item \textbf{The residuals carry model noise}: which pitchers share a cross-validation fold changes a pitcher's expectation, worth about 1.1 index points per component after averaging three random grouped splits (about 2 with one). Season-level driver results near a threshold can move with it, as the vertical-approach-angle result did.
+\item \textbf{Exploratory, even after correction}: the Benjamini--Hochberg adjustment covers the 14 tests inside each model. The project has tested many other things (component candidates, other drivers, sequencing features), so even a result that survives, such as pace between pitches or velocity gap, deserves replication on another season before it is relied on. Vertical-approach-angle consistency shows how fragile a marginal result is: clustered, its $q$ is $0.050$ for whiff and $0.026$ for timing here, against $0.061$ and $0.047$ in the previous run of the scoring model.
+\item \textbf{The residuals carry model noise}: which pitchers share a cross-validation fold changes a pitcher's expectation, worth about 0.75 index points per component after averaging six random grouped splits (about 1.1 with three, about 2 with one). Season-level driver results near a threshold can move with it, as the vertical-approach-angle result did.
 \item \textbf{Raw coefficients depend on units}: a coefficient's size reflects the scale of its feature (repeat rate runs from 0 to 1, pace in seconds), so ``largest coefficient'' comparisons across features are not like-for-like. Standardized coefficients would be the fair comparison.
-\item \textbf{The residual is not independent of pitch quality}: Deception+ correlates $r=0.409$ with FanGraphs Stuff+, so these coefficients describe what separates pitchers on a residual that still carries some pitch-quality information.
+\item \textbf{The residual is not independent of pitch quality}: Deception+ correlates $r=0.410$ with FanGraphs Stuff+, so these coefficients describe what separates pitchers on a residual that still carries some pitch-quality information.
 \item \textbf{Explanatory, not predictive}: this driver regression is a diagnostic layer only, exactly as the project's own driver-analysis module states. It does not feed back into, or change, any pitcher's scored Deception+ value.
 \end{itemize}
 
