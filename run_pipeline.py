@@ -76,7 +76,7 @@ STEPS = [
     Step("sequencing_driver_analysis", ("sequencing_driver_analysis.py",), ("output/sequencing_driver_report.json",),
          "does the previous pitch explain the residual? (pitch level)"),
     Step("stuffplus_relationship", ("stuffplus_relationship.py",), ("output/stuffplus_relationship.json",),
-         "average result by Stuff+ fifth, fastballs against other pitches"),
+         "average result by Stuff+ fifth, and the Stuff+ slope by pitch type and on first pitches only"),
     Step("model_validation", ("model_validation.py",), ("output/model_validation.json",),
          "out-of-fold AUC, log loss, calibration and R2 for every pitch model"),
     Step("export_data", ("export_artifact_data.py", "export_site_stats.py", "export_leaderboard_data.py"),
