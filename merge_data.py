@@ -337,6 +337,16 @@ def merge_fangraphs_standard(pitcher_season_covariates: pd.DataFrame) -> pd.Data
     return pitcher_season_covariates.merge(totals, on=["pitcher", "season"], how="outer")
 
 
+def restrict_to_pulled_seasons(covariates: pd.DataFrame, seasons) -> pd.DataFrame:
+    """Drop covariate rows for seasons that are not in the Statcast pull. The FanGraphs exports hold more seasons than
+    were pulled (2023, with no pitch data behind it), and the outer merges above would otherwise carry those rows."""
+    keep = covariates["season"].isin(set(seasons))
+    if not keep.all():
+        print(f"dropping {int((~keep).sum())} covariate rows for seasons not in the Statcast pull: "
+              f"{sorted(covariates.loc[~keep, 'season'].unique().tolist())}")
+    return covariates[keep].reset_index(drop=True)
+
+
 # ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
@@ -372,6 +382,7 @@ if __name__ == "__main__":
 
     print("attempting FanGraphs games/starts/innings merge (optional)...")
     pitcher_season_covariates = merge_fangraphs_standard(pitcher_season_covariates)
+    pitcher_season_covariates = restrict_to_pulled_seasons(pitcher_season_covariates, outcome_rates["season"].unique())
 
     table = table.merge(pitcher_season_covariates, on=["pitcher", "season"], how="left")
     if fg_pitch_type_long is not None:

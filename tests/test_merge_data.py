@@ -131,3 +131,11 @@ def test_pitch_mix_entropy_is_zero_for_one_pitch_and_one_bit_for_an_even_split()
 
     assert out[1] == pytest.approx(0.0)
     assert out[2] == pytest.approx(1.0)
+
+
+def test_covariate_rows_for_seasons_that_were_not_pulled_are_dropped():
+    covariates = pd.DataFrame({"pitcher": [1, 1, 2], "season": [2023, 2024, 2023], "stuff_plus": [100.0, 110.0, 90.0]})
+
+    out = merge_data.restrict_to_pulled_seasons(covariates, [2024, 2025, 2026])
+
+    assert out["season"].tolist() == [2024] and out["pitcher"].tolist() == [1]

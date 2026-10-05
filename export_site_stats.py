@@ -451,7 +451,6 @@ def main() -> None:
         "N_COMPOSITE": str(len(COMPOSITE_OUTCOMES)),
         "QUALIFY_TEXT": qualify_text(),
         "TIMING_ONTIME_R": fmt_r(timing_vs_savant(ps)),
-        "REL_CHASE": fmt_r(rel["chase"]),
         "DRIVER_R2_RANGE": f"{min(driver_r2):.2f} to {max(driver_r2):.2f}",
         "SEQ_R2_RANGE": f"{min(seq_r2):.4f} to {max(seq_r2):.4f}",
         "STUFF_R": fmt_r(stuff["composite"]),
