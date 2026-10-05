@@ -34,7 +34,7 @@ from physics_features import add_physics_features
 from pitch_pairs import TRAJECTORY_COLS, add_pair_features
 from swing_alignment import add_swing_alignment
 
-PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2025_2026.csv"
+PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2024_2026.csv"
 PREDICTIONS_FILE = "output/per_pitch_predictions.csv"
 CHUNKSIZE = 500_000
 WEAK_CONTACT_EV = 85.0

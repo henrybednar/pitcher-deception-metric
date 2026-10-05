@@ -1,32 +1,33 @@
 """
 Pitcher Deception Project — predictive validity check
 ========================================================
-Does a pitcher's 2025 deception score predict their 2026 ACTUAL outcome
-rate, on top of what 2026's own stuff+location+opponent expectation
-already predicts?
+Does a pitcher's deception score in one season predict their ACTUAL outcome rate the next season, on top
+of what that next season's own stuff+location+opponent expectation already predicts?
 
-  Model A: 2026_actual_rate ~ 2026_own_expected_full
-  Model B: 2026_actual_rate ~ 2026_own_expected_full + 2025_{label}_index
+  Model A: next_actual_rate ~ next_own_expected_full
+  Model B: next_actual_rate ~ next_own_expected_full + this_season_{label}_index
+
+Every pair of consecutive seasons counts (2024 to 2025 and 2025 to 2026), stacked into one regression, so a
+pitcher who threw all three seasons contributes two rows.
 
 Two numbers reported per component, not just one:
-  - `f_pvalue`: a nested-model partial-F test on the added coefficient —
-    the correct significance test, since in-sample R² is mathematically
-    guaranteed to be >= when adding ANY second predictor (even pure noise),
-    so a raw in-sample delta-R^2 alone cannot distinguish real signal from
-    that guaranteed-non-negative artifact.
-  - `cv_delta_r2`: 5-fold cross-validated (out-of-sample) R^2 delta, which
-    is NOT guaranteed non-negative — a genuinely uninformative predictor
-    will show a negative or near-zero out-of-sample delta on average.
+  - `p_value`: a test of the added coefficient with standard errors clustered on pitcher, since a pitcher's two
+    rows share a season. In-sample R² is mathematically guaranteed to be >= when adding ANY second predictor
+    (even pure noise), so a raw in-sample delta-R^2 alone cannot distinguish real signal from that
+    guaranteed-non-negative artifact, and the test is the one that can.
+  - `cv_delta_r2`: 5-fold cross-validated (out-of-sample) R^2 delta with folds grouped by pitcher, which is NOT
+    guaranteed non-negative — a genuinely uninformative predictor will show a negative or near-zero
+    out-of-sample delta on average.
 
-Two seasons is a real held-out year, but still only one; treat this as a direction-of-effect
-check, not a precise long-run estimate.
+Two held-out year-ahead pairs are still a short record; treat this as a direction-of-effect check, not a
+precise long-run estimate.
 """
 
 import numpy as np
 import pandas as pd
-from scipy import stats
+import statsmodels.api as sm
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import KFold, cross_val_score
+from sklearn.model_selection import GroupKFold, cross_val_score
 
 from reliability_and_ci import (
     BINARY_OUTCOMES,
@@ -37,41 +38,63 @@ from reliability_and_ci import (
 )
 
 OUTCOME_SPECS = {**BINARY_OUTCOMES, **CONTINUOUS_OUTCOMES}
-CV = KFold(n_splits=5, shuffle=True, random_state=42)
+CV_SPLITS = 5
+CV_SEED = 42
+MIN_ROWS = 30
 
 
 def in_sample_r2(X: np.ndarray, y: np.ndarray) -> float:
     return LinearRegression().fit(X, y).score(X, y)
 
 
-def cv_r2(X: np.ndarray, y: np.ndarray) -> float:
-    return cross_val_score(LinearRegression(), X, y, cv=CV, scoring="r2").mean()
+def cv_r2(X: np.ndarray, y: np.ndarray, groups: np.ndarray) -> float:
+    cv = GroupKFold(n_splits=CV_SPLITS, shuffle=True, random_state=CV_SEED)
+    return cross_val_score(LinearRegression(), X, y, cv=cv, groups=groups, scoring="r2").mean()
 
 
-def nested_f_test(X_a: np.ndarray, X_b: np.ndarray, y: np.ndarray) -> float:
-    """Partial-F test: is the extra predictor in X_b (vs. X_a) significant?
-    X_b must be X_a with exactly one additional column appended."""
-    n = len(y)
-    rss_a = np.sum((y - LinearRegression().fit(X_a, y).predict(X_a)) ** 2)
-    rss_b = np.sum((y - LinearRegression().fit(X_b, y).predict(X_b)) ** 2)
-    df_b = n - X_b.shape[1] - 1
-    f_stat = ((rss_a - rss_b) / 1) / (rss_b / df_b)
-    return 1 - stats.f.cdf(max(f_stat, 0), 1, df_b)
+def added_term_p_value(X_b: np.ndarray, y: np.ndarray, groups: np.ndarray) -> float:
+    """p-value of the last column of X_b in an OLS fit, with standard errors clustered on `groups`."""
+    fit = sm.OLS(y, sm.add_constant(X_b)).fit(cov_type="cluster", cov_kwds={"groups": groups})
+    return float(fit.pvalues[-1])
 
 
-def evaluate(data: pd.DataFrame, x_col: str, prior_col: str, y_col: str) -> dict:
+def next_season_frame(agg: pd.DataFrame, ps: pd.DataFrame, prior_col: str) -> pd.DataFrame:
+    """One row per pitcher and season that has a scored previous season: the season's own actual and expected rate
+    (agg: pitcher, season, actual_mean, expected_mean) beside the previous season's `prior_col` value from ps."""
+    prior = (ps[["pitcher", "season", prior_col]].assign(season=lambda d: d["season"] + 1)
+             .rename(columns={prior_col: "prior_index"}))
+    out = agg[["pitcher", "season", "actual_mean", "expected_mean"]].merge(prior, on=["pitcher", "season"])
+    return out.rename(columns={"actual_mean": "y_next", "expected_mean": "exp_next_full"}).dropna().reset_index(drop=True)
+
+
+def evaluate(data: pd.DataFrame, x_col: str, prior_col: str, y_col: str, group_col: str = "pitcher") -> dict:
     X_a = data[[x_col]].values
     X_b = data[[x_col, prior_col]].values
     y = data[y_col].values
+    groups = data[group_col].values
     r2_a_in, r2_b_in = in_sample_r2(X_a, y), in_sample_r2(X_b, y)
     return {
         "n": len(data),
+        "pitchers": int(data[group_col].nunique()),
         "r2_stuff_only": round(r2_a_in, 4),
-        "r2_plus_2025_deception": round(r2_b_in, 4),
+        "r2_plus_prior_deception": round(r2_b_in, 4),
         "delta_r2_in_sample": round(r2_b_in - r2_a_in, 4),
-        "cv_delta_r2": round(cv_r2(X_b, y) - cv_r2(X_a, y), 4),
-        "f_pvalue": round(nested_f_test(X_a, X_b, y), 6),
+        "cv_delta_r2": round(cv_r2(X_b, y, groups) - cv_r2(X_a, y, groups), 4),
+        "p_value": round(added_term_p_value(X_b, y, groups), 6),
     }
+
+
+def pitcher_season_rates(df: pd.DataFrame, label: str, spec: dict) -> pd.DataFrame:
+    """Actual and expected mean of one outcome for every scored pitcher-season."""
+    mask = spec["subset"](df) & df[f"{label}_expected_full"].notna()
+    agg = pitcher_season_point_estimate(game_level_table(df[mask], label, spec["target"], baseline="full"))
+    return agg[agg["n"] >= MIN_N_FOR_SCORE]
+
+
+def describe(result: dict) -> str:
+    return (f"n={result['n']} ({result['pitchers']} pitchers), R2(next season's expectation alone)={result['r2_stuff_only']:.4f}, "
+            f"R2(+prior score)={result['r2_plus_prior_deception']:.4f}, in-sample delta={result['delta_r2_in_sample']:+.4f}, "
+            f"CV delta={result['cv_delta_r2']:+.4f}, p={result['p_value']:.4g}")
 
 
 if __name__ == "__main__":
@@ -80,43 +103,19 @@ if __name__ == "__main__":
 
     rows = []
     for label, spec in OUTCOME_SPECS.items():
-        mask = spec["subset"](df) & df[f"{label}_expected_full"].notna() & (df["season"] == 2026)
-        games_26 = game_level_table(df[mask], label, spec["target"], baseline="full")
-        agg_26 = pitcher_season_point_estimate(games_26)
-        agg_26 = agg_26[agg_26["n"] >= MIN_N_FOR_SCORE][["pitcher", "actual_mean", "expected_mean"]]
-        agg_26 = agg_26.rename(columns={"actual_mean": "y_2026", "expected_mean": "exp_2026_full"})
-
-        prior = ps.loc[ps["season"] == 2025, ["pitcher", f"{label}_index"]].rename(
-            columns={f"{label}_index": "prior_index"})
-
-        data = agg_26.merge(prior, on="pitcher", how="inner").dropna()
-        if len(data) < 30:
+        data = next_season_frame(pitcher_season_rates(df, label, spec), ps, f"{label}_index")
+        if len(data) < MIN_ROWS:
             print(f"{label}: n={len(data)} too small, skipping")
             continue
-
-        result = {"label": label, **evaluate(data, "exp_2026_full", "prior_index", "y_2026")}
+        result = {"label": label, **evaluate(data, "exp_next_full", "prior_index", "y_next")}
         rows.append(result)
-        print(f"{label}: n={result['n']}, R2(2026 stuff alone)={result['r2_stuff_only']:.4f}, "
-              f"R2(+2025 index)={result['r2_plus_2025_deception']:.4f}, "
-              f"in-sample delta={result['delta_r2_in_sample']:+.4f}, "
-              f"CV delta={result['cv_delta_r2']:+.4f}, p={result['f_pvalue']:.4g}", flush=True)
+        print(f"{label}: {describe(result)}", flush=True)
 
-    # composite-level check: does 2025 Deception+ predict 2026 actual whiff rate?
-    spec = BINARY_OUTCOMES["whiff"]
-    mask = spec["subset"](df) & df["whiff_expected_full"].notna()
-    sub = df[mask]
-    games_26 = game_level_table(sub[sub["season"] == 2026], "whiff", spec["target"], baseline="full")
-    agg_26 = pitcher_season_point_estimate(games_26)
-    agg_26 = agg_26[agg_26["n"] >= MIN_N_FOR_SCORE][["pitcher", "actual_mean", "expected_mean"]]
-    agg_26 = agg_26.rename(columns={"actual_mean": "y_2026", "expected_mean": "exp_2026_full"})
-    prior = ps.loc[ps["season"] == 2025, ["pitcher", "deception_plus"]]
-    data = agg_26.merge(prior, on="pitcher", how="inner").dropna()
-    result = {"label": "composite_to_whiff", **evaluate(data, "exp_2026_full", "deception_plus", "y_2026")}
+    # composite-level check: does a season's Deception+ predict the next season's actual whiff rate?
+    data = next_season_frame(pitcher_season_rates(df, "whiff", BINARY_OUTCOMES["whiff"]), ps, "deception_plus")
+    result = {"label": "composite_to_whiff", **evaluate(data, "exp_next_full", "prior_index", "y_next")}
     rows.append(result)
-    print(f"composite_to_whiff: n={result['n']}, R2(2026 stuff alone)={result['r2_stuff_only']:.4f}, "
-          f"R2(+2025 Deception+)={result['r2_plus_2025_deception']:.4f}, "
-          f"in-sample delta={result['delta_r2_in_sample']:+.4f}, "
-          f"CV delta={result['cv_delta_r2']:+.4f}, p={result['f_pvalue']:.4g}", flush=True)
+    print(f"composite_to_whiff: {describe(result)}", flush=True)
 
     pd.DataFrame(rows).to_csv("output/predictive_validity_report.csv", index=False)
     print("\nSaved predictive_validity_report.csv. Done.")

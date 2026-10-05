@@ -31,7 +31,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2025_2026.csv"
+PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2024_2026.csv"
 
 
 # ---------------------------------------------------------------------------
@@ -136,13 +136,13 @@ def compute_pitch_mix_entropy(outcome_rates: pd.DataFrame) -> pd.DataFrame:
 # 4. Loaders for the pitcher-season-level leaderboard pulls
 # ---------------------------------------------------------------------------
 def load_arm_angle_leaderboard() -> pd.DataFrame:
-    df = pd.read_csv("raw/arm_angle_by_pitcher_2025_2026.csv")
+    df = pd.read_csv("raw/arm_angle_by_pitcher_2024_2026.csv")
     keep = ["pitcher", "season", "ball_angle"]
     return df[keep].rename(columns={"ball_angle": "arm_angle_szn_avg"})
 
 
 def load_tempo() -> pd.DataFrame:
-    df = pd.read_csv("raw/pitch_tempo_by_pitcher_2025_2026.csv")
+    df = pd.read_csv("raw/pitch_tempo_by_pitcher_2024_2026.csv")
     df = df.rename(columns={"entity_id": "pitcher"})
     # The pull used split=no, so the file's second pace column is a positional duplicate of this one.
     return df[["pitcher", "season", "median_seconds_empty"]].rename(columns={"median_seconds_empty": "tempo_bases_empty_sec"})
@@ -342,7 +342,7 @@ def merge_fangraphs_standard(pitcher_season_covariates: pd.DataFrame) -> pd.Data
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     print("loading outcome rates...")
-    outcome_rates = pd.read_csv("raw/outcome_rates_by_pitcher_pitchtype_2025_2026.csv")
+    outcome_rates = pd.read_csv("raw/outcome_rates_by_pitcher_pitchtype_2024_2026.csv")
 
     print("computing pitch characteristics (chunked pass over pitch-level file)...")
     pitch_chars = compute_pitch_characteristics(PITCH_LEVEL_FILE)

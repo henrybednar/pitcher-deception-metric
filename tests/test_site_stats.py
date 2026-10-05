@@ -41,7 +41,7 @@ def test_fmt_p_keeps_three_decimals_below_the_five_percent_line_so_a_gate_at_one
     assert fmt_p(0.00003) == "<0.0001"
 
 
-def test_ground_ball_forecast_correlation_pairs_2025_deception_with_2026_ground_ball_by_pitcher():
+def test_ground_ball_forecast_correlation_pairs_a_season_s_deception_with_the_next_season_s_ground_ball_by_pitcher():
     from export_site_stats import ground_ball_forecast_correlation
 
     ps = pd.DataFrame({
@@ -101,6 +101,19 @@ def test_year_over_year_summary_gives_an_interval_and_splits_by_volume():
     assert summary["high_volume_r"] > summary["low_volume_r"]      # less noise, more stable
 
 
+def test_year_over_year_summary_pools_every_pair_of_consecutive_seasons_and_reports_each():
+    from export_site_stats import year_over_year_summary
+
+    ps = pd.concat([stability_frame(n=100, seed=0).assign(season=lambda d: d["season"].map({2025: 2024, 2026: 2025})),
+                    stability_frame(n=100, seed=0).query("season == 2026")], ignore_index=True)
+    # every pitcher has 2024, 2025 and 2026: two pairs each, 200 in all
+
+    summary = year_over_year_summary(ps, n_boot=100)
+
+    assert summary["n"] == 200
+    assert set(summary["by_pair"]) == {"2024-2025", "2025-2026"}
+
+
 def test_year_over_year_summary_ignores_unqualified_and_single_season_pitchers():
     from export_site_stats import year_over_year_summary
 
@@ -139,3 +152,16 @@ def test_handedness_gap_is_left_minus_right_with_a_welch_test():
     assert gap["gap"] == pytest.approx(ps["deception_plus"][:100].mean() - ps["deception_plus"][100:].mean())
     assert (gap["n_left"], gap["n_right"]) == (100, 300)
     assert 0.0 < gap["p"] < 1.0
+
+
+def test_membership_text_formats_each_variant_with_its_difference_and_interval():
+    from export_site_stats import membership_text
+
+    entry = {"reliability": 0.7114, "yoy_all": 0.5936, "diff": -0.0266, "diff_lo": -0.0441, "diff_hi": -0.0098}
+    check = {name: entry for name in ("+gb", "+align", "+calledstrike", "-whiffmiss", "-weak", "-timing")}
+
+    text = membership_text(check)
+
+    assert text["MEM_GB_REL"] == "0.711" and text["MEM_GB_YOY"] == "0.594"
+    assert text["MEM_CS_DIFF"] == "-0.027" and text["MEM_CS_CI"] == "-0.044 to -0.010"
+    assert set(text) >= {"MEM_NO_WHIFFMISS_DIFF", "MEM_NO_WEAK_CI", "MEM_NO_TIMING_REL", "MEM_ALIGN_YOY"}

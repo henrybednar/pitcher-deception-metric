@@ -22,61 +22,75 @@ from driver_features import fdr_adjusted_p_values
 
 LABELS = ["whiff", "timing"]
 
-driver_df = pd.read_csv("output/driver_features.csv")
-ps = pd.read_csv("output/pitcher_season.csv")
-feature_cols = [c for c in driver_df.columns if c not in ("pitcher", "season")]
 
-results = {}
-for label in LABELS:
+def model_data(label: str, driver_df: pd.DataFrame, ps: pd.DataFrame, feature_cols: list[str]) -> pd.DataFrame:
+    """The pitcher-seasons one driver model uses: the label's shrunk residual joined to the features, rows with
+    more than two missing features dropped, the rest median-filled."""
     target_col = f"{label}_diff_adj_shrunk"
     data = driver_df.merge(ps[["pitcher", "season", target_col]], on=["pitcher", "season"], how="inner")
     data = data.dropna(subset=[target_col])
-    data = data.dropna(subset=feature_cols, thresh=len(feature_cols) - 2)
+    data = data.dropna(subset=feature_cols, thresh=len(feature_cols) - 2).copy()
     for c in feature_cols:
         data[c] = data[c].fillna(data[c].median())
+    return data
 
-    X = sm.add_constant(data[feature_cols])
-    y = data[target_col]
-    # Standard errors, p-values and intervals cluster on pitcher: most pitchers appear in both seasons, and
-    # a pitcher's two rows are dependent. R2, F and the coefficients are the plain OLS values.
-    plain = sm.OLS(y, X).fit()
-    model = sm.OLS(y, X).fit(cov_type="cluster", cov_kwds={"groups": data["pitcher"].to_numpy()})
 
-    ci = model.conf_int(alpha=0.05)
-    q = fdr_adjusted_p_values(data[feature_cols], y, groups=data["pitcher"].to_numpy())
-    rows = []
-    for feat in feature_cols:
-        rows.append({
-            "feature": feat,
-            "coef": round(float(model.params[feat]), 6),
-            "se": round(float(model.bse[feat]), 6),
-            "p": round(float(model.pvalues[feat]), 6),
-            "q": round(float(q[feat]), 6),
-            "ci_lo": round(float(ci.loc[feat, 0]), 6),
-            "ci_hi": round(float(ci.loc[feat, 1]), 6),
-        })
-    rows.sort(key=lambda r: r["p"])
+def main() -> None:
+    driver_df = pd.read_csv("output/driver_features.csv")
+    ps = pd.read_csv("output/pitcher_season.csv")
+    feature_cols = [c for c in driver_df.columns if c not in ("pitcher", "season")]
 
-    results[label] = {
-        "n": int(model.nobs),
-        "pitchers": int(data["pitcher"].nunique()),
-        "n_features": len(feature_cols),
-        "r2": round(float(plain.rsquared), 4),
-        "adj_r2": round(float(plain.rsquared_adj), 4),
-        "fvalue": round(float(plain.fvalue), 3),
-        "f_pvalue": float(plain.f_pvalue),
-        "df_resid": int(plain.df_resid),
-        "intercept": round(float(model.params["const"]), 6),
-        "rows": rows,
-    }
-    print(f"\n=== {label} ===  n={results[label]['n']}, R2={results[label]['r2']}, "
-          f"adj R2={results[label]['adj_r2']}, F={results[label]['fvalue']} (p={results[label]['f_pvalue']:.3g}), "
-          f"df_resid={results[label]['df_resid']}", flush=True)
-    for r in rows:
-        sig = "***" if r["p"] < 0.001 else "**" if r["p"] < 0.01 else "*" if r["p"] < 0.05 else ""
-        print(f"  {r['feature']:38s} coef={r['coef']:+.5f}  se={r['se']:.5f}  p={r['p']:.4f}{sig:3s} q={r['q']:.4f} "
-              f"CI=[{r['ci_lo']:+.5f}, {r['ci_hi']:+.5f}]", flush=True)
+    results = {}
+    for label in LABELS:
+        target_col = f"{label}_diff_adj_shrunk"
+        data = model_data(label, driver_df, ps, feature_cols)
 
-with open("output/driver_ols_report.json", "w", encoding="utf-8") as f:
-    json.dump(results, f, indent=2)
-print("\nSaved output/driver_ols_report.json")
+        X = sm.add_constant(data[feature_cols])
+        y = data[target_col]
+        # Standard errors, p-values and intervals cluster on pitcher: most pitchers appear in more than one season,
+        # and a pitcher's rows are dependent. R2, F and the coefficients are the plain OLS values.
+        plain = sm.OLS(y, X).fit()
+        model = sm.OLS(y, X).fit(cov_type="cluster", cov_kwds={"groups": data["pitcher"].to_numpy()})
+
+        ci = model.conf_int(alpha=0.05)
+        q = fdr_adjusted_p_values(data[feature_cols], y, groups=data["pitcher"].to_numpy())
+        rows = []
+        for feat in feature_cols:
+            rows.append({
+                "feature": feat,
+                "coef": round(float(model.params[feat]), 6),
+                "se": round(float(model.bse[feat]), 6),
+                "p": round(float(model.pvalues[feat]), 6),
+                "q": round(float(q[feat]), 6),
+                "ci_lo": round(float(ci.loc[feat, 0]), 6),
+                "ci_hi": round(float(ci.loc[feat, 1]), 6),
+            })
+        rows.sort(key=lambda r: r["p"])
+
+        results[label] = {
+            "n": int(model.nobs),
+            "pitchers": int(data["pitcher"].nunique()),
+            "n_features": len(feature_cols),
+            "r2": round(float(plain.rsquared), 4),
+            "adj_r2": round(float(plain.rsquared_adj), 4),
+            "fvalue": round(float(plain.fvalue), 3),
+            "f_pvalue": float(plain.f_pvalue),
+            "df_resid": int(plain.df_resid),
+            "intercept": round(float(model.params["const"]), 6),
+            "rows": rows,
+        }
+        print(f"\n=== {label} ===  n={results[label]['n']}, R2={results[label]['r2']}, "
+              f"adj R2={results[label]['adj_r2']}, F={results[label]['fvalue']} (p={results[label]['f_pvalue']:.3g}), "
+              f"df_resid={results[label]['df_resid']}", flush=True)
+        for r in rows:
+            sig = "***" if r["p"] < 0.001 else "**" if r["p"] < 0.01 else "*" if r["p"] < 0.05 else ""
+            print(f"  {r['feature']:38s} coef={r['coef']:+.5f}  se={r['se']:.5f}  p={r['p']:.4f}{sig:3s} q={r['q']:.4f} "
+                  f"CI=[{r['ci_lo']:+.5f}, {r['ci_hi']:+.5f}]", flush=True)
+
+    with open("output/driver_ols_report.json", "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2)
+    print("\nSaved output/driver_ols_report.json")
+
+
+if __name__ == "__main__":
+    main()

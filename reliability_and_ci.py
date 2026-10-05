@@ -83,7 +83,9 @@ import pandas as pd
 from scipy.optimize import brentq
 from scipy.stats import chi2
 
-PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2025_2026.csv"
+from season_pairs import consecutive_pairs, correlation_by_pair, pooled_correlation
+
+PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2024_2026.csv"
 FANGRAPHS_COLS = ["stuff_plus", "location_plus", "pitching_plus", "games", "games_started", "innings_pitched"]
 
 
@@ -633,11 +635,9 @@ if __name__ == "__main__":
     covariates = pd.read_csv("output/pitcher_season_covariates.csv")
     ps = ps.merge(names, on="pitcher", how="left")
     ps = merge_fangraphs_columns(ps, covariates)
-    y25 = comp_scored[comp_scored["season"] == 2025]
-    y26 = comp_scored[comp_scored["season"] == 2026]
-    merged = y25.merge(y26, on="pitcher", suffixes=("_25", "_26"))
-    r_yoy = merged["deception_plus_25"].corr(merged["deception_plus_26"])
-    print(f"Deception+ year-over-year reliability: n={len(merged)}, r={r_yoy:.3f}", flush=True)
+    pairs = consecutive_pairs(comp_scored, ["deception_plus"])
+    print(f"Deception+ year-over-year reliability: n={len(pairs)} pairs, r={pooled_correlation(pairs, 'deception_plus'):.3f} "
+          f"({', '.join(f'{k} {v:.3f}' for k, v in correlation_by_pair(pairs, 'deception_plus').items())})", flush=True)
 
     top = ps.dropna(subset=["deception_plus"]).sort_values("deception_plus", ascending=False)
     print("\nTop 10 by Deception+ (with 95% CI on whiff component):")
@@ -646,4 +646,5 @@ if __name__ == "__main__":
 
     ps.to_csv("output/pitcher_season.csv", index=False)
     pd.DataFrame(reliability_report).to_csv("output/reliability_report.csv", index=False)
-    print("\nSaved pitcher_season.csv and reliability_report.csv. Done.", flush=True)
+    half_all.to_csv("output/half_scores.csv", index=False)      # every outcome's odd-game and even-game index, read by membership_check.py
+    print("\nSaved pitcher_season.csv, reliability_report.csv and half_scores.csv. Done.", flush=True)

@@ -18,6 +18,7 @@ import pandas as pd
 from scipy import stats
 
 from reliability_and_ci import COMPOSITE_OUTCOMES, QUALIFY_MIN_N
+from season_pairs import cluster_bootstrap_interval, consecutive_pairs, correlation_by_pair, pooled_correlation
 
 # display order; membership in Deception+ comes from reliability_and_ci.COMPOSITE_OUTCOMES
 COMPONENTS = [
@@ -83,7 +84,7 @@ def qualify_text() -> str:
 def timing_vs_savant(ps: pd.DataFrame) -> float:
     """Pitcher-season correlation of the timing index with the share of on-time swings Savant's
     own swing-timing leaderboard reports, qualified pitchers only."""
-    board = pd.read_csv("raw/swing_timing_by_pitcher_2025_2026.csv").rename(columns={"id": "pitcher"})
+    board = pd.read_csv("raw/swing_timing_by_pitcher_2024_2026.csv").rename(columns={"id": "pitcher"})
     joined = ps[ps["qualified"]].merge(board[["pitcher", "season", "on_time_percent"]], on=["pitcher", "season"])
     return float(joined["timing_index"].corr(joined["on_time_percent"]))
 
@@ -105,39 +106,31 @@ BOOTSTRAP_DRAWS = 1000
 
 
 def year_over_year_summary(ps: pd.DataFrame, n_boot: int = BOOTSTRAP_DRAWS, seed: int = 0) -> dict:
-    """Year-over-year correlation of Deception+ among pitchers qualified in both seasons: the figure, a 95%
-    interval from resampling pitchers, and the figure for the higher- and lower-volume halves. A pitcher's volume
-    is the smaller of their two seasons' mean member sample size relative to that member's median. The headline
-    tile uses every scored pitcher-season instead, which is lower (0.60 against 0.64) because small samples are noisier."""
+    """Year-over-year correlation of Deception+ among pitchers qualified in both seasons of a pair, pooled over
+    every pair of consecutive seasons: the figure, a 95% interval from resampling pitchers (a pitcher's two pairs
+    share a season), the figure for each pair, and the figure for the higher- and lower-volume halves. A pair's
+    volume is the smaller of its two seasons' mean member sample size relative to that member's median. The
+    headline tile uses every scored pitcher-season instead, which is lower because small samples are noisier."""
     members = COMPOSITE_OUTCOMES
     q = ps[ps["qualified"] & ps["deception_plus"].notna()].copy()
     medians = {m: q[f"{m}_n"].median() for m in members}
     q["volume"] = sum(q[f"{m}_n"] / medians[m] for m in members) / len(members)
-    both = (q.pivot_table(index="pitcher", columns="season", values=["deception_plus", "volume"]).dropna())
-    first, second = both["deception_plus"].iloc[:, 0].to_numpy(), both["deception_plus"].iloc[:, 1].to_numpy()
-    volume = both["volume"].min(axis=1).to_numpy()
-    rng = np.random.default_rng(seed)
-    draws = [np.corrcoef(first[i], second[i])[0, 1] for i in (rng.integers(0, len(first), len(first)) for _ in range(n_boot))]
+    pairs = consecutive_pairs(q, ["deception_plus", "volume"])
+    first, second = pairs["deception_plus_1"].to_numpy(), pairs["deception_plus_2"].to_numpy()
+    volume = pairs[["volume_1", "volume_2"]].min(axis=1).to_numpy()
+    lo, hi = cluster_bootstrap_interval(first, second, pairs["pitcher"].to_numpy(), n_boot, seed)
     high = volume >= np.median(volume)
-    return {"r": float(np.corrcoef(first, second)[0, 1]), "n": int(len(first)),
-            "lo": float(np.percentile(draws, 2.5)), "hi": float(np.percentile(draws, 97.5)),
+    return {"r": float(np.corrcoef(first, second)[0, 1]), "n": int(len(pairs)), "lo": lo, "hi": hi,
             "high_volume_r": float(np.corrcoef(first[high], second[high])[0, 1]),
-            "low_volume_r": float(np.corrcoef(first[~high], second[~high])[0, 1])}
+            "low_volume_r": float(np.corrcoef(first[~high], second[~high])[0, 1]),
+            "by_pair": correlation_by_pair(pairs, "deception_plus")}
 
 
 def stuff_plus_correlation_interval(ps: pd.DataFrame, n_boot: int = BOOTSTRAP_DRAWS, seed: int = 0) -> tuple[float, float]:
     """95% interval for the Deception+ and Stuff+ correlation over qualified pitcher-seasons, resampling whole
-    pitchers: most pitchers contribute both seasons, so resampling rows would understate the uncertainty."""
-    q = ps[ps["qualified"] & ps["stuff_plus"].notna() & ps["deception_plus"].notna()].sort_values("pitcher")
-    x, y = q["stuff_plus"].to_numpy(), q["deception_plus"].to_numpy()
-    codes, starts = np.unique(q["pitcher"].to_numpy(), return_index=True)
-    spans = [np.arange(a, b) for a, b in zip(starts, list(starts[1:]) + [len(q)])]
-    rng = np.random.default_rng(seed)
-    draws = []
-    for _ in range(n_boot):
-        idx = np.concatenate([spans[i] for i in rng.integers(0, len(spans), len(spans))])
-        draws.append(np.corrcoef(x[idx], y[idx])[0, 1])
-    return float(np.percentile(draws, 2.5)), float(np.percentile(draws, 97.5))
+    pitchers: most pitchers contribute more than one season, so resampling rows would understate the uncertainty."""
+    q = ps[ps["qualified"] & ps["stuff_plus"].notna() & ps["deception_plus"].notna()]
+    return cluster_bootstrap_interval(q["stuff_plus"].to_numpy(), q["deception_plus"].to_numpy(), q["pitcher"].to_numpy(), n_boot, seed)
 
 
 def handedness_gap(ps: pd.DataFrame, hands: pd.Series) -> dict:
@@ -157,10 +150,11 @@ def unscored_pitch_share(predictions_path: str = "output/per_pitch_predictions.c
 
 
 def ground_ball_forecast_correlation(ps: pd.DataFrame) -> float:
-    """Correlation of a pitcher's 2025 Deception+ with their 2026 ground-ball index."""
-    a = ps[ps["season"] == 2025][["pitcher", "deception_plus"]].dropna()
-    b = ps[ps["season"] == 2026][["pitcher", "gb_index"]].dropna()
-    joined = a.merge(b, on="pitcher")
+    """Correlation of a pitcher's Deception+ with their ground-ball index the next season, over every pair of
+    consecutive seasons."""
+    earlier = ps[["pitcher", "season", "deception_plus"]].dropna()
+    later = ps[["pitcher", "season", "gb_index"]].dropna().assign(season=lambda d: d["season"] - 1)
+    joined = earlier.merge(later, on=["pitcher", "season"])
     return float(joined["deception_plus"].corr(joined["gb_index"]))
 
 
@@ -185,6 +179,23 @@ def sequencing_feature_overlap(driver: pd.DataFrame, ps: pd.DataFrame) -> dict:
     }
 
 
+MEMBERSHIP_KEYS = {"+gb": "MEM_GB", "+align": "MEM_ALIGN", "+calledstrike": "MEM_CS", "-whiffmiss": "MEM_NO_WHIFFMISS",
+                    "-weak": "MEM_NO_WEAK", "-timing": "MEM_NO_TIMING"}
+
+
+def membership_text(check: dict) -> dict:
+    """Page-text figures from membership_check.json: for each variant composite, its split-half reliability and
+    year-over-year correlation, and the change in year-over-year among qualified pairs with its 95% interval."""
+    text = {}
+    for variant, prefix in MEMBERSHIP_KEYS.items():
+        e = check[variant]
+        text[f"{prefix}_REL"] = fmt_r(e["reliability"])
+        text[f"{prefix}_YOY"] = fmt_r(e["yoy_all"])
+        text[f"{prefix}_DIFF"] = f"{e['diff']:+.3f}"
+        text[f"{prefix}_CI"] = f"{e['diff_lo']:+.3f} to {e['diff_hi']:+.3f}"
+    return text
+
+
 def validation_text(validation: dict) -> dict:
     """Page-text figures from model_validation.json: how far each model's fit ranges across pitch types,
     and the calibration slopes."""
@@ -206,17 +217,12 @@ def validation_text(validation: dict) -> dict:
 
 
 def component_yoy(ps: pd.DataFrame, key: str) -> float:
-    """Correlation of a component's index across seasons, both seasons held to the same qualifying
-    minimum. Used to halve the 2026 threshold from when 2026 was a partial season; both seasons are
-    now complete, and the asymmetry was measurably diluting several of these correlations (+0.004 to
-    +0.010 once matched) by pairing a fully-qualified 2025 side against a noisier, under-qualified
-    2026 side."""
-    min_n = QUALIFY_MIN_N[key]
-    cols = ["pitcher", f"{key}_index", f"{key}_n"]
-    a = ps[ps["season"] == 2025][cols].dropna()
-    b = ps[ps["season"] == 2026][cols].dropna()
-    joined = a[a[f"{key}_n"] >= min_n].merge(b[b[f"{key}_n"] >= min_n], on="pitcher", suffixes=("_25", "_26"))
-    return float(joined[f"{key}_index_25"].corr(joined[f"{key}_index_26"]))
+    """Correlation of a component's index across consecutive seasons, pooled over every pair, with both seasons
+    held to the same qualifying minimum. (A partial season would need a lower bar on its side, and pairing a
+    fully qualified season with a noisier one measurably diluted these correlations, +0.004 to +0.010 once
+    matched.)"""
+    eligible = ps[ps[f"{key}_n"].fillna(0) >= QUALIFY_MIN_N[key]]
+    return pooled_correlation(consecutive_pairs(eligible, [f"{key}_index"]), f"{key}_index")
 
 
 def pretty_name(name: str) -> str:
@@ -269,7 +275,7 @@ def main() -> None:
     pv = pd.read_csv("output/predictive_validity_report.csv").set_index("label")
 
     raw = pd.read_csv(
-        "raw/statcast_pitch_level_2025_2026.csv",
+        "raw/statcast_pitch_level_2024_2026.csv",
         usecols=["pitcher", "season", "game_pk", "game_date", "game_type", "p_throws"],
         low_memory=False,
     )
@@ -283,10 +289,8 @@ def main() -> None:
 
     # year over year, same definition as reliability_and_ci.py
     scored = ps.dropna(subset=["deception_plus"])
-    yoy = scored[scored["season"] == 2025].merge(
-        scored[scored["season"] == 2026], on="pitcher", suffixes=("_25", "_26")
-    )
-    yoy_r = yoy["deception_plus_25"].corr(yoy["deception_plus_26"])
+    yoy = consecutive_pairs(scored, ["deception_plus"])
+    yoy_r = pooled_correlation(yoy, "deception_plus")
 
     # share of variance on the first principal component across the composite members
     z_cols = [f"{k}_z" for k in COMPOSITE_OUTCOMES]
@@ -327,21 +331,21 @@ def main() -> None:
             "reliability": fmt_r(rel[key]),
             "yoy": fmt_r(yoy_by_component[key]),
             "delta": fmt_delta(float(pv.loc[key, "cv_delta_r2"])),
-            "p": fmt_p(float(pv.loc[key, "f_pvalue"])),
+            "p": fmt_p(float(pv.loc[key, "p_value"])),
             "n": int(pv.loc[key, "n"]),
-            "passes": bool(pv.loc[key, "f_pvalue"] < 0.01),
+            "passes": bool(pv.loc[key, "p_value"] < 0.01),
             "in_score": key in COMPOSITE_OUTCOMES,
         })
     components.append({
         "key": "composite",
-        "label": "Deception+ (forecast is for 2026 whiff rate)",
+        "label": "Deception+ (forecast is for next-season whiff rate)",
         "reliability": fmt_r(float(rr.loc["deception_plus", "r_full_spearman_brown"])),
         "yoy": fmt_r(yoy_r),
         "in_score": True,
         "delta": fmt_delta(float(pv.loc["composite_to_whiff", "cv_delta_r2"])),
-        "p": fmt_p(float(pv.loc["composite_to_whiff", "f_pvalue"])),
+        "p": fmt_p(float(pv.loc["composite_to_whiff", "p_value"])),
         "n": int(pv.loc["composite_to_whiff", "n"]),
-        "passes": bool(pv.loc["composite_to_whiff", "f_pvalue"] < 0.01),
+        "passes": bool(pv.loc["composite_to_whiff", "p_value"] < 0.01),
     })
 
     with open("output/artifact_data.json", encoding="utf-8") as f:
@@ -352,6 +356,8 @@ def main() -> None:
         seq_r2 = [m["r2"] for m in json.load(f).values()]
     with open("output/model_validation.json", encoding="utf-8") as f:
         validation = json.load(f)
+    with open("output/membership_check.json", encoding="utf-8") as f:
+        membership = json.load(f)
 
     text = {
         "DATA_THROUGH": f"{data_through:%B} {data_through.day}, {data_through.year}",
@@ -396,10 +402,10 @@ def main() -> None:
         "MOST_R": fmt_r(rel[most]),
         "CORR_WHIFF_TIMING": fmt_r(float(qualified["whiff_index"].corr(qualified["timing_index"]))),
         "DELTA_TIMING": fmt_delta(float(pv.loc["timing", "cv_delta_r2"])),
-        "P_CALLEDSTRIKE": fmt_p(float(pv.loc["calledstrike", "f_pvalue"])),
+        "P_CALLEDSTRIKE": fmt_p(float(pv.loc["calledstrike", "p_value"])),
         "YOY_ALIGN": fmt_r(yoy_by_component["align"]),
         "YOY_CALLEDSTRIKE": fmt_r(yoy_by_component["calledstrike"]),
-        "P_ALIGN": fmt_p(float(pv.loc["align", "f_pvalue"])),
+        "P_ALIGN": fmt_p(float(pv.loc["align", "p_value"])),
         "DELTA_ALIGN": fmt_delta(float(pv.loc["align", "cv_delta_r2"])),
         "N_COMPOSITE": str(len(COMPOSITE_OUTCOMES)),
         "QUALIFY_TEXT": qualify_text(),
@@ -408,8 +414,9 @@ def main() -> None:
         "DRIVER_R2_RANGE": f"{min(driver_r2):.2f} to {max(driver_r2):.2f}",
         "SEQ_R2_RANGE": f"{min(seq_r2):.4f} to {max(seq_r2):.4f}",
         "STUFF_R": fmt_r(stuff["composite"]),
-        "STUFF_R_2025": fmt_r(stuff["by_season"][2025]),
-        "STUFF_R_2026": fmt_r(stuff["by_season"][2026]),
+        "STUFF_R_BY_SEASON": join_words([f"{fmt_r(r)} in {season}" for season, r in sorted(stuff["by_season"].items())]),
+        "YOY_BY_PAIR": join_words([f"{fmt_r(r)} for {pair.replace('-', ' to ')}" for pair, r in correlation_by_pair(yoy, "deception_plus").items()]),
+        "YOY_QUAL_BY_PAIR": join_words([f"{fmt_r(r)} for {pair.replace('-', ' to ')}" for pair, r in yoy_q["by_pair"].items()]),
         "STUFF_N": f"{stuff['n']:,}",
         "STUFF_R_MEMBERS": join_words([f"{QUALIFY_LABELS[k]} {fmt_r_short(r)}" for k, r in stuff["members"].items()]),
         "DELTA_CALLEDSTRIKE": fmt_delta(float(pv.loc["calledstrike", "cv_delta_r2"])),
@@ -427,13 +434,14 @@ def main() -> None:
         "LHP_P": fmt_p(hand["p"]),
         "LHP_N": f"{hand['n_left']:,}",
         "RHP_N": f"{hand['n_right']:,}",
-        "P_WEAK": fmt_p(float(pv.loc["weak", "f_pvalue"])),
+        "P_WEAK": fmt_p(float(pv.loc["weak", "p_value"])),
         "DP_CLEAR": f"{clear[0]:,}",
         "DP_CLEAR_PCT": f"{clear[0] / clear[1]:.0%}",
         "SEQ_FEATURES_R": fmt_r(sequencing["between"]),
         "SEQ_GAP_WHIFF_R": fmt_r(sequencing["gap_whiff"]),
         "SEQ_REPEAT_WHIFF_R": fmt_r(sequencing["repeat_whiff"]),
         **validation_text(validation),
+        **membership_text(membership),
     }
 
     out = {"text": text, "components": components}

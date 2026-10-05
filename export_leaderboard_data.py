@@ -14,7 +14,7 @@ import pandas as pd
 from export_site_stats import pitcher_roles
 
 ps = pd.read_csv("output/pitcher_season.csv")
-raw = pd.read_csv("raw/statcast_pitch_level_2025_2026.csv", usecols=["pitcher", "season", "game_pk", "game_type"], low_memory=False)
+raw = pd.read_csv("raw/statcast_pitch_level_2024_2026.csv", usecols=["pitcher", "season", "game_pk", "game_type"], low_memory=False)
 raw = raw[raw["game_type"] == "R"]
 ps = ps.merge(pitcher_roles(raw, usage=ps[["pitcher", "season", "games", "games_started"]]),
               on=["pitcher", "season"], how="left")

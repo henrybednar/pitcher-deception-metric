@@ -9,7 +9,7 @@ than the hitter's ideal (early), negative = deeper (late).
 
 Sign check: the raw intercept depth correlated +0.71 with Savant's early_percent
 leaderboard column and -0.72 with late_percent, so larger depth = early. (A one-off
-check against swing_timing_by_pitcher_2025_2026.csv, joined on pitcher and season.)
+check against swing_timing_by_pitcher_2024_2026.csv, joined on pitcher and season.)
 
 Same architecture, features, and per-pitch-type grouping as every other outcome,
 without the opponent and context features: stuff + location + plate_x_inside. The

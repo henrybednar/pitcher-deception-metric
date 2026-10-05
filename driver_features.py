@@ -35,7 +35,7 @@ from sklearn.model_selection import GroupKFold, GroupShuffleSplit, cross_val_sco
 from sklearn.preprocessing import StandardScaler
 from statsmodels.stats.multitest import multipletests
 
-PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2025_2026.csv"
+PITCH_LEVEL_FILE = "raw/statcast_pitch_level_2024_2026.csv"
 CHUNKSIZE = 500_000
 MIN_PITCHES_PER_TYPE = 20
 Y0 = 50.0            # Statcast trajectory start, ft from home plate

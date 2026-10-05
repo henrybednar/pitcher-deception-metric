@@ -15,7 +15,7 @@ from site_common import LEADERBOARD_FILE, load_stats, page_links, render_page
 TITLE = "Deception+ Leaderboard"
 DESCRIPTION = (
     "Sortable Deception+ scores and six component indexes for every scored pitcher-season, "
-    "with 95% intervals and a starter or reliever filter. Statcast 2025-26."
+    "with 95% intervals and a starter or reliever filter. Statcast 2024-26."
 )
 
 

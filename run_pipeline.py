@@ -28,11 +28,11 @@ ROOT = Path(__file__).resolve().parent
 LOG_DIR = ROOT / "logs"
 
 RAW_INPUTS = [
-    "raw/statcast_pitch_level_2025_2026.csv",
-    "raw/outcome_rates_by_pitcher_pitchtype_2025_2026.csv",
-    "raw/swing_timing_by_pitcher_2025_2026.csv",
-    "raw/arm_angle_by_pitcher_2025_2026.csv",
-    "raw/pitch_tempo_by_pitcher_2025_2026.csv",
+    "raw/statcast_pitch_level_2024_2026.csv",
+    "raw/outcome_rates_by_pitcher_pitchtype_2024_2026.csv",
+    "raw/swing_timing_by_pitcher_2024_2026.csv",
+    "raw/arm_angle_by_pitcher_2024_2026.csv",
+    "raw/pitch_tempo_by_pitcher_2024_2026.csv",
     "raw/fangraphs_stuff_manual.tsv",
 ]
 
@@ -65,14 +65,16 @@ STEPS = [
     Step("fit_called_strike", ("fit_called_strike.py",), ("output/per_pitch_predictions.csv",),
          "called strike model (validation table only)"),
     Step("reliability_and_ci", ("reliability_and_ci.py",),
-         ("output/pitcher_season.csv", "output/reliability_report.csv"),
+         ("output/pitcher_season.csv", "output/reliability_report.csv", "output/half_scores.csv"),
          "shrinkage, bootstrap intervals, composite, split-half reliability, player names and Stuff+"),
     Step("add_timing_direction", ("add_timing_direction.py",), ("output/pitcher_season.csv", "output/reliability_report.csv"),
          "signed timing diagnostic with intervals"),
     Step("driver_analysis", ("driver_analysis.py",), ("output/driver_analysis.json",),
          "what explains each residual? (season level)"),
     Step("predictive_validity", ("predictive_validity.py",), ("output/predictive_validity_report.csv",),
-         "does a 2025 score predict the 2026 outcome rate?"),
+         "does a season's score predict the next season's outcome rate?"),
+    Step("membership_check", ("membership_check.py",), ("output/membership_check.json",),
+         "does the composite's membership hold? (each member dropped, each candidate added)"),
     Step("sequencing_driver_analysis", ("sequencing_driver_analysis.py",), ("output/sequencing_driver_report.json",),
          "does the previous pitch explain the residual? (pitch level)"),
     Step("pitch_surprise", ("pitch_surprise.py",), ("output/pitch_surprise.json",),

@@ -36,7 +36,7 @@ from reliability_and_ci import BINARY_OUTCOMES, COMPOSITE_OUTCOMES, CONTINUOUS_O
 
 PREDICTIONS_FILE = "output/per_pitch_predictions.csv"
 PITCH_TYPE_FILE = "output/pitcher_pitchtype_season.csv"
-RAW_FILE = "raw/statcast_pitch_level_2025_2026.csv"
+RAW_FILE = "raw/statcast_pitch_level_2024_2026.csv"
 OUT_FILE = "output/stuffplus_relationship.json"
 MIN_CELLS_PER_TYPE = 30
 FIRST_PITCH_MIN_N_SCALE = 0.5            # a first-pitch sample is about a quarter the size, so the minimum is halved

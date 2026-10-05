@@ -4,10 +4,10 @@ __pycache__/
 .claude/
 logs/
 
-# raw/: only the large Statcast pull (about 1 GB) is excluded; the small pulled
+# raw/: only the large Statcast pull (about 1.5 GB) is excluded; the small pulled
 # leaderboard files and the manual FanGraphs export are tracked.
 # Recreate with `python run_pipeline.py --pull`.
-raw/statcast_pitch_level_2025_2026.csv
+raw/statcast_pitch_level_2024_2026.csv
 
 # output/: everything here is regenerated from raw/ by run_pipeline.py on every run, the same
 # way a dist/ or build/ folder is, so none of it is tracked. The two HTML pages at the repo root
@@ -16,5 +16,3 @@ output/
 
 .pytest_cache/
 
-# out-of-time replication sandbox (a copy of the code and about 2.5 GB of raw pitches)
-sandbox_out_of_time/

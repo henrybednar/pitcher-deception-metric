@@ -41,7 +41,7 @@ from reliability_and_ci import BINARY_OUTCOMES, COMPOSITE_OUTCOMES, CONTINUOUS_O
 
 PREDICTIONS_FILE = "output/per_pitch_predictions.csv"
 PITCHER_SEASON_FILE = "output/pitcher_season.csv"
-RAW_FILE = "raw/statcast_pitch_level_2025_2026.csv"
+RAW_FILE = "raw/statcast_pitch_level_2024_2026.csv"
 OUT_FILE = "output/pitch_surprise.json"
 SPECS = {**BINARY_OUTCOMES, **CONTINUOUS_OUTCOMES}
 PITCH_ALIASES = {"SV": "ST", "FO": "FS"}

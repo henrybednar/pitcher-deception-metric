@@ -2,7 +2,7 @@
 Pitcher Deception Project — Data Pull
 ======================================
 Pulls and merges everything needed for the deception metric:
-  1. Raw pitch-level Statcast data (2025-2026): velo, spin, movement,
+  1. Raw pitch-level Statcast data (2024-2026): velo, spin, movement,
      release points, extension, VAA/HAA (computed)
   2. Outcome rates by pitcher/pitch type: Whiff%, Chase%, GB%, Strike%
      (computed from #1)
@@ -15,8 +15,13 @@ hand (see merge_data.merge_fangraphs_stuff) — FanGraphs blocks scripted
 access with a 403, so there is no automated pull for it here.
 
 Run: `pip install pybaseball pandas numpy requests --upgrade` first.
+
+    python data_pull.py                 pull every season in YEARS
+    python data_pull.py --years 2024    pull only those seasons and keep the other seasons' rows from the
+                                        files already in raw/ (so adding a season does not re-pull the rest)
 """
 
+import argparse
 import io
 import shutil
 import time
@@ -37,8 +42,9 @@ import pybaseball as pb
 shutil.rmtree(pb.cache.config.cache_directory, ignore_errors=True)
 pb.cache.enable()  # avoids re-downloading on repeat runs within this one pull
 
-YEARS = [2025, 2026]
+YEARS = [2024, 2025, 2026]
 SEASON_RANGES = {
+    2024: ("2024-03-20", "2024-11-01"),  # bat tracking is complete from April 2024, so every component can be scored
     2025: ("2025-03-18", "2025-11-01"),
     2026: ("2026-03-24", "2026-11-01"),  # 2026-11-01 safely postdates the season; no need to narrow it
 }
@@ -187,14 +193,39 @@ def pull_pitch_tempo(year: int, min_pitches="1") -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
+OUTPUT_FILES = {
+    "pitches": "raw/statcast_pitch_level_2024_2026.csv",
+    "rates": "raw/outcome_rates_by_pitcher_pitchtype_2024_2026.csv",
+    "swing_timing": "raw/swing_timing_by_pitcher_2024_2026.csv",
+    "arm_angle": "raw/arm_angle_by_pitcher_2024_2026.csv",
+    "tempo": "raw/pitch_tempo_by_pitcher_2024_2026.csv",
+}
+
+
+def combine_with_existing(filename: str, frames: list[pd.DataFrame], pulled_years: list[int]) -> pd.DataFrame:
+    """The pulled seasons' rows, plus every other season's rows from the file already on disk when only some
+    seasons were pulled. Rows end up in season order, like a full pull."""
+    new = pd.concat(frames, ignore_index=True)
+    if set(pulled_years) >= set(YEARS) or not Path(filename).exists():
+        return new
+    old = pd.read_csv(filename, low_memory=False)
+    old = old[~old["season"].isin(pulled_years)]
+    return pd.concat([old, new], ignore_index=True, sort=False).sort_values("season", kind="stable", ignore_index=True)
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--years", type=int, nargs="+", default=YEARS, choices=YEARS,
+                        help="seasons to pull; the other seasons' rows are kept from the existing files")
+    pulled_years = sorted(parser.parse_args().years)
+
     all_pitches = []
     all_rates = []
     all_swing_timing = []
     all_arm_angle = []
     all_tempo = []
 
-    for year in YEARS:
+    for year in pulled_years:
         start, end = SEASON_RANGES[year]
         print(f"--- {year} ---")
 
@@ -237,11 +268,11 @@ if __name__ == "__main__":
             print(f"  FAILED: {e}")
 
     outputs = {
-        "raw/statcast_pitch_level_2025_2026.csv": all_pitches,
-        "raw/outcome_rates_by_pitcher_pitchtype_2025_2026.csv": all_rates,
-        "raw/swing_timing_by_pitcher_2025_2026.csv": all_swing_timing,
-        "raw/arm_angle_by_pitcher_2025_2026.csv": all_arm_angle,
-        "raw/pitch_tempo_by_pitcher_2025_2026.csv": all_tempo,
+        OUTPUT_FILES["pitches"]: all_pitches,
+        OUTPUT_FILES["rates"]: all_rates,
+        OUTPUT_FILES["swing_timing"]: all_swing_timing,
+        OUTPUT_FILES["arm_angle"]: all_arm_angle,
+        OUTPUT_FILES["tempo"]: all_tempo,
     }
 
     Path("raw").mkdir(exist_ok=True)
@@ -250,7 +281,7 @@ if __name__ == "__main__":
         if not frames:
             skipped.append(filename)
             continue
-        pd.concat(frames, ignore_index=True).to_csv(filename, index=False)
+        combine_with_existing(filename, frames, pulled_years).to_csv(filename, index=False)
         written.append(filename)
 
     print(f"Done. {len(written)}/{len(outputs)} CSVs written: {written}")
