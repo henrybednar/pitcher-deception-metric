@@ -98,6 +98,49 @@ def render_page(template_path: str, *, title: str, description: str, artifact_mo
     )
 
 
+def format_gain(g: dict) -> str:
+    return f"{g['gain']:+.3f} [{g['lo']:+.3f}, {g['hi']:+.3f}]"
+
+
+def outcome_table_rows(validation: dict) -> str:
+    """Rows of the on-field validation table: for each outcome, cross-validated R2 of Stuff+ and Location+ and with Deception+
+    added, then the same with last season's own result in the model, each gain with its 95% interval (shaded when the
+    interval is above zero)."""
+    esc = lambda value: html.escape(str(value), quote=True)
+    rows = []
+    for o in validation["outcomes"].values():
+        r2 = o["r2"]
+        g1, g2 = o["deception_over_stuff_location"], o["deception_over_own_stuff_location"]
+        cells = [f'<th scope="row">{esc(o["label"])}</th>', f'<td>{r2["stuff_location"]:.3f}</td>', f'<td>{r2["stuff_location_deception"]:.3f}</td>',
+                 f'<td class="{"dx-pass" if g1["lo"] > 0 else ""}">{esc(format_gain(g1))}</td>',
+                 f'<td>{r2["own_stuff_location"]:.3f}</td>', f'<td>{r2["own_stuff_location_deception"]:.3f}</td>',
+                 f'<td class="{"dx-pass" if g2["lo"] > 0 else ""}">{esc(format_gain(g2))}</td>']
+        rows.append("<tr>" + "".join(cells) + "</tr>")
+    return "\n".join(rows)
+
+
+def p_text(p: float) -> str:
+    return "<0.001" if p < 0.001 else f"{p:.3f}"
+
+
+COEFFICIENT_ROWS = [("stuff_plus", "Stuff+"), ("location_plus", "Location+"), ("whiff_index", "Whiff"), ("chase_index", "Chase"),
+                    ("weak_index", "Weak contact"), ("timing_index", "Timing"), ("whiffmiss_index", "Whiff miss distance")]
+
+
+def outcome_coefficient_rows(validation: dict) -> str:
+    """Rows of the member table: the change in the next season's strikeout rate (percentage points) and xwOBA allowed (points of
+    xwOBA) per standard deviation of each score, with the others held fixed, and the p-value."""
+    esc = lambda value: html.escape(str(value), quote=True)
+    k, x = validation["coefficients"]["k_pct"], validation["coefficients"]["xwoba"]
+    rows = []
+    for key, label in COEFFICIENT_ROWS:
+        cells = [f'<th scope="row">{esc(label)}</th>',
+                 f'<td class="{"dx-pass" if k[key]["p"] < 0.05 else ""}">{k[key]["coef"] * 100:+.2f} (p {esc(p_text(k[key]["p"]))})</td>',
+                 f'<td class="{"dx-pass" if x[key]["p"] < 0.05 else ""}">{x[key]["coef"] * 1000:+.1f} (p {esc(p_text(x[key]["p"]))})</td>']
+        rows.append("<tr>" + "".join(cells) + "</tr>")
+    return "\n".join(rows)
+
+
 def component_table_rows(components: list) -> str:
     esc = lambda value: html.escape(str(value), quote=True)
     rows = []

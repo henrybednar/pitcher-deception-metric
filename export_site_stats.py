@@ -225,6 +225,51 @@ def projection_text(projection: dict) -> dict:
     }
 
 
+def join_labels(labels: list[str], none: str = "no outcome") -> str:
+    return join_words(labels) if labels else none
+
+
+def outcome_text(validation: dict) -> dict:
+    """Page-text figures from outcome_validation.json: the sample, which outcomes Deception+ adds to (an interval
+    above zero) beyond Stuff+ and Location+ and beyond last season's own result, the stability of each metric, and the
+    standing of the timing demotion rule."""
+    outcomes = validation["outcomes"]
+    first = outcomes["k_pct"]
+    clear = lambda key: [o["label"] for o in outcomes.values() if o[key]["lo"] > 0]
+    r = validation["stability"]["r"]
+    order = ["stuff_plus", "whiff_rate", "deception_plus", "k_pct", "location_plus", "bb_pct", "xwoba", "woba", "rv100"]
+    names = {"stuff_plus": "Stuff+", "whiff_rate": "whiff rate", "deception_plus": "Deception+", "k_pct": "strikeout rate", "location_plus": "Location+",
+             "bb_pct": "walk rate", "xwoba": "xwOBA allowed", "woba": "wOBA allowed", "rv100": "run value per 100 pitches"}
+    stability = ", ".join(f"{names[k]} {r[k]:.2f}" for k in sorted(order, key=lambda k: -r[k]))
+    verdict = ("Deception+ is less stable than the raw whiff rate it is built from, which is expected of a residual: what it offers is the part of "
+               "results that stuff and location do not explain, not a better forecast of whiffs." if r["deception_plus"] < r["whiff_rate"] else
+               "Deception+ is at least as stable as the raw whiff rate it is built from.")
+    rule = validation["timing_rule"]
+    coef = validation["coefficients"]
+
+    def per_sd(outcome: str, member: str) -> str:
+        c = coef[outcome][member]
+        scale = 100 if outcome == "k_pct" else 1000
+        return f"{c['coef'] * scale:+.1f} points (95% interval {c['lo'] * scale:+.1f} to {c['hi'] * scale:+.1f})"
+
+    if rule["demote"]:
+        timing = ("Timing meets the written demotion rule on both strikeout rate and xwOBA: the upper end of its interval is under "
+                  f"{rule['share']:.0%} of whiff's effect on each. It should be reviewed for removal from the score.")
+    else:
+        timing = (f"Timing is the most reliable member, so its effect on the field is worth watching. Per standard deviation it moves the next season's strikeout rate by "
+                  f"{per_sd('k_pct', 'timing_index')} and xwOBA allowed (where lower is better) by {per_sd('xwoba', 'timing_index')}, against {per_sd('k_pct', 'whiff_index')} and "
+                  f"{per_sd('xwoba', 'whiff_index')} for whiff. The rule written down for timing is to demote it from the score if, on both outcomes, the upper end of its "
+                  f"interval is under {rule['share']:.0%} of whiff's effect. That rule is not met "
+                  f"(ratios {rule['outcomes']['k_pct']['ratio']:+.2f} for strikeout rate and {rule['outcomes']['xwoba']['ratio']:+.2f} for xwOBA), so it stays in.")
+    return {
+        "OV_PAIRS": f"{first['n']:,}", "OV_PITCHERS": f"{first['pitchers']:,}", "OV_MIN_PA": str(validation["min_next_pa"]),
+        "OV_SUMMARY": (f"Beyond Stuff+ and Location+, Deception+ adds clearly (95% interval above zero) for {join_labels(clear('deception_over_stuff_location'))}. "
+                       f"Beyond last season's own result as well, it adds clearly for {join_labels(clear('deception_over_own_stuff_location'))}."),
+        "OV_STABILITY": f"Year-over-year correlation among {validation['stability']['n']:,} pairs of pitchers qualified in both seasons: {stability}. {verdict}",
+        "OV_TIMING": timing,
+    }
+
+
 def validation_text(validation: dict) -> dict:
     """Page-text figures from model_validation.json: how far each model's fit ranges across pitch types,
     and the calibration slopes."""
@@ -399,6 +444,8 @@ def main() -> None:
         membership = json.load(f)
     with open("output/projection.json", encoding="utf-8") as f:
         projection = json.load(f)
+    with open("output/outcome_validation.json", encoding="utf-8") as f:
+        outcome_validation = json.load(f)
 
     text = {
         "DATA_THROUGH": f"{data_through:%B} {data_through.day}, {data_through.year}",
@@ -483,6 +530,7 @@ def main() -> None:
         **validation_text(validation),
         **membership_text(membership),
         **projection_text(projection),
+        **outcome_text(outcome_validation),
     }
 
     check_page_text(text, components)

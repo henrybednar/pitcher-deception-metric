@@ -310,6 +310,29 @@ __COMPONENT_ROWS__
   </div>
 
   <div class="dx-section">
+    <h2>Does it matter on the field?</h2>
+    <p class="dx-section-note dx-wide">The checks above ask whether Deception+ is stable and whether its members forecast themselves. This one asks the baseball question: does a pitcher's score in one season help predict their results the next season? Across {{OV_PAIRS}} pairs of consecutive seasons ({{OV_PITCHERS}} pitchers, at least {{OV_MIN_PA}} batters faced in the second season), each row gives the cross-validated R&sup2; of Stuff+ and Location+, then with Deception+ added, then the same with last season's own result in the model. The gain is the change in R&sup2; with a 95% interval from resampling pitchers, shaded when the interval is above zero.</p>
+    <div class="dx-card dx-table-card">
+      <table class="dx-table">
+        <thead><tr><th scope="col">Next season's result</th><th scope="col">Stuff+ and Location+</th><th scope="col">+ Deception+</th><th scope="col">Gain</th><th scope="col">Last season's result, Stuff+, Location+</th><th scope="col">+ Deception+</th><th scope="col">Gain</th></tr></thead>
+        <tbody>
+__OUTCOME_ROWS__
+        </tbody>
+      </table>
+    </div>
+    <p class="dx-section-note dx-wide">{{OV_SUMMARY}} {{OV_STABILITY}}</p>
+    <div class="dx-card dx-table-card">
+      <table class="dx-table">
+        <thead><tr><th scope="col">Score (per standard deviation)</th><th scope="col">Next season's strikeout rate, points</th><th scope="col">Next season's xwOBA allowed, points (lower is better)</th></tr></thead>
+        <tbody>
+__OUTCOME_COEF_ROWS__
+        </tbody>
+      </table>
+    </div>
+    <p class="dx-section-note dx-wide">{{OV_TIMING}}</p>
+  </div>
+
+  <div class="dx-section">
     <div class="dx-section-head">
       <div>
         <h2>What explains the gap?</h2>

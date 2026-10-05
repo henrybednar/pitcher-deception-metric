@@ -331,6 +331,39 @@
   </div>
 
   <div class="dx-section">
+    <h2>Does it matter on the field?</h2>
+    <p class="dx-section-note dx-wide">The checks above ask whether Deception+ is stable and whether its members forecast themselves. This one asks the baseball question: does a pitcher's score in one season help predict their results the next season? Across 671 pairs of consecutive seasons (452 pitchers, at least 150 batters faced in the second season), each row gives the cross-validated R&sup2; of Stuff+ and Location+, then with Deception+ added, then the same with last season's own result in the model. The gain is the change in R&sup2; with a 95% interval from resampling pitchers, shaded when the interval is above zero.</p>
+    <div class="dx-card dx-table-card">
+      <table class="dx-table">
+        <thead><tr><th scope="col">Next season's result</th><th scope="col">Stuff+ and Location+</th><th scope="col">+ Deception+</th><th scope="col">Gain</th><th scope="col">Last season's result, Stuff+, Location+</th><th scope="col">+ Deception+</th><th scope="col">Gain</th></tr></thead>
+        <tbody>
+<tr><th scope="row">strikeout rate</th><td>0.233</td><td>0.305</td><td class="dx-pass">+0.072 [+0.031, +0.111]</td><td>0.455</td><td>0.457</td><td class="">+0.003 [-0.004, +0.010]</td></tr>
+<tr><th scope="row">walk rate</th><td>0.163</td><td>0.161</td><td class="">-0.002 [-0.009, +0.004]</td><td>0.268</td><td>0.267</td><td class="">-0.001 [-0.007, +0.006]</td></tr>
+<tr><th scope="row">xwOBA allowed</th><td>0.233</td><td>0.271</td><td class="dx-pass">+0.038 [+0.013, +0.061]</td><td>0.260</td><td>0.279</td><td class="dx-pass">+0.019 [+0.003, +0.037]</td></tr>
+<tr><th scope="row">wOBA allowed</th><td>0.134</td><td>0.146</td><td class="">+0.012 [-0.003, +0.028]</td><td>0.141</td><td>0.149</td><td class="">+0.008 [-0.005, +0.021]</td></tr>
+<tr><th scope="row">run value per 100 pitches</th><td>0.143</td><td>0.152</td><td class="">+0.009 [-0.006, +0.024]</td><td>0.146</td><td>0.153</td><td class="">+0.006 [-0.007, +0.020]</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="dx-section-note dx-wide">Beyond Stuff+ and Location+, Deception+ adds clearly (95% interval above zero) for strikeout rate and xwOBA allowed. Beyond last season&#x27;s own result as well, it adds clearly for xwOBA allowed. Year-over-year correlation among 579 pairs of pitchers qualified in both seasons: Stuff+ 0.79, whiff rate 0.74, Deception+ 0.70, strikeout rate 0.68, walk rate 0.55, Location+ 0.54, xwOBA allowed 0.43, wOBA allowed 0.25, run value per 100 pitches 0.24. Deception+ is less stable than the raw whiff rate it is built from, which is expected of a residual: what it offers is the part of results that stuff and location do not explain, not a better forecast of whiffs.</p>
+    <div class="dx-card dx-table-card">
+      <table class="dx-table">
+        <thead><tr><th scope="col">Score (per standard deviation)</th><th scope="col">Next season's strikeout rate, points</th><th scope="col">Next season's xwOBA allowed, points (lower is better)</th></tr></thead>
+        <tbody>
+<tr><th scope="row">Stuff+</th><td class="dx-pass">+1.94 (p &lt;0.001)</td><td class="dx-pass">-13.2 (p &lt;0.001)</td></tr>
+<tr><th scope="row">Location+</th><td class="">+0.05 (p 0.791)</td><td class="dx-pass">-4.2 (p &lt;0.001)</td></tr>
+<tr><th scope="row">Whiff</th><td class="dx-pass">+1.25 (p &lt;0.001)</td><td class="dx-pass">-3.6 (p 0.002)</td></tr>
+<tr><th scope="row">Chase</th><td class="">+0.40 (p 0.055)</td><td class="">-1.5 (p 0.196)</td></tr>
+<tr><th scope="row">Weak contact</th><td class="">+0.25 (p 0.171)</td><td class="dx-pass">-2.4 (p 0.043)</td></tr>
+<tr><th scope="row">Timing</th><td class="">-0.26 (p 0.206)</td><td class="">-0.8 (p 0.502)</td></tr>
+<tr><th scope="row">Whiff miss distance</th><td class="dx-pass">+0.69 (p &lt;0.001)</td><td class="">-2.1 (p 0.145)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="dx-section-note dx-wide">Timing is the most reliable member, so its effect on the field is worth watching. Per standard deviation it moves the next season&#x27;s strikeout rate by -0.3 points (95% interval -0.7 to +0.1) and xwOBA allowed (where lower is better) by -0.8 points (95% interval -3.2 to +1.6), against +1.2 points (95% interval +0.8 to +1.7) and -3.6 points (95% interval -5.9 to -1.3) for whiff. The rule written down for timing is to demote it from the score if, on both outcomes, the upper end of its interval is under 25% of whiff&#x27;s effect. That rule is not met (ratios +0.11 for strikeout rate and +0.89 for xwOBA), so it stays in.</p>
+  </div>
+
+  <div class="dx-section">
     <div class="dx-section-head">
       <div>
         <h2>What explains the gap?</h2>

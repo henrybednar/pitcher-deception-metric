@@ -76,6 +76,8 @@ STEPS = [
          "does a season's score predict the next season's outcome rate?"),
     Step("projection", ("projection.py",), ("output/projection.csv", "output/projection.json"),
          "projected Deception+ for the next season from the last two (out of sample)"),
+    Step("outcome_validation", ("outcome_validation.py",), ("output/outcome_validation.json",),
+         "does Deception+ predict next-season strikeout rate, xwOBA and run value beyond Stuff+ and Location+?"),
     Step("membership_check", ("membership_check.py",), ("output/membership_check.json",),
          "does the composite's membership hold? (each member dropped, each candidate added)"),
     Step("sequencing_driver_analysis", ("sequencing_driver_analysis.py",), ("output/sequencing_driver_report.json",),

@@ -16,6 +16,8 @@ from site_common import (
     component_table_rows,
     json_for_script,
     load_stats,
+    outcome_coefficient_rows,
+    outcome_table_rows,
     page_links,
     render_page,
 )
@@ -41,6 +43,8 @@ def main() -> None:
         stuff_data = json.load(f)
     with open("output/model_validation.json", encoding="utf-8") as f:
         validation_data = json.load(f)
+    with open("output/outcome_validation.json", encoding="utf-8") as f:
+        outcome_validation = json.load(f)
     stats = load_stats()
 
     page = render_page(
@@ -56,6 +60,8 @@ def main() -> None:
             "__STUFFPLUS_JSON__": json_for_script(stuff_data["outcomes"]),
             "__VALIDATION_JSON__": json_for_script(validation_data["outcomes"]),
             "__COMPONENT_ROWS__": component_table_rows(stats["components"]),
+            "__OUTCOME_ROWS__": outcome_table_rows(outcome_validation),
+            "__OUTCOME_COEF_ROWS__": outcome_coefficient_rows(outcome_validation),
             "__LEADERBOARD_URL__": page_links(args.artifact)["leaderboard"],
         },
     )
