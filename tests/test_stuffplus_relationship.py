@@ -103,3 +103,80 @@ def test_stuff_plus_correlations_use_qualified_pitcher_seasons_with_a_stuff_figu
     assert result["composite"] == pytest.approx(1.0)
     assert result["by_season"] == pytest.approx({2025: 1.0, 2026: 1.0})
     assert set(result["members"]) == {"whiff", "chase", "weak", "timing", "whiffmiss"}
+
+
+def stuff_cells(types=(("SL", 100.0, 0.0), ("CH", 60.0, 1.5)), n=120, slope=0.05, seed=0):
+    rng = np.random.default_rng(seed)
+    parts = []
+    for pitch_type, centre, shift in types:
+        stuff = rng.normal(centre, 8, n)
+        parts.append(pd.DataFrame({"pitcher": np.arange(n) + len(parts) * n, "pitch_type": pitch_type, "n": 100,
+                                   "stuff": stuff, "resid": shift + slope * (stuff - centre) + rng.normal(0, 0.2, n)}))
+    return pd.concat(parts, ignore_index=True)
+
+
+def test_stuff_slope_recovers_the_residual_change_per_ten_stuff_points():
+    cells = stuff_cells(types=(("SL", 100.0, 0.0),))
+
+    result = sr.stuff_slope(cells)
+
+    assert result["per_10"] == pytest.approx(0.5, abs=0.1)
+    assert result["lo"] < result["per_10"] < result["hi"]
+    assert result["cells"] == 120 and result["pitchers"] == 120
+
+
+def test_stuff_slope_standard_error_grows_when_a_pitchers_samples_are_clustered():
+    cells = stuff_cells(types=(("SL", 100.0, 0.0),))
+    doubled = pd.concat([cells, cells], ignore_index=True)           # each pitcher's second sample repeats the first
+
+    independent = sr.stuff_slope(doubled.assign(pitcher=np.arange(len(doubled))))
+    clustered = sr.stuff_slope(doubled)
+
+    assert clustered["se"] > independent["se"] * 1.2
+
+
+def test_slopes_by_pitch_type_reports_each_type_and_a_pooled_slope_within_type():
+    cells = stuff_cells()                                            # changeups sit lower on Stuff+ and higher on residual
+
+    result = sr.slopes_by_pitch_type(cells)
+
+    assert set(result) == {"SL", "CH", "all"}
+    assert result["SL"]["per_10"] == pytest.approx(0.5, abs=0.15)
+    assert result["CH"]["per_10"] == pytest.approx(0.5, abs=0.15)
+    assert result["all"]["per_10"] == pytest.approx(0.5, abs=0.1)    # a pooled fit without type effects would read negative
+
+
+def test_slopes_by_pitch_type_skips_a_type_with_too_few_samples():
+    cells = pd.concat([stuff_cells(types=(("SL", 100.0, 0.0),)), stuff_cells(types=(("CH", 60.0, 0.0),), n=5)], ignore_index=True)
+
+    assert "CH" not in sr.slopes_by_pitch_type(cells)
+
+
+def test_residual_cells_can_be_restricted_to_a_subset_of_pitches_with_a_lower_minimum():
+    df = pd.DataFrame({"pitcher": 1, "season": 2025, "pitch_type": "FF", "is_swing": True,
+                       "is_whiff": [1, 0] * 30, "whiff_expected_full": 0.40})
+    first = pd.Series([i < 30 for i in range(60)])                   # 30 of the 60 swings
+
+    assert sr.residual_cells(df, "whiff", restrict=first).empty                       # 30 is under the usual 50
+    cells = sr.residual_cells(df, "whiff", restrict=first, min_n_scale=0.5)
+    assert cells.loc[0, "n"] == 30 and cells.loc[0, "resid"] == pytest.approx((0.5 - 0.4) * 100)
+
+
+def test_first_pitch_flags_mark_pitch_number_one_after_dropping_non_regular_season_rows(tmp_path):
+    raw = pd.DataFrame({"pitcher": [1, 1, 1, 2], "season": 2025, "game_type": ["S", "R", "R", "R"], "pitch_number": [1, 1, 2, 1]})
+    path = tmp_path / "raw.csv"
+    raw.to_csv(path, index=False)
+    scored = pd.DataFrame({"pitcher": [1, 1, 2], "season": 2025})
+
+    flags = sr.first_pitch_flags(str(path), scored)
+
+    assert flags.tolist() == [True, False, True]
+
+
+def test_first_pitch_flags_refuse_rows_that_do_not_line_up(tmp_path):
+    raw = pd.DataFrame({"pitcher": [1, 2], "season": 2025, "game_type": "R", "pitch_number": [1, 1]})
+    path = tmp_path / "raw.csv"
+    raw.to_csv(path, index=False)
+
+    with pytest.raises(ValueError):
+        sr.first_pitch_flags(str(path), pd.DataFrame({"pitcher": [2, 1], "season": 2025}))
