@@ -110,6 +110,7 @@ table.lb-table thead th {
 }
 table.lb-table thead th:hover { color: var(--text-primary); }
 table.lb-table thead th.sorted { color: var(--accent); }
+table.lb-table thead th:focus-visible, table.lb-table tr.row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 table.lb-table tbody tr { border-bottom: 0.5px solid var(--border); }
 table.lb-table tbody tr:hover { background: var(--row-hover); }
 table.lb-table td.name { font-weight: 500; }
@@ -156,7 +157,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
 }
 </style>
 <div class="lbroot">
-<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Sortable, searchable leaderboard of Deception+ scores and its component indexes for every scored pitcher-season, 2025-2026.</h2>
+<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Sortable, searchable leaderboard of Deception+ scores and its component indexes for every scored pitcher-season, 2024-2026.</h2>
 <div class="lb-wrap">
 
   <div class="lb-head">
@@ -239,6 +240,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
   var N_COLS = { whiff_index: 'whiff_n', chase_index: 'chase_n', gb_index: 'gb_n', weak_index: 'weak_n', timing_index: 'timing_n',
                  whiffmiss_index: 'whiffmiss_n' };
 
+  var NARROW = window.matchMedia('(max-width: 960px)');   // below this width a row is tapped to show the columns that are hidden
   var state = { sortKey: 'deception_plus', sortDir: -1, search: '', season: 'all', role: 'all', qualifiedOnly: true };
 
   function cellColor(val) {
@@ -252,6 +254,10 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
   }
 
   function fmt(v) { return (v === null || v === undefined) ? '-' : v.toFixed(1); }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
 
   function fmtDir(v) {
     if (v === null || v === undefined) return '-';
@@ -283,7 +289,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
     filtered.forEach(function(r, i) {
       var cls = r.qualified ? '' : ' unqualified';
       var roleTitle = r.med_pitches_per_app === null ? '' : 'median ' + r.med_pitches_per_app.toFixed(0) + ' pitches per appearance';
-      var roleTag = r.role ? '<span class="role-tag" title="' + roleTitle + '">' + r.role + '</span>' : '';
+      var roleTag = r.role ? '<span class="role-tag" title="' + esc(roleTitle) + '">' + esc(r.role) + '</span>' : '';
       function dpCell(r) {
         var known = r.deception_plus_ci_lo !== null && r.deception_plus_ci_hi !== null;
         var unsure = known && r.deception_plus_ci_lo <= 100 && r.deception_plus_ci_hi >= 100;
@@ -312,7 +318,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
       }
       var stuff = r.stuff_plus !== null ? r.stuff_plus.toFixed(0) : '-';
       var cells = ['<td class="mono c4">' + (i + 1) + '</td>',
-                   '<td class="name">' + r.name.split(', ').reverse().join(' ') + roleTag + '</td>',
+                   '<td class="name">' + esc(r.name.split(', ').reverse().join(' ')) + roleTag + '</td>',
                    '<td class="mono c3">' + r.season + '</td>',
                    dpCell(r), projCell(r),
                    indexCell('whiff_index', ''), indexCell('chase_index', ' c5'), indexCell('weak_index', ' c3'),
@@ -323,29 +329,43 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
       var detail = item('c4', 'Rank', '#' + (i + 1)) + item('c3', 'Season', r.season) + item('c6', 'Next season', fmt(r.proj)) + item('c3', 'Weak contact', fmt(r.weak_index)) + item('c5', 'Timing', fmt(r.timing_index)) + item('c5', 'Chase', fmt(r.chase_index)) +
                    item('c2', 'Whiff miss', fmt(r.whiffmiss_index)) + item('c2', 'Ground ball*', fmt(r.gb_index)) +
                    item('c1', 'Timing dir', fmtDir(r.timing_bias_inches)) + item('c1', 'Stuff+', stuff);
-      html.push('<tr class="row' + cls + '">' + cells.join('') + '</tr>');
+      html.push('<tr class="row' + cls + '"' + (NARROW.matches ? ' tabindex="0" aria-expanded="false"' : '') + '>' + cells.join('') + '</tr>');
       html.push('<tr class="detail' + cls + '"><td colspan="13">' + detail + '</td></tr>');
     });
     body.innerHTML = html.join('');
 
     document.querySelectorAll('#lbTable thead th').forEach(function(th) {
       th.classList.toggle('sorted', th.dataset.key === state.sortKey);
+      if (th.dataset.key) {
+        th.setAttribute('aria-sort', th.dataset.key === state.sortKey ? (state.sortDir === 1 ? 'ascending' : 'descending') : 'none');
+      }
     });
   }
 
+  function sortBy(key) {
+    if (state.sortKey === key) { state.sortDir *= -1; }
+    else { state.sortKey = key; state.sortDir = key === 'name' ? 1 : -1; }
+    render();
+  }
   document.querySelectorAll('#lbTable thead th').forEach(function(th) {
-    th.addEventListener('click', function() {
-      var key = th.dataset.key;
-      if (!key) return;
-      if (state.sortKey === key) { state.sortDir *= -1; }
-      else { state.sortKey = key; state.sortDir = key === 'name' ? 1 : -1; }
-      render();
+    var key = th.dataset.key;
+    if (!key) return;
+    th.setAttribute('tabindex', '0');
+    th.addEventListener('click', function() { sortBy(key); });
+    th.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sortBy(key); }
     });
   });
-  document.getElementById('lbBody').addEventListener('click', function(e) {
-    var tr = e.target.closest('tr.row');
-    if (tr && tr.nextElementSibling) tr.nextElementSibling.classList.toggle('open');
+  function toggleDetail(tr) {
+    if (!tr || !tr.nextElementSibling) return;
+    var open = tr.nextElementSibling.classList.toggle('open');
+    if (tr.hasAttribute('aria-expanded')) tr.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  document.getElementById('lbBody').addEventListener('click', function(e) { toggleDetail(e.target.closest('tr.row')); });
+  document.getElementById('lbBody').addEventListener('keydown', function(e) {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr.row')) { e.preventDefault(); toggleDetail(e.target); }
   });
+  NARROW.addEventListener('change', render);
   document.getElementById('searchBox').addEventListener('input', function(e) {
     state.search = e.target.value.trim().toLowerCase();
     render();

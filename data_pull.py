@@ -14,7 +14,7 @@ Stuff+ / Location+ / PitchingBot comes from a FanGraphs export dropped in by
 hand (see merge_data.merge_fangraphs_stuff) — FanGraphs blocks scripted
 access with a 403, so there is no automated pull for it here.
 
-Run: `pip install pybaseball pandas numpy requests --upgrade` first.
+Run: `pip install -r requirements-pull.txt` first (pybaseball and requests; the pinned versions the pipeline was run with).
 
     python data_pull.py                 pull every season in YEARS
     python data_pull.py --years 2024    pull only those seasons and keep the other seasons' rows from the
@@ -24,23 +24,33 @@ Run: `pip install pybaseball pandas numpy requests --upgrade` first.
 import argparse
 import io
 import shutil
+import sys
 import time
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import requests
 
-import pybaseball as pb
+# pybaseball and requests are imported where they are used, so importing this module (for its helpers, or in a
+# test) neither needs them installed nor touches the cache directory.
 
-# The cache keys on each call's own arguments (the date range, the year), not on when it ran. A
-# re-pull with the same SEASON_RANGES as last time would otherwise silently return last time's
-# stale result instead of the new games, so every run starts from an empty cache directory.
-# pybaseball's own cache.purge() reads every existing record to remove it and raises
-# JSONDecodeError on a record left truncated by a killed process, so the directory is wiped
-# directly instead: same effect, and it can't be broken by a bad record.
-shutil.rmtree(pb.cache.config.cache_directory, ignore_errors=True)
-pb.cache.enable()  # avoids re-downloading on repeat runs within this one pull
+
+def reset_cache() -> None:
+    """Empty pybaseball's cache directory and turn the cache back on for this pull.
+
+    The cache keys on each call's own arguments (the date range, the year), not on when it ran. A re-pull with the
+    same SEASON_RANGES as last time would otherwise silently return last time's stale result instead of the new
+    games, so every pull starts from an empty cache directory. pybaseball's own cache.purge() reads every existing
+    record to remove it and raises JSONDecodeError on a record left truncated by a killed process, so the directory
+    is wiped directly instead. It refuses a directory that does not look like a pybaseball cache, since the location
+    comes from the PYBASEBALL_CACHE environment variable and a mistaken value must not delete something else."""
+    import pybaseball as pb
+
+    cache_dir = Path(pb.cache.config.cache_directory)
+    if "pybaseball" not in str(cache_dir).lower():
+        raise SystemExit(f"refusing to wipe {cache_dir}: it does not look like a pybaseball cache directory")
+    shutil.rmtree(cache_dir, ignore_errors=True)
+    pb.cache.enable()  # avoids re-downloading on repeat runs within this one pull
 
 YEARS = [2024, 2025, 2026]
 SEASON_RANGES = {
@@ -57,8 +67,9 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}  # Savant 403s without a UA header
 # ---------------------------------------------------------------------------
 def pull_statcast_pitches(start_dt: str, end_dt: str) -> pd.DataFrame:
     """Full pitch-level pull. pybaseball auto-chunks by date under the hood."""
-    df = pb.statcast(start_dt=start_dt, end_dt=end_dt)
-    return df
+    import pybaseball as pb
+
+    return pb.statcast(start_dt=start_dt, end_dt=end_dt)
 
 
 def add_vaa_haa(df: pd.DataFrame) -> pd.DataFrame:
@@ -133,6 +144,22 @@ def compute_outcome_rates(df: pd.DataFrame, group_cols=("pitcher", "pitch_type")
 # ---------------------------------------------------------------------------
 # 3. Swing timing / miss distance (bat tracking, 2024+, pitcher view)
 # ---------------------------------------------------------------------------
+def read_leaderboard_csv(url: str, name: str) -> pd.DataFrame:
+    """One Savant leaderboard as a frame. An empty reply or an HTML page (an error or sign-in page served with a
+    200) raises, so a season that did not come back can never pass for a season with no rows."""
+    import requests
+
+    resp = requests.get(url, headers=HEADERS, timeout=30)
+    resp.raise_for_status()
+    text = resp.content.decode("utf-8")
+    if not text.strip() or text.strip().startswith("<!"):
+        raise ValueError(f"{name} pull returned no CSV; verify the URL params against the live page")
+    frame = pd.read_csv(io.StringIO(text))
+    if frame.empty:
+        raise ValueError(f"{name} pull returned a CSV with no rows")
+    return frame
+
+
 def pull_swing_timing(year: int, min_swings="1") -> pd.DataFrame:
     """Params confirmed live 2026-09-14 by watching the leaderboard's own
     Download CSV request in the network tab — the endpoint uses a season[]
@@ -144,12 +171,7 @@ def pull_swing_timing(year: int, min_swings="1") -> pd.DataFrame:
         "&gameType[]=R&dateStart=&dateEnd=&batSide=&contactType=&attackZone=&pitchHand="
         "&csv=true"
     )
-    resp = requests.get(url, headers=HEADERS, timeout=30)
-    resp.raise_for_status()
-    text = resp.content.decode("utf-8")
-    if not text.strip() or text.strip().startswith("<!"):
-        raise ValueError("Swing timing pull returned no CSV — verify URL params against the live page.")
-    return pd.read_csv(io.StringIO(text))
+    return read_leaderboard_csv(url, "swing timing")
 
 
 # ---------------------------------------------------------------------------
@@ -165,12 +187,7 @@ def pull_arm_angle(year: int, min_pitches="1") -> pd.DataFrame:
         f"&perspective=back&pitchHand=&pitchType=&season={year}"
         "&size=small&sort=ascending&team=&csv=true"
     )
-    resp = requests.get(url, headers=HEADERS, timeout=30)
-    resp.raise_for_status()
-    text = resp.content.decode("utf-8")
-    if not text.strip() or text.strip().startswith("<!"):
-        return pd.DataFrame()
-    return pd.read_csv(io.StringIO(text))
+    return read_leaderboard_csv(url, "arm angle")
 
 
 # ---------------------------------------------------------------------------
@@ -182,12 +199,7 @@ def pull_pitch_tempo(year: int, min_pitches="1") -> pd.DataFrame:
         f"?type=Pit&season_start={year}&season_end={year}"
         f"&n={min_pitches}&game_type=Regular&split=no&with_team_only=1&csv=true"
     )
-    resp = requests.get(url, headers=HEADERS, timeout=30)
-    resp.raise_for_status()
-    text = resp.content.decode("utf-8")
-    if not text.strip() or text.strip().startswith("<!"):
-        return pd.DataFrame()
-    return pd.read_csv(io.StringIO(text))
+    return read_leaderboard_csv(url, "pitch tempo")
 
 
 # ---------------------------------------------------------------------------
@@ -213,77 +225,59 @@ def combine_with_existing(filename: str, frames: list[pd.DataFrame], pulled_year
     return pd.concat([old, new], ignore_index=True, sort=False).sort_values("season", kind="stable", ignore_index=True)
 
 
-if __name__ == "__main__":
+def pull_season(year: int) -> dict[str, pd.DataFrame]:
+    """Every source for one season, keyed like OUTPUT_FILES. Any source that cannot be pulled raises, so a season is
+    either complete or the whole pull stops before a file is touched."""
+    start, end = SEASON_RANGES[year]
+    print(f"--- {year} ---")
+
+    print("pulling raw pitch-level statcast...")
+    pitches = add_movement_inches(add_vaa_haa(pull_statcast_pitches(start, end)))
+    pitches["season"] = year
+
+    print("computing outcome rates...")
+    rates = compute_outcome_rates(pitches[pitches["game_type"] == "R"])   # regular season only, like the scores
+    rates["season"] = year
+
+    frames = {"pitches": pitches, "rates": rates}
+    for key, label, puller in (("swing_timing", "swing timing", pull_swing_timing), ("arm_angle", "arm angle", pull_arm_angle),
+                               ("tempo", "pitch tempo", pull_pitch_tempo)):
+        print(f"pulling {label} leaderboard...")
+        try:
+            frames[key] = puller(year).assign(season=year)
+        except Exception as e:
+            raise RuntimeError(f"{label} pull for {year} failed: {e}") from e
+        time.sleep(1)
+    return frames
+
+
+def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--years", type=int, nargs="+", default=YEARS, choices=YEARS,
                         help="seasons to pull; the other seasons' rows are kept from the existing files")
-    pulled_years = sorted(parser.parse_args().years)
+    pulled_years = sorted(set(parser.parse_args().years))
+    reset_cache()
 
-    all_pitches = []
-    all_rates = []
-    all_swing_timing = []
-    all_arm_angle = []
-    all_tempo = []
-
-    for year in pulled_years:
-        start, end = SEASON_RANGES[year]
-        print(f"--- {year} ---")
-
-        print("pulling raw pitch-level statcast...")
-        pitches = pull_statcast_pitches(start, end)
-        pitches = add_vaa_haa(pitches)
-        pitches = add_movement_inches(pitches)
-        pitches["season"] = year
-        all_pitches.append(pitches)
-
-        print("computing outcome rates...")
-        rates = compute_outcome_rates(pitches[pitches["game_type"] == "R"])   # regular season only, like the scores
-        rates["season"] = year
-        all_rates.append(rates)
-
-        print("pulling swing timing leaderboard...")
-        try:
-            timing = pull_swing_timing(year)
-            timing["season"] = year
-            all_swing_timing.append(timing)
-        except Exception as e:
-            print(f"  FAILED: {e}")
-        time.sleep(1)
-
-        print("pulling arm angle leaderboard...")
-        try:
-            arm_angle = pull_arm_angle(year)
-            arm_angle["season"] = year
-            all_arm_angle.append(arm_angle)
-        except Exception as e:
-            print(f"  FAILED: {e}")
-        time.sleep(1)
-
-        print("pulling pitch tempo leaderboard...")
-        try:
-            tempo = pull_pitch_tempo(year)
-            tempo["season"] = year
-            all_tempo.append(tempo)
-        except Exception as e:
-            print(f"  FAILED: {e}")
-
-    outputs = {
-        OUTPUT_FILES["pitches"]: all_pitches,
-        OUTPUT_FILES["rates"]: all_rates,
-        OUTPUT_FILES["swing_timing"]: all_swing_timing,
-        OUTPUT_FILES["arm_angle"]: all_arm_angle,
-        OUTPUT_FILES["tempo"]: all_tempo,
-    }
+    pulled = {}
+    try:
+        for year in pulled_years:
+            for key, frame in pull_season(year).items():
+                pulled.setdefault(key, []).append(frame)
+    except Exception as e:
+        # nothing has been written yet, so the files in raw/ are exactly as they were
+        sys.exit(f"Pull failed, no file was changed: {e}")
 
     Path("raw").mkdir(exist_ok=True)
-    written, skipped = [], []
-    for filename, frames in outputs.items():
-        if not frames:
-            skipped.append(filename)
-            continue
-        combine_with_existing(filename, frames, pulled_years).to_csv(filename, index=False)
-        written.append(filename)
+    for key, filename in OUTPUT_FILES.items():
+        if set(pulled_years) < set(YEARS) and not Path(filename).exists():
+            print(f"Warning: {filename} did not exist, so it now holds only {pulled_years}.")
+        combined = combine_with_existing(filename, pulled[key], pulled_years)
+        missing = set(YEARS if set(pulled_years) >= set(YEARS) else pulled_years) - set(combined["season"].unique())
+        if missing:
+            sys.exit(f"{filename} would be missing seasons {sorted(missing)}; nothing was written for it.")
+        combined.to_csv(filename, index=False)
+    print(f"Done. {len(OUTPUT_FILES)}/{len(OUTPUT_FILES)} CSVs written: {list(OUTPUT_FILES.values())}")
 
-    print(f"Done. {len(written)}/{len(outputs)} CSVs written: {written}")
-    if skipped:
-        print(f"Skipped (no data — check FAILED lines above): {skipped}")
+
+if __name__ == "__main__":
+    main()

@@ -39,3 +39,10 @@ def test_the_cluster_bootstrap_interval_brackets_the_correlation_and_is_wider_th
 
     assert lo < np.corrcoef(x, y)[0, 1] < hi
     assert hi - lo > hi_rows - lo_rows
+
+
+def test_a_repeated_pitcher_season_is_refused_instead_of_multiplying_pairs():
+    ps = pd.DataFrame({"pitcher": [1, 1, 1], "season": [2024, 2024, 2025], "score": [1.0, 2.0, 3.0]})
+
+    with pytest.raises(ValueError):
+        sp.consecutive_pairs(ps, ["score"])

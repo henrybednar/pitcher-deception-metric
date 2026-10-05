@@ -1,0 +1,3 @@
+# Only needed to download data (data_pull.py, or `run_pipeline.py --pull`); not needed for the pipeline or the tests.
+pybaseball==2.2.7
+requests==2.34.2

@@ -4,8 +4,9 @@ Pitcher Deception Project: called-strike outcome (validation table only, not par
 A pitcher who gets more called strikes than their exact plate location alone would predict
 may be stealing strikes through pitch shape, a different mechanism from whiff, chase, ground
 ball, weak contact and the bat-tracking outcomes (which all need a swing or a ball in play).
-It fails the 2025-to-2026 forecast and does not persist across seasons, so
-reliability_and_ci.COMPOSITE_OUTCOMES leaves it out. It is still fit and scored.
+It carries over weakly between seasons and adds little to the year-ahead forecast (it passes the p < 0.01
+gate on three seasons with a gain far smaller than any member's), and adding it lowers the composite's
+stability, so reliability_and_ci.COMPOSITE_OUTCOMES leaves it out. It is still fit and scored.
 
 Subset: pitches the batter DIDN'T swing at and that were a real ball/strike judgment call
 (excludes hit_by_pitch and the pitch-clock-violation automatic_ball/automatic_strike calls,

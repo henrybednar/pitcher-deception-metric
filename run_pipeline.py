@@ -26,6 +26,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 LOG_DIR = ROOT / "logs"
+FILE_TIME_SLACK_SECONDS = 2.0     # file systems stamp modification times a little coarsely
 
 RAW_INPUTS = [
     "raw/statcast_pitch_level_2024_2026.csv",
@@ -122,6 +123,10 @@ def run_step(step: Step) -> None:
     missing = [o for o in step.outputs if not (ROOT / o).exists()]
     if missing:
         raise SystemExit(f"{step.name} finished but did not write: {missing}")
+    # an output left over from an earlier run must not pass for this step's: it has to have been written since the step began
+    stale = [o for o in step.outputs if (ROOT / o).stat().st_mtime < started - FILE_TIME_SLACK_SECONDS]
+    if stale:
+        raise SystemExit(f"{step.name} finished but did not update: {stale}")
     print(f"=== {step.name} done in {(time.time() - started) / 60:.1f} min", flush=True)
 
 
@@ -143,8 +148,9 @@ def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--list", action="store_true", help="show the steps and exit")
-    parser.add_argument("--from", dest="start", help="start at this step")
-    parser.add_argument("--only", help="run just this step")
+    where = parser.add_mutually_exclusive_group()
+    where.add_argument("--from", dest="start", help="start at this step")
+    where.add_argument("--only", help="run just this step")
     parser.add_argument("--pull", action="store_true", help="run data_pull.py first (network)")
     args = parser.parse_args()
 

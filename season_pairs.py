@@ -16,6 +16,8 @@ def consecutive_pairs(ps: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     `<column>_2` from the next one, plus `season` (the earlier). Rows missing any column are dropped, so pass
     only the pitcher-seasons that should count (already filtered to qualified, say)."""
     first = ps[["pitcher", "season", *columns]]
+    if first.duplicated(["pitcher", "season"]).any():
+        raise ValueError("consecutive_pairs needs one row per pitcher and season; a repeated pair would multiply its pairs")
     second = first.assign(season=first["season"] - 1)
     return first.merge(second, on=["pitcher", "season"], suffixes=("_1", "_2")).dropna().reset_index(drop=True)
 

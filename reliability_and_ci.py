@@ -143,21 +143,19 @@ CONTINUOUS_OUTCOMES = {
 }
 # Every outcome here is scored, given intervals and tested. Only COMPOSITE_OUTCOMES feed
 # Deception+, and each member is weighted by its league-wide split-half reliability.
-# Membership is a decision made from the evidence, not an automatic rule. A candidate
-# joins when it clears split-half reliability of about 0.3 and a 2025-to-2026 forecast
-# p below 0.01, and does not make the composite less stable. Weak contact is the exception on reliability
-# (0.26, forecast p 0.0076): it is in on the forecast gate, and the composite is about as stable without it
-# (year-over-year within 0.01), so it matters little either way. On 2025-26 data:
-#   timing     (contact-only depth deviation)  reliability 0.618, year-over-year 0.483, forecast dR2 +0.099   in
-#   whiffmiss  (log miss distance on whiffs)   reliability 0.676, year-over-year 0.469, forecast dR2 +0.044   in
-# Outside the composite, all still modeled, scored and tested (composite reliability 0.750, year-over-year
-# 0.583 without them):
-#   gb         ground-ball talent is nearly uncorrelated with every member (index correlations of at most
-#              0.18) and the composite says nothing about it. Adding it lowers reliability to 0.721 and
-#              year-over-year to 0.548. Shown as its own readout.
-#   calledstrike  stable within a season (reliability 0.65) but year-over-year 0.02 and fails the forecast
-#              (p 0.12), which points to umpire, catcher or park effects. Adding it back: 0.748 / 0.575.
-#   align      forecast p 0.04, year-over-year 0.10. Adding it: 0.725 / 0.542. Validation table only.
+# Membership is a decision made from the evidence, not an automatic rule. A candidate joins when it
+# clears a split-half reliability of about 0.3 and the year-ahead forecast test (p below 0.01), and
+# does not make the composite less stable. Weak contact is the exception on reliability (about 0.27):
+# it is in on the forecast gate, and the composite is about as stable without it. The comparisons that
+# back the decision (each member dropped, each candidate added, year-over-year over every pair of
+# consecutive seasons with intervals) are produced by membership_check.py on every pipeline run and
+# written up in the README and on the dashboard; on 2024-26 they say:
+#   gb, calledstrike, align   each lowers the composite's year-over-year when added. Called strike and
+#                             alignment now also pass the forecast gate, with gains a small fraction of a
+#                             member's, so their exclusion rests on stability, not on the p-value.
+#   whiff, whiffmiss          dropping either costs about 0.05
+#   timing, weak, chase       dropping them costs about nothing or little, so they stay on their
+#                             forecast gains and reliability
 ALL_OUTCOMES = list(BINARY_OUTCOMES) + list(CONTINUOUS_OUTCOMES)
 COMPOSITE_OUTCOMES = ["whiff", "chase", "weak", "timing", "whiffmiss"]
 QUALIFY_MIN_N = {"whiff": 100, "chase": 100, "timing": 75, "gb": 40, "weak": 40, "calledstrike": 100,

@@ -14,6 +14,7 @@ import json
 from site_common import (
     DASHBOARD_FILE,
     component_table_rows,
+    json_for_script,
     load_stats,
     page_links,
     render_page,
@@ -24,10 +25,6 @@ DESCRIPTION = (
     "Deception+ scores how far a pitcher's whiff, chase, weak contact, swing timing, and whiff miss "
     "distance results land above what the pitch's measured traits predict. Statcast 2024-26."
 )
-
-
-def compact_json(obj) -> str:
-    return json.dumps(obj, separators=(",", ":"), ensure_ascii=False).replace("</", "<\/")
 
 
 def main() -> None:
@@ -53,11 +50,11 @@ def main() -> None:
         artifact_mode=args.artifact,
         text=stats["text"],
         replacements={
-            "__POINTS_JSON__": compact_json(artifact_data["points"]),
-            "__LORE_JSON__": compact_json(artifact_data["lore"]),
-            "__DRIVERS_JSON__": compact_json(driver_data),
-            "__STUFFPLUS_JSON__": compact_json(stuff_data["outcomes"]),
-            "__VALIDATION_JSON__": compact_json(validation_data["outcomes"]),
+            "__POINTS_JSON__": json_for_script(artifact_data["points"]),
+            "__LORE_JSON__": json_for_script(artifact_data["lore"]),
+            "__DRIVERS_JSON__": json_for_script(driver_data),
+            "__STUFFPLUS_JSON__": json_for_script(stuff_data["outcomes"]),
+            "__VALIDATION_JSON__": json_for_script(validation_data["outcomes"]),
             "__COMPONENT_ROWS__": component_table_rows(stats["components"]),
             "__LEADERBOARD_URL__": page_links(args.artifact)["leaderboard"],
         },

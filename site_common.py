@@ -32,6 +32,13 @@ STANDALONE_BODY_STYLE = (
     "@media (prefers-color-scheme:dark){html,body{background:#10151c}}</style>"
 )
 TOKEN_PATTERN = re.compile(r"\{\{([A-Z0-9_]+)\}\}")
+PAYLOAD_PATTERN = re.compile(r"__[A-Z0-9_]+__")
+
+
+def json_for_script(obj) -> str:
+    """JSON that is safe inside an inline <script>: every `<` becomes a backslash-u-003c escape, so neither
+    `</script>` nor `<!--` can appear in the page whatever the data holds, and the parser reads the same JSON."""
+    return json.dumps(obj, separators=(",", ":"), ensure_ascii=False).replace("<", "\\u003c")
 
 
 def load_stats(path: str = "output/site_stats.json") -> dict:
@@ -44,7 +51,7 @@ def fill_stats(template: str, text: dict) -> str:
     missing = sorted({k for k in TOKEN_PATTERN.findall(template) if k not in text})
     if missing:
         raise KeyError(f"template uses keys missing from site_stats.json: {missing}")
-    return TOKEN_PATTERN.sub(lambda m: html.escape(str(text[m.group(1)]), quote=False), template)
+    return TOKEN_PATTERN.sub(lambda m: html.escape(str(text[m.group(1)]), quote=True), template)
 
 
 def page_links(artifact_mode: bool) -> dict:
@@ -77,10 +84,11 @@ def render_page(template_path: str, *, title: str, description: str, artifact_mo
     if "__HEAD__" not in template:
         raise ValueError(f"{template_path} has no __HEAD__ token")
     body = fill_stats(template.replace("__HEAD__\n", "", 1), text)
-    for token, value in replacements.items():
+    for token in replacements:
         if token not in body:
             raise ValueError(f"{template_path} has no {token} token")
-        body = body.replace(token, value)
+    # one pass, so a payload that happens to contain another token's text is never expanded
+    body = PAYLOAD_PATTERN.sub(lambda m: replacements.get(m.group(0), m.group(0)), body)
     head = head_block(title, description, artifact_mode)
     if artifact_mode:
         return head + body
@@ -91,6 +99,7 @@ def render_page(template_path: str, *, title: str, description: str, artifact_mo
 
 
 def component_table_rows(components: list) -> str:
+    esc = lambda value: html.escape(str(value), quote=True)
     rows = []
     for c in components:
         verdict = "Pass" if c["passes"] else "Fails"
@@ -99,7 +108,7 @@ def component_table_rows(components: list) -> str:
         in_score = "Yes" if c["in_score"] else "No"
         rows.append(
             f'<tr class="{total}"><th scope="row">{html.escape(c["label"])}</th>'
-            f'<td>{c["reliability"]}</td><td>{c["yoy"]}</td><td>{c["delta"]}</td><td>{c["p"]}</td>'
-            f'<td>{c["n"]}</td><td class="dx-{cls}">{verdict}</td><td>{in_score}</td></tr>'
+            f'<td>{esc(c["reliability"])}</td><td>{esc(c["yoy"])}</td><td>{esc(c["delta"])}</td><td>{esc(c["p"])}</td>'
+            f'<td>{esc(c["n"])}</td><td class="dx-{cls}">{verdict}</td><td>{in_score}</td></tr>'
         )
     return "\n".join(rows)

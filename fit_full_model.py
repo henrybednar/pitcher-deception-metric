@@ -17,7 +17,7 @@ The Deception+ residual is actual minus the "full" expectation. reliability_and_
 game_level_table() defaults to the "full" suffix.
 
 GROUPKFOLD, not plain KFold: 85%+ of four-seam fastballs come from pitchers who threw in BOTH
-2025 and 2026. A plain shuffled KFold lets a pitcher's own pitches land in both train and test,
+2024, 2025 and 2026. A plain shuffled KFold lets a pitcher's own pitches land in both train and test,
 so the model can learn "pitches shaped exactly like Pitcher X's get extra whiffs" from that
 pitcher's other-season pitches, which suppresses the measured residual in proportion to how
 distinctive and stable the pitcher's stuff is. GroupKFold guarantees no pitcher ever splits.
@@ -66,9 +66,9 @@ OUTCOMES = {
 }
 CONTEXT_FEATURES = ["stand", "balls", "strikes", "home_team", "same_hand", "season", "pitch_count_in_appearance",
                     "times_faced_this_game", "outs", "runners_on", "score_diff"]
-# season is a fixed effect, not a talent signal: the 2025-26 pull carries a real leaguewide
-# calibration gap between the two years (e.g. whiff actual-minus-expected +1.2 points in 2025,
-# -0.8 in 2026, before this feature existed), and without a way to see which season a pitch is
+# season is a fixed effect, not a talent signal: the pull carries a real leaguewide
+# calibration gap between years (measured on 2025 and 2026: whiff actual-minus-expected +1.2 points
+# in 2025, -0.8 in 2026, before this feature existed), and without a way to see which season a pitch is
 # from, the model can't help but read that gap as pitcher skill. Adding it lets the model absorb
 # the level shift instead.
 # pitch_count_in_appearance (build_pitch_table.py) is the same idea for role and in-game fatigue:
