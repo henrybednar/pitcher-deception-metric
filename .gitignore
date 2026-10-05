@@ -15,3 +15,6 @@ raw/statcast_pitch_level_2025_2026.csv
 output/
 
 .pytest_cache/
+
+# out-of-time replication sandbox (a copy of the code and about 2.5 GB of raw pitches)
+sandbox_out_of_time/
