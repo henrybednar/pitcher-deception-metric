@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
+from raw_alignment import regular_season_rows
 from reliability_and_ci import BINARY_OUTCOMES, COMPOSITE_OUTCOMES, CONTINUOUS_OUTCOMES
 
 PREDICTIONS_FILE = "output/per_pitch_predictions.csv"
@@ -138,15 +139,9 @@ def slopes_by_pitch_type(cells: pd.DataFrame) -> dict[str, dict]:
 
 
 def first_pitch_flags(raw_path: str, scored: pd.DataFrame) -> pd.Series:
-    """True for the first pitch of each plate appearance, aligned by position to the scored pitches. The
-    predictions file is the regular-season rows of the raw file in the same order; pitcher and season are
-    checked row by row and a mismatch is refused."""
-    raw = pd.read_csv(raw_path, usecols=["pitcher", "season", "game_type", "pitch_number"], low_memory=False)
-    raw = raw[raw["game_type"] == "R"].reset_index(drop=True)
-    if len(raw) != len(scored) or not (raw["pitcher"].to_numpy() == scored["pitcher"].to_numpy()).all() \
-            or not (raw["season"].to_numpy() == scored["season"].to_numpy()).all():
-        raise ValueError("raw pitch rows do not line up with the scored pitches; refusing to flag first pitches by position")
-    return pd.Series((raw["pitch_number"] == 1).to_numpy(), index=scored.index)
+    """True for the first pitch of each plate appearance, aligned by position to the scored pitches (see
+    raw_alignment.regular_season_rows for the row-by-row check)."""
+    return regular_season_rows(raw_path, ["pitch_number"], scored)["pitch_number"] == 1
 
 
 def pitch_type_views(df: pd.DataFrame, stuff: pd.DataFrame, first_pitch: pd.Series) -> dict:

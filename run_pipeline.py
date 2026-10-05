@@ -75,6 +75,8 @@ STEPS = [
          "does a 2025 score predict the 2026 outcome rate?"),
     Step("sequencing_driver_analysis", ("sequencing_driver_analysis.py",), ("output/sequencing_driver_report.json",),
          "does the previous pitch explain the residual? (pitch level)"),
+    Step("pitch_surprise", ("pitch_surprise.py",), ("output/pitch_surprise.json",),
+         "does an unpredictable pitch beat its expectation? (pitch and season level)"),
     Step("stuffplus_relationship", ("stuffplus_relationship.py",), ("output/stuffplus_relationship.json",),
          "average result by Stuff+ fifth, and the Stuff+ slope by pitch type and on first pitches only"),
     Step("model_validation", ("model_validation.py",), ("output/model_validation.json",),
