@@ -254,7 +254,7 @@ Unlike a single in-sample year-effect coefficient, Deception+ already runs a gen
 \begin{itemize}
 \item Called Strike: cross-validated $\Delta R^2 = +0.0039$, $p<0.0001$
 \item Horizontal Alignment: cross-validated $\Delta R^2 = +0.0007$, $p=0.0018$
-\item Both clear the $p<0.01$ gate on three seasons (neither did on two), with gains a small fraction of a member's, and adding either lowers the composite's year-over-year correlation among qualified pairs (called strike $-0.033$, alignment $-0.028$, each with an interval below zero). That is why the project's composite metric excludes both.
+\item Both clear the $p<0.01$ gate on three seasons (neither did on two), with gains a small fraction of a member's, and adding either lowers the composite's year-over-year correlation among qualified pairs (called strike $-0.033$, alignment $-0.029$, each with an interval below zero). That is why the project's composite metric excludes both.
 \end{itemize}
 
 \textbf{Strategic Implication}: deception that shows up in a pitcher's whiff and timing numbers one season keeps showing up in their actual outcomes the next. That is the strongest evidence in the project that these two residuals measure a stable pitcher trait rather than noise, and a materially stronger check than an in-sample year dummy could ever provide.
@@ -323,7 +323,7 @@ Unlike a single in-sample year-effect coefficient, Deception+ already runs a gen
 \item \textbf{Exploratory, even after correction}: the Benjamini--Hochberg adjustment covers the 14 tests inside each model. The project has tested many other things (component candidates, other drivers, sequencing features), so even a result that survives deserves replication on another season before it is relied on. Vertical-approach-angle consistency shows how a marginal result moves: clustered, its $q$ was $0.061$ and $0.047$ for whiff and timing in one two-season run, $0.050$ and $0.026$ in the next, and is $0.003$ and $0.007$ with a third season.
 \item \textbf{The residuals carry model noise}: which pitchers share a cross-validation fold changes a pitcher's expectation, worth about 0.75 index points per component after averaging six random grouped splits (about 1.1 with three, about 2 with one). Season-level driver results near a threshold can move with it.
 \item \textbf{Raw coefficients depend on units}: a coefficient's size reflects the scale of its feature (repeat rate runs from 0 to 1, pace in seconds), so ``largest coefficient'' comparisons across features are not like-for-like. Standardized coefficients would be the fair comparison.
-\item \textbf{The residual is not independent of pitch quality}: Deception+ correlates $r=0.371$ with FanGraphs Stuff+, so these coefficients describe what separates pitchers on a residual that still carries some pitch-quality information.
+\item \textbf{The residual is not independent of pitch quality}: Deception+ correlates $r=0.360$ with FanGraphs Stuff+, so these coefficients describe what separates pitchers on a residual that still carries some pitch-quality information.
 \item \textbf{Explanatory, not predictive}: this driver regression is a diagnostic layer only, exactly as the project's own driver-analysis module states. It does not feed back into, or change, any pitcher's scored Deception+ value.
 \end{itemize}
 

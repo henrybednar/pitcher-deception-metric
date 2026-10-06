@@ -40,6 +40,7 @@ CHUNKSIZE = 500_000
 WEAK_CONTACT_EV = 85.0
 IN_ZONE = set(range(1, 10))
 MIN_ZONE_HEIGHT = 0.5  # ft; real strike zones run about 1.1 to 2.6
+LINEUP_SIZE = 9
 ALIGN_COLS = ["pitcher", "pitch_type", "season", "game_pk", "half"]
 TABLE_COLS = ALIGN_COLS + ["is_swing", "is_in_zone", "is_bip", "is_whiff", "is_gb", "is_weak"]
 
@@ -54,6 +55,7 @@ RAW_COLS = [
     "batter", "stand", "fielder_2", "at_bat_number", "pitch_number", "spin_axis",
     "balls", "strikes", "home_team", "game_type", "game_date",
     "outs_when_up", "on_1b", "on_2b", "on_3b", "bat_score", "fld_score",
+    "inning", "inning_topbot", "home_win_exp",
 ] + TRAJECTORY_COLS
 
 SWING_DESC = {"foul", "foul_tip", "hit_into_play", "swinging_strike", "swinging_strike_blocked", "missed_bunt", "foul_bunt"}
@@ -127,6 +129,7 @@ def load_pitch_data(path: str) -> pd.DataFrame:
     df = add_pitch_count_in_appearance(df)
     df = add_times_faced_this_game(df)
     df = add_game_state_features(df)
+    df = add_game_context_features(df)
 
     return replace_nonfinite(df)
 
@@ -162,6 +165,25 @@ def add_game_state_features(df: pd.DataFrame) -> pd.DataFrame:
     df["outs"] = df["outs_when_up"]
     df["runners_on"] = df[["on_1b", "on_2b", "on_3b"]].notna().sum(axis=1)
     df["score_diff"] = df["fld_score"] - df["bat_score"]
+    return df
+
+
+def add_game_context_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Where the batter sits in the order and how much the game hangs on this pitch (inning is read as is).
+
+    lineup_slot is the batting team's plate appearance number in the game, wrapped to 1 through 9, which
+    follows the batting order whoever is in it. wp_closeness is 1 when the home win probability is even and 0 when
+    it is settled. Statcast's home_win_exp is the state before the pitch (the next pitch's value is this
+    one's plus this pitch's delta_home_win_exp, correlation 0.98), so it carries nothing of the swing itself,
+    though it already includes the count. Relievers pitch in tighter spots and against the top of the order,
+    where batters chase differently; with these three the qualified reliever minus starter chase gap fell from
+    +0.91 to +0.34 points."""
+    order = df.sort_values(["game_pk", "inning_topbot", "at_bat_number", "pitch_number"]).index
+    keys = df.loc[order, ["game_pk", "inning_topbot", "at_bat_number"]]
+    first_pitch_of_plate_appearance = ~keys.duplicated()
+    appearance = first_pitch_of_plate_appearance.groupby([keys["game_pk"], keys["inning_topbot"]]).cumsum()
+    df.loc[order, "lineup_slot"] = ((appearance.to_numpy() - 1) % LINEUP_SIZE + 1)
+    df["wp_closeness"] = 1 - (2 * df["home_win_exp"] - 1).abs()
     return df
 
 

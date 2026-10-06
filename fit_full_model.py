@@ -58,9 +58,15 @@ STUFF_FEATURES = [
     "release_pos_z", "release_pos_x_armside", "p_throws",
 ] + PHYSICS_FEATURES
 LOCATION_FEATURES = ["plate_x_armside", "plate_z_norm"]
+# Inning, the batting team's lineup slot and how close the game is (build_pitch_table.add_game_context_features)
+# are chase features only. Held out by pitcher, two seeds: chase log loss 0.40730 to 0.40710 and AUC 0.86402 to
+# 0.86418, and the qualified reliever minus starter gap in actual-minus-expected chase fell from +0.91 to +0.34
+# points. Whiff did not move (log loss 0.42122 to 0.42120, gap +0.31 to +0.41) and weak contact moved a little
+# (0.55432 to 0.55388, gap +0.41 to +0.32), so they stay out.
+GAME_CONTEXT_FEATURES = ["inning", "lineup_slot", "wp_closeness"]
 OUTCOMES = {
     "whiff": dict(subset="is_swing", target="is_whiff", kind="classify"),
-    "chase": dict(subset="not_in_zone", target="is_swing", kind="classify"),
+    "chase": dict(subset="not_in_zone", target="is_swing", kind="classify", extra=GAME_CONTEXT_FEATURES),
     "gb": dict(subset="is_bip", target="is_gb", kind="classify"),
     "weak": dict(subset="is_bip", target="is_weak", kind="classify"),
 }
@@ -281,7 +287,8 @@ if __name__ == "__main__":
     new_cols = []
     for label, spec in OUTCOMES.items():
         print(f"\n=== {label.upper()} (full tier: stuff+location+opponent+catcher+context) ===", flush=True)
-        fit_full_outcome(df, label, spec["target"], df[spec["subset"]], spec["kind"], fold_seeds=FOLD_SEEDS)
+        fit_full_outcome(df, label, spec["target"], df[spec["subset"]], spec["kind"], extra_features=spec.get("extra"),
+                         fold_seeds=FOLD_SEEDS)
         recalibrate_scored_by_month(df, label, spec["target"], binary=True)
         new_cols.append(f"{label}_expected_full")
     save_predictions(existing, df, new_cols)

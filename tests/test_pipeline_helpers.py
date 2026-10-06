@@ -247,6 +247,54 @@ def test_game_state_features_read_outs_runners_and_score_from_the_pitching_teams
     assert out["score_diff"].tolist() == [2, 0]   # pitching team's lead: fld_score - bat_score
 
 
+def test_game_context_lineup_slot_counts_the_batting_teams_plate_appearances_and_wraps_at_nine():
+    # Home team bats in the bottom halves. 11 plate appearances in game 100's top half (rows out of order, two
+    # pitches in the first), one in its bottom half, and one in another game.
+    top = [(n, p) for n in range(1, 12) for p in ([1, 2] if n == 1 else [1])]
+    frame = pd.DataFrame({
+        "game_pk": [100] * len(top) + [100, 200],
+        "inning_topbot": ["Top"] * len(top) + ["Bot", "Top"],
+        "at_bat_number": [n for n, _ in top] + [2, 1],
+        "pitch_number": [p for _, p in top] + [1, 1],
+        "home_win_exp": [0.5] * (len(top) + 2),
+    }).sample(frac=1, random_state=3)   # shuffled: the slot follows at-bat order, not row order
+
+    out = build_pitch_table.add_game_context_features(frame)
+    slots = out[out["game_pk"].eq(100) & out["inning_topbot"].eq("Top")].groupby("at_bat_number")["lineup_slot"].agg(["min", "max"])
+
+    assert (slots["min"] == slots["max"]).all()                       # every pitch of a plate appearance shares a slot
+    assert slots["min"].tolist() == [1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2]   # wraps after the ninth hitter
+    assert out.loc[out["inning_topbot"].eq("Bot"), "lineup_slot"].item() == 1   # the other team's order starts on its own
+    assert out.loc[out["game_pk"].eq(200), "lineup_slot"].item() == 1
+
+
+def test_game_context_wp_closeness_is_one_when_even_and_zero_when_settled():
+    frame = pd.DataFrame({
+        "game_pk": [1, 1, 1, 1], "inning_topbot": ["Top"] * 4, "at_bat_number": [1, 2, 3, 4], "pitch_number": [1] * 4,
+        "home_win_exp": [0.5, 0.0, 1.0, 0.25],
+    })
+
+    out = build_pitch_table.add_game_context_features(frame)
+
+    assert out["wp_closeness"].tolist() == pytest.approx([1.0, 0.0, 0.0, 0.5])
+
+
+def test_only_chase_carries_the_game_context_features():
+    assert fit_full_model.OUTCOMES["chase"]["extra"] == ["inning", "lineup_slot", "wp_closeness"]
+    assert all("extra" not in spec for label, spec in fit_full_model.OUTCOMES.items() if label != "chase")
+    assert set(fit_full_model.GAME_CONTEXT_FEATURES).issubset(build_pitch_table.RAW_COLS + ["lineup_slot", "wp_closeness"])
+
+
+def test_fit_full_outcome_adds_extra_features_between_location_and_context(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(fit_full_model, "fit_tier", lambda df, out_col, target, mask, kind, cols, **kw: seen.update(cols=cols))
+
+    fit_full_model.fit_full_outcome(None, "chase", "is_swing", None, "classify", extra_features=["inning"])
+
+    cols = seen["cols"]
+    assert cols.index("plate_z_norm") < cols.index("inning") < cols.index("balls")
+
+
 def test_filter_regular_season_drops_postseason_and_spring_training_and_the_game_type_column():
     frame = pd.DataFrame({"pitcher": [1, 2, 3, 4], "game_type": ["R", "S", "D", "W"]})
 
