@@ -102,6 +102,23 @@ def format_gain(g: dict) -> str:
     return f"{g['gain']:+.3f} [{g['lo']:+.3f}, {g['hi']:+.3f}]"
 
 
+def pitch_type_rows(summary: dict) -> str:
+    """Rows of the by-pitch-type table: for each pitch type, the pitcher-seasons scored, the median sample and the
+    split-half reliability (Spearman-Brown corrected) of the whiff and chase scores."""
+    from pitch_type_scores import PITCH_TYPE_NAMES   # imported here so the page builders do not load the scoring code unless they need a table
+
+    esc = lambda value: html.escape(str(value), quote=True)
+    rows = []
+    for pitch_type, per_label in summary["types"].items():
+        cells = [f'<th scope="row">{esc(PITCH_TYPE_NAMES[pitch_type].capitalize())}</th>']
+        for label in ("whiff", "chase"):
+            r = per_label[label]
+            reliability = "-" if r["reliability"] is None else f"{r['reliability']:.2f}"
+            cells += [f'<td>{r["n_pitcher_seasons"]:,}</td>', f'<td>{r["median_n"]:.0f}</td>', f"<td>{reliability}</td>"]
+        rows.append("<tr>" + "".join(cells) + "</tr>")
+    return "\n".join(rows)
+
+
 def outcome_table_rows(validation: dict) -> str:
     """Rows of the on-field validation table: for each outcome, cross-validated R2 of Stuff+ and Location+ and with Deception+
     added, then the same with last season's own result in the model, each gain with its 95% interval (shaded when the

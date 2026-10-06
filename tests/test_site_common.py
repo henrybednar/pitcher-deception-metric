@@ -49,3 +49,18 @@ def test_the_component_table_escapes_every_cell():
 
     assert "<b>Whiff</b>" not in html_rows and "&lt;b&gt;" in html_rows
     assert "<td><0.0001</td>" not in html_rows and "<td>&lt;0.0001</td>" in html_rows
+
+
+def test_pitch_type_rows_list_each_type_with_the_sample_and_reliability_of_whiff_and_chase():
+    from site_common import pitch_type_rows
+
+    summary = {"types": {
+        "SL": {"whiff": {"reliability": 0.641, "n_pitcher_seasons": 1084, "median_n": 98.0},
+               "chase": {"reliability": None, "n_pitcher_seasons": 1156, "median_n": 104.0}},
+    }}
+
+    row = pitch_type_rows(summary)
+
+    assert row.startswith('<tr><th scope="row">Sliders</th>')
+    assert "<td>1,084</td><td>98</td><td>0.64</td>" in row
+    assert "<td>1,156</td><td>104</td><td>-</td>" in row                      # a reliability that could not be estimated reads as a dash

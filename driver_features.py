@@ -7,7 +7,7 @@ regression that tests them (driver_analysis.py runs it).
 
 Features, one row per pitcher-season:
   release-point, arm-angle and VAA spread across a pitcher's pitch types
-  velocity gap from the previous pitch, same-pitch-type repeat rate
+  velocity gap when the pitch type switches from the previous pitch, same-pitch-type repeat rate
   release extension, average VAA, pitch-mix entropy, pace, arm angle, repertoire size
   tunnel differential: how much closer two consecutive pitches of different
     types are at the batter's decision point (23.5 ft out) than at the plate
@@ -55,7 +55,7 @@ FEATURE_LABELS = {
     "release_pos_x_cross_pitch_std": "Release-point (x) consistency (season proxy)",
     "release_pos_z_cross_pitch_std": "Release-point (z) consistency (season proxy)",
     "vaa_cross_pitch_std": "VAA consistency (season proxy)",
-    "avg_velocity_gap_from_prev": "Velocity gap from previous pitch",
+    "velocity_gap_per_switch": "Velocity gap when switching pitch types",
     "repeat_pct": "Same-pitch-type repeat rate",
     "release_extension_mean": "Release extension",
     "vaa_mean": "Average vertical approach angle",
@@ -81,6 +81,15 @@ def weighted_std(values: np.ndarray, weights: np.ndarray) -> float:
     return float(np.sqrt(np.average((values - avg) ** 2, weights=weights)))
 
 
+def pooled_gap_per_switch(pitch_types: pd.DataFrame) -> float:
+    """Average speed change on the pitches that switched type, over all of a pitcher-season's pitch types, each
+    weighted by its switches. NaN when none of them has one."""
+    has_switch = pitch_types["avg_velocity_gap_per_switch"].notna() & (pitch_types["n_switched"] > 0)
+    if not has_switch.any():
+        return np.nan
+    return float(np.average(pitch_types.loc[has_switch, "avg_velocity_gap_per_switch"], weights=pitch_types.loc[has_switch, "n_switched"]))
+
+
 def build_cross_pitch_features(pitch_types: pd.DataFrame) -> pd.DataFrame:
     """Spread of release point, arm angle and VAA across a pitcher's pitch types."""
     rows = []
@@ -94,8 +103,7 @@ def build_cross_pitch_features(pitch_types: pd.DataFrame) -> pd.DataFrame:
             "release_pos_x_cross_pitch_std": weighted_std(g["release_pos_x_mean"].values, weights.values),
             "release_pos_z_cross_pitch_std": weighted_std(g["release_pos_z_mean"].values, weights.values),
             "vaa_cross_pitch_std": weighted_std(g["vaa_mean"].values, weights.values),
-            "avg_velocity_gap_from_prev": np.average(
-                g["avg_velocity_gap_from_prev"].fillna(g["avg_velocity_gap_from_prev"].mean()), weights=weights),
+            "velocity_gap_per_switch": pooled_gap_per_switch(g),
             "repeat_pct": np.average(g["repeat_pct"].fillna(g["repeat_pct"].mean()), weights=weights),
             "release_extension_mean": np.average(g["release_extension_mean"], weights=weights),
             "vaa_mean": np.average(g["vaa_mean"], weights=weights),

@@ -88,6 +88,8 @@ STEPS = [
          "average result by Stuff+ fifth, and the Stuff+ slope by pitch type and on first pitches only"),
     Step("model_validation", ("model_validation.py",), ("output/model_validation.json",),
          "out-of-fold AUC, log loss, calibration and R2 for every pitch model"),
+    Step("pitch_type_scores", ("pitch_type_scores.py",), ("output/pitch_type_scores.csv", "output/pitch_type_scores.json"),
+         "whiff and chase by pitch type, with the reliability of each (a pitcher's slider against every other slider)"),
     Step("export_data", ("export_artifact_data.py", "export_site_stats.py", "export_leaderboard_data.py"),
          ("output/artifact_data.json", "output/site_stats.json", "output/leaderboard_data.json"),
          "JSON and stats consumed by the pages"),

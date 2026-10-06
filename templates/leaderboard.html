@@ -112,6 +112,12 @@ table.lb-table tr.unqualified td { opacity: 0.55; }
 .lb-footnote p { margin: 0; }
 .role-tag { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); border: 0.5px solid var(--border-strong); border-radius: 4px; padding: 0 4px; margin-left: 6px; vertical-align: 1px; }
 tr.detail { display: none; }
+tr.detail.open { display: table-row; }
+tr.row.expandable { cursor: pointer; }
+.detail .pt-list { display: block; margin-top: 2px; line-height: 1.9; }
+.detail .pt { display: inline-block; margin-right: 18px; white-space: nowrap; }
+.detail .pt i { color: var(--text-muted); font-style: normal; font-size: 11.5px; }
+.detail .pt .chip { font-family: var(--font-mono); padding: 0 5px; border-radius: 3px; }
 tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; color: var(--text-secondary); font-size: 12.5px; background: var(--surface-2); }
 .detail .di { display: none; margin-right: 14px; white-space: nowrap; }
 .detail .di b { font-weight: 500; color: var(--text-primary); }
@@ -151,7 +157,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
     <div>
       <p class="lb-eyebrow">2024-26 &middot; Deception+ &middot; data through {{DATA_THROUGH}}</p>
       <h1>Deception+ leaderboard</h1>
-      <p class="lb-sub">Click a column to sort. Hover an index for its sample size and 95% interval. A <span class="unsure">&#9675;</span> beside a Deception+ score means its interval includes 100, so it is not clearly different from average. Rows below the minimum sample for one or more components are dimmed and hidden by default. <span class="narrow-only">Tap a row for the columns that do not fit. </span><a class="lb-link" href="__DASHBOARD_URL__">&larr; Dashboard and method</a></p>
+      <p class="lb-sub">Pitcher results beyond what the pitch's measured traits predict. Click a column to sort. Hover an index for its sample size and 95% interval. A <span class="unsure">&#9675;</span> beside a Deception+ score means its interval includes 100, so it is not clearly different from average. Rows below the minimum sample for one or more components are dimmed and hidden by default. <span class="narrow-only">Tap a row for the columns that do not fit. </span><a class="lb-link" href="__DASHBOARD_URL__">&larr; Dashboard and method</a></p>
     </div>
   </div>
 
@@ -206,6 +212,8 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
 
   <div class="lb-footnote">
     <p>Each index is the pitcher's actual rate minus the rate a model expects from the pitch's measured traits (velocity, spin, movement, location), the batter, the catcher, the count, the park, and pitcher-batter handedness. Small samples are shrunk toward the average. 100 is the average scored pitcher-season for each index and the average qualified pitcher-season for Deception+, and 10 points is one standard deviation. Deception+ is a reliability-weighted average of {{N_COMPOSITE}} components: whiff, chase, weak contact, timing and whiff miss distance.</p>
+    <p>Qualified means {{QUALIFY_TEXT}}. Pitchers below that bar are still scored, shrunk toward 100, and show up when Qualified only is turned off.</p>
+    <p>By pitch type: click a row to open its whiff and chase scores for each pitch type with at least {{PT_MIN_N}} swings (whiff) or pitches outside the zone (chase). Each pitch type is scored against the same pitch type only, with the same shrinkage and 100/10 scale as the season scores. They are noisier than the season score: split-half reliability runs {{PT_WHIFF_REL_RANGE}} for whiff and {{PT_CHASE_REL_RANGE}} for chase, depending on the pitch type. The dashboard has the table.</p>
     <p>Timing is the gap between where the bat met the ball and the hitter's estimated ideal contact depth, so early and late contact both count. It is scored on swings that made contact. Whiff miss distance is Statcast's distance between ball and barrel at closest approach on swings and misses. *Ground ball is scored and shown but is not part of Deception+, because it is a different skill from the other components (its index correlates at most {{GB_CORR_MAX}} with them). Timing dir is the signed timing gap in inches on contact swings, against a stuff-and-location baseline: positive means contact farther out front than the hitter's ideal (earlier) and negative means deeper (later). It is not shaded because it is not on the 100 scale.</p>
     <p>Next season is a projection of the pitcher's Deception+ for the following season ({{PROJ_NEXT_SEASON}} on the latest rows) from this season and the one before it, pulled toward 100. Its typical miss against what happened is {{PROJ_RMSE}} points, against {{PROJ_RMSE_RAW}} for using this season's score as the guess; hover a value for its 80% range.</p>
     <p>Role, the tag beside each name, comes from each pitcher's real share of appearances that were starts: {{ROLE_GS_MIN}} or more is a starter (SP), under {{ROLE_GS_MAX}} is a reliever (RP), and anything between is mixed (MR). Where that isn't available, role falls back to a proxy from median pitches per appearance: {{ROLE_SP_MIN}} or more is a starter, under {{ROLE_RP_MAX}} is a reliever.</p>
@@ -227,6 +235,9 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
   var N_COLS = { whiff_index: 'whiff_n', chase_index: 'chase_n', gb_index: 'gb_n', weak_index: 'weak_n', timing_index: 'timing_n',
                  whiffmiss_index: 'whiffmiss_n' };
 
+  var PT_NAMES = { FF: 'Four-seam fastball', SI: 'Sinker', FC: 'Cutter', SL: 'Slider', ST: 'Sweeper', CU: 'Curveball',
+                   KC: 'Knuckle curve', CH: 'Changeup', FS: 'Splitter' };
+
   var NARROW = window.matchMedia('(max-width: 960px)');   // below this width a row is tapped to show the columns that are hidden
   var state = { sortKey: 'deception_plus', sortDir: -1, search: '', season: 'all', role: 'all', qualifiedOnly: true };
 
@@ -244,6 +255,19 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+
+  function typeList(r) {
+    if (!r.types || !r.types.length) return '';
+    var items = r.types.map(function(t) {
+      function part(label, n, index) {
+        if (index === null) return '';
+        return label + ' <span class="chip" style="background:' + cellColor(index) + '">' + index.toFixed(1) + '</span> <i>n ' + n + '</i>';
+      }
+      var parts = [part('whiff', t[1], t[2]), part('chase', t[3], t[4])].filter(Boolean);
+      return '<span class="pt"><b title="' + esc(PT_NAMES[t[0]] || t[0]) + '">' + esc(t[0]) + '</b> ' + parts.join(' &middot; ') + '</span>';
+    });
+    return '<span class="pt-list"><b>By pitch type</b> ' + items.join('') + '</span>';
   }
 
   function fmtDir(v) {
@@ -316,8 +340,10 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
       var detail = item('c4', 'Rank', '#' + (i + 1)) + item('c3', 'Season', r.season) + item('c6', 'Next season', fmt(r.proj)) + item('c3', 'Weak contact', fmt(r.weak_index)) + item('c5', 'Timing', fmt(r.timing_index)) + item('c5', 'Chase', fmt(r.chase_index)) +
                    item('c2', 'Whiff miss', fmt(r.whiffmiss_index)) + item('c2', 'Ground ball*', fmt(r.gb_index)) +
                    item('c1', 'Timing dir', fmtDir(r.timing_bias_inches)) + item('c1', 'Stuff+', stuff);
-      html.push('<tr class="row' + cls + '"' + (NARROW.matches ? ' tabindex="0" aria-expanded="false"' : '') + '>' + cells.join('') + '</tr>');
-      html.push('<tr class="detail' + cls + '"><td colspan="13">' + detail + '</td></tr>');
+      var typesHtml = typeList(r);
+      var expandable = NARROW.matches || typesHtml !== '';
+      html.push('<tr class="row' + cls + (expandable ? ' expandable' : '') + '"' + (expandable ? ' tabindex="0" aria-expanded="false"' : '') + '>' + cells.join('') + '</tr>');
+      html.push('<tr class="detail' + cls + '"><td colspan="13">' + detail + typesHtml + '</td></tr>');
     });
     body.innerHTML = html.join('');
 
@@ -344,7 +370,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
     });
   });
   function toggleDetail(tr) {
-    if (!tr || !tr.nextElementSibling) return;
+    if (!tr || !tr.nextElementSibling || !tr.classList.contains('expandable')) return;
     var open = tr.nextElementSibling.classList.toggle('open');
     if (tr.hasAttribute('aria-expanded')) tr.setAttribute('aria-expanded', open ? 'true' : 'false');
   }

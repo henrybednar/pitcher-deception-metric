@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
+from driver_features import FEATURE_LABELS, MIN_PITCHES_PER_TYPE, weighted_std
 from reliability_and_ci import COMPOSITE_OUTCOMES, QUALIFY_MIN_N
 from season_pairs import cluster_bootstrap_interval, consecutive_pairs, correlation_by_pair, pooled_correlation
 
@@ -172,9 +173,9 @@ def clear_of_average_counts(ps: pd.DataFrame) -> tuple[int, int]:
 
 def sequencing_feature_overlap(driver: pd.DataFrame, ps: pd.DataFrame) -> dict:
     """How the two sequencing driver features relate to each other and to the whiff residual, over the
-    pitcher-seasons the driver regression uses. Velocity gap averages the speed change over every
-    consecutive pitch pair, repeats included, so it overlaps with repeat rate by construction."""
-    cols = ["avg_velocity_gap_from_prev", "repeat_pct"]
+    pitcher-seasons the driver regression uses. The velocity gap is taken on pitch-type switches only, so it
+    no longer carries the repeat rate."""
+    cols = ["velocity_gap_per_switch", "repeat_pct"]
     joined = driver.merge(ps[["pitcher", "season", "whiff_diff_adj_shrunk"]], on=["pitcher", "season"])
     joined = joined.dropna(subset=cols + ["whiff_diff_adj_shrunk"])
     return {
@@ -182,6 +183,29 @@ def sequencing_feature_overlap(driver: pd.DataFrame, ps: pd.DataFrame) -> dict:
         "gap_whiff": float(joined[cols[0]].corr(joined["whiff_diff_adj_shrunk"])),
         "repeat_whiff": float(joined[cols[1]].corr(joined["whiff_diff_adj_shrunk"])),
     }
+
+
+def speed_spread_correlation(driver: pd.DataFrame, pitch_types: pd.DataFrame) -> float:
+    """Correlation of the velocity gap per switch with how far apart a pitcher's pitch types sit in speed (the
+    pitch-weighted SD of their average speeds), over the pitcher-seasons that have both."""
+    rows = [{"pitcher": pitcher, "season": season, "speed_spread": weighted_std(g["release_speed_mean"].to_numpy(), g["pitches"].to_numpy())}
+            for (pitcher, season), g in pitch_types[pitch_types["pitches"] >= MIN_PITCHES_PER_TYPE].groupby(["pitcher", "season"])]
+    joined = driver.merge(pd.DataFrame(rows), on=["pitcher", "season"]).dropna(subset=["velocity_gap_per_switch", "speed_spread"])
+    return float(joined["velocity_gap_per_switch"].corr(joined["speed_spread"]))
+
+
+def sequencing_survivors(driver_analysis: dict) -> dict:
+    """Page-text lists of the outcomes for which each sequencing feature survives the Benjamini-Hochberg correction
+    (q below 0.05) in driver_analysis.json."""
+    labels = {**QUALIFY_LABELS, "align": "horizontal alignment"}
+
+    def survives(feature: str) -> str:
+        names = [labels[k] for k, result in driver_analysis.items()
+                 if any(f["feature"] == feature and f["q"] < 0.05 for f in result["features"])]
+        return join_words(names) if names else "none of the outcomes"
+
+    return {"SEQ_GAP_SURVIVES": survives(FEATURE_LABELS["velocity_gap_per_switch"]),
+            "SEQ_REPEAT_SURVIVES": survives(FEATURE_LABELS["repeat_pct"])}
 
 
 MEMBERSHIP_KEYS = {"+gb": "MEM_GB", "+align": "MEM_ALIGN", "+calledstrike": "MEM_CS", "-whiffmiss": "MEM_NO_WHIFFMISS",
@@ -267,6 +291,38 @@ def outcome_text(validation: dict) -> dict:
                        f"Beyond last season's own result as well, it adds clearly for {join_labels(clear('deception_over_own_stuff_location'))}."),
         "OV_STABILITY": f"Year-over-year correlation among {validation['stability']['n']:,} pairs of pitchers qualified in both seasons: {stability}. {verdict}",
         "OV_TIMING": timing,
+    }
+
+
+def pitch_type_text(summary: dict) -> dict:
+    """Page text from pitch_type_scores.json: the display minimum and the range and extremes of the split-half
+    reliability of the per-pitch-type whiff and chase scores."""
+    from pitch_type_scores import PITCH_TYPE_NAMES, SHOW_MIN_N
+
+    text = {"PT_MIN_N": str(SHOW_MIN_N)}
+    for label in ("whiff", "chase"):
+        rel = {t: v[label]["reliability"] for t, v in summary["types"].items() if v[label]["reliability"] is not None}
+        best, worst = max(rel, key=rel.get), min(rel, key=rel.get)
+        key = label.upper()
+        text[f"PT_{key}_REL_RANGE"] = f"{rel[worst]:.2f} to {rel[best]:.2f}"
+        text[f"PT_{key}_BEST"] = f"{PITCH_TYPE_NAMES[best]} ({rel[best]:.2f})"
+        text[f"PT_{key}_WORST"] = f"{PITCH_TYPE_NAMES[worst]} ({rel[worst]:.2f})"
+    text["PT_MEDIAN_N"] = f"{pd.Series([v['whiff']['median_n'] for v in summary['types'].values()]).median():.0f}"
+    return text
+
+
+def location_text(ps: pd.DataFrame, validation: dict) -> dict:
+    """Page text on Location+: how it correlates with Deception+, Stuff+ and the members among qualified pitcher-seasons
+    (negatively, unlike the other scores), and what it does on the field in the member regression."""
+    q = ps[ps["qualified"] & ps["location_plus"].notna()]
+    corr = lambda col: fmt_r(float(q["location_plus"].corr(q[col])))
+    coef = validation["coefficients"]
+    k, x = coef["k_pct"]["location_plus"], coef["xwoba"]["location_plus"]
+    return {
+        "LOC_DECEPTION_R": corr("deception_plus"), "LOC_STUFF_R": corr("stuff_plus"), "LOC_WHIFFMISS_R": corr("whiffmiss_index"),
+        "LOC_WHIFF_R": corr("whiff_index"), "LOC_CHASE_R": corr("chase_index"),
+        "LOC_XWOBA": f"{x['coef'] * 1000:+.1f} points of xwOBA allowed (lower is better; 95% interval {x['lo'] * 1000:+.1f} to {x['hi'] * 1000:+.1f}, p {fmt_p(x['p'])})",
+        "LOC_K_P": fmt_p(k["p"]),
     }
 
 
@@ -435,9 +491,12 @@ def main() -> None:
     with open("output/artifact_data.json", encoding="utf-8") as f:
         n_points = len(json.load(f)["points"])
     with open("output/driver_analysis.json", encoding="utf-8") as f:
-        driver_r2 = [m["r2_mean"] for m in json.load(f).values()]
+        driver_analysis = json.load(f)
+    driver_r2 = [m["r2_mean"] for m in driver_analysis.values()]
     with open("output/sequencing_driver_report.json", encoding="utf-8") as f:
         seq_r2 = [m["r2"] for m in json.load(f).values()]
+    with open("output/pitch_type_scores.json", encoding="utf-8") as f:
+        pitch_type_summary = json.load(f)
     with open("output/model_validation.json", encoding="utf-8") as f:
         validation = json.load(f)
     with open("output/membership_check.json", encoding="utf-8") as f:
@@ -527,10 +586,14 @@ def main() -> None:
         "SEQ_FEATURES_R": fmt_r(sequencing["between"]),
         "SEQ_GAP_WHIFF_R": fmt_r(sequencing["gap_whiff"]),
         "SEQ_REPEAT_WHIFF_R": fmt_r(sequencing["repeat_whiff"]),
+        "SEQ_SPREAD_R": fmt_r(speed_spread_correlation(pd.read_csv("output/driver_features.csv"), pd.read_csv("output/pitcher_pitchtype_season.csv"))),
+        **sequencing_survivors(driver_analysis),
         **validation_text(validation),
         **membership_text(membership),
         **projection_text(projection),
         **outcome_text(outcome_validation),
+        **location_text(ps, outcome_validation),
+        **pitch_type_text(pitch_type_summary),
     }
 
     check_page_text(text, components)

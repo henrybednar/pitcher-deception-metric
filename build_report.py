@@ -29,7 +29,7 @@ SEASONS = "2024--2026"
 LABEL_TITLE = {"whiff": "Whiff", "timing": "Timing"}
 TITLE = {
     "tempo_bases_empty_sec": "Pace between pitches",
-    "avg_velocity_gap_from_prev": "Velocity gap from previous pitch",
+    "velocity_gap_per_switch": "Velocity gap when switching pitch types",
     "repeat_pct": "Same-pitch-type repeat rate",
     "vaa_cross_pitch_std": "VAA consistency across repertoire",
     "spin_mirror_score_mean": "Spin-axis mirror score",
@@ -45,7 +45,7 @@ TITLE = {
 }
 IMPORTANCE_NAME = {
     "tempo_bases_empty_sec": "Pace between pitches",
-    "avg_velocity_gap_from_prev": "Velocity gap from previous pitch",
+    "velocity_gap_per_switch": "Velocity gap when switching pitch types",
     "repeat_pct": "Same-pitch-type repeat rate",
     "vaa_cross_pitch_std": "VAA consistency (season proxy)",
     "spin_mirror_score_mean": "Spin-axis mirror score (real; low = match/mirror)",
@@ -148,17 +148,28 @@ class Report:
             self.cross_season_r[label] = pooled_correlation(consecutive_pairs(data[["pitcher", "season", target]], [target]), target)
         whiff = model_data("whiff", driver_df, ps, features)
         t = "whiff_diff_adj_shrunk"
-        self.r_gap = float(whiff["avg_velocity_gap_from_prev"].corr(whiff[t]))
+        self.r_gap = float(whiff["velocity_gap_per_switch"].corr(whiff[t]))
         self.r_repeat = float(whiff["repeat_pct"].corr(whiff[t]))
-        self.r_between = float(whiff["avg_velocity_gap_from_prev"].corr(whiff["repeat_pct"]))
-        denom = 1 - self.r_between ** 2
-        self.beta_gap = (self.r_gap - self.r_between * self.r_repeat) / denom
-        self.beta_repeat = (self.r_repeat - self.r_between * self.r_gap) / denom
-        self.joint_share = self.beta_gap * self.r_gap + self.beta_repeat * self.r_repeat
+        self.r_between = float(whiff["velocity_gap_per_switch"].corr(whiff["repeat_pct"]))
+        self.r_spread = self.site["SEQ_SPREAD_R"]
 
     # ----- small accessors -----
     def r(self, model: str, key: str) -> dict:
         return self.row[model][key]
+
+    def sequencing_summary(self) -> str:
+        """The finding on the two sequencing features, in words that match what the q-values say."""
+        gw, gt = self.r("whiff", "velocity_gap_per_switch"), self.r("timing", "velocity_gap_per_switch")
+        rw, rt = self.r("whiff", "repeat_pct"), self.r("timing", "repeat_pct")
+        numbers = (f"velocity gap when switching: whiff ${peq(gw['q']).replace('p', 'q', 1)}$, timing ${peq(gt['q']).replace('p', 'q', 1)}$; "
+                   f"repeat rate: whiff $q={rw['q']:.2f}$, timing $q={rt['q']:.2f}$")
+        if gw["q"] < 0.05 and gt["q"] < 0.05 and rw["q"] >= 0.05 and rt["q"] >= 0.05:
+            lead = ("The speed change on pitch-type switches survives the correction in both models and repeat rate in neither, so the earlier result that "
+                    "both were positive came from a gap averaged over repeats, which overlapped with repeat rate")
+        else:
+            lead = "The two sequencing features no longer split cleanly between the models, so read them from the q-values"
+        return (f"{lead} ({numbers}). The gap per switch correlates $r={self.r_spread}$ with how far apart a pitcher's pitch types sit in speed, "
+                f"so it is largely an arsenal property and not evidence that mixing speeds creates deception")
 
     def tiers(self, model: str) -> tuple[list[dict], list[dict], list[dict]]:
         rows = self.ols[model]["rows"]
@@ -187,11 +198,12 @@ class Report:
             return (f"Working slower between pitches predicts a higher whiff residual. The residual's own standard deviation across these "
                     f"pitcher-seasons is ${sd:.4f}$, so a 5-second pace difference moves the prediction by about {abs(5 * r['coef'] / sd):.1f} "
                     f"of a residual standard deviation.")
-        if (model, key) == ("whiff", "avg_velocity_gap_from_prev"):
-            return "Bigger speed changes between consecutive pitches predict more whiffs than stuff and location alone would, consistent with classic pitch-sequencing theory."
+        if (model, key) == ("whiff", "velocity_gap_per_switch"):
+            return (f"A bigger speed change when a pitcher switches pitch types goes with more whiffs than stuff and location alone would predict. It tracks how far "
+                    f"apart a pitcher's pitch types sit in speed ($r={self.r_spread}$), so it is largely an arsenal property.")
         if (model, key) == ("whiff", "repeat_pct"):
-            return (f"Significant in the model, but weak on its own ($r={self.r_repeat:+.2f}$ with the whiff residual) and partly redundant with velocity gap "
-                    f"(the two features correlate at $r={self.r_between:.2f}$). Read the two together; see Cross-Model Strategic Insights.")
+            return (f"Once the speed change is measured on switches only, repeat rate {'still clears the correction' if r['q'] < 0.05 else 'is not distinguishable from zero'} "
+                    f"($r={self.r_repeat:+.2f}$ with the whiff residual, $q={r['q']:.2f}$). It used to look significant because the old velocity gap, averaged over repeats too, overlapped with it.")
         if (model, key) == ("whiff", "vaa_cross_pitch_std"):
             return ("Less spread in vertical approach angle across a pitcher's pitch types, a more consistent tunnel, goes with a higher residual. "
                     + self.vaa_status())
@@ -205,11 +217,12 @@ class Report:
             return "A bigger repertoire trends toward more deception credit, but not reliably."
         if (model, key) == ("whiff", "arm_angle_szn_avg"):
             return "Arm slot carries no distinguishable effect on the whiff residual."
-        if (model, key) == ("timing", "avg_velocity_gap_from_prev"):
-            return (f"The single most reliable predictor in either model. Timing's own residual standard deviation is ${sd:.3f}$, so this effect is "
+        if (model, key) == ("timing", "velocity_gap_per_switch"):
+            return (f"The most reliable predictor in either model. Timing's own residual standard deviation is ${sd:.3f}$, so this effect is "
                     f"proportionally similar in size to the whiff-model version of the same feature.")
         if (model, key) == ("timing", "repeat_pct"):
-            return "Confirms the whiff-model finding in an independent outcome: repeating a pitch type more often predicts bigger contact-timing misses, not smaller ones."
+            return (f"Once the speed change is measured on switches only, repeat rate is {'still' if r['q'] < 0.05 else 'no longer'} distinguishable from zero for "
+                    f"timing ($q={r['q']:.2f}$).")
         if (model, key) == ("timing", "vaa_cross_pitch_std"):
             return "Same sign as in the whiff model. " + self.vaa_status()
         if (model, key) == ("timing", "vaa_mean"):
@@ -246,9 +259,7 @@ class Report:
             f"\\item With 14 features tested per model, results are read after a Benjamini--Hochberg correction, with standard errors clustered on pitcher because most pitchers appear in more than one season: "
             f"{len(sw)} of 14 features survive for the whiff residual ({len(sw) + len(nw)} are nominally significant at $p<0.05$) and {len(st)} of 14 for the timing residual "
             f"({'all' if not nt else len(st) + len(nt)} nominally significant features {'survive' if not nt else 'in total'})",
-            f"\\item Velocity gap from the previous pitch and same-pitch-type repeat rate are both significant and positive in \\emph{{both}} models (repeat rate: whiff ${rep_w['coef']:+.4f}$, ${peq(rep_w['p'])}$; "
-            f"timing ${rep_t['coef']:+.3f}$, ${peq(rep_t['p'])}$), but each is only weakly related to the residual on its own ($r={self.r_gap:+.2f}$ and ${self.r_repeat:+.2f}$ for whiff), "
-            f"and the two features partly offset each other, so they are best read together as a weak signal about how a pitcher switches between pitches, not as evidence that repeating pitches creates deception",
+            f"\\item {self.sequencing_summary()}",
             f"\\item {vaa}",
             f"\\item Deception+'s own held-out year-ahead forecast test, not a mere year-effect coefficient, confirms both outcomes studied here are temporally stable: "
             f"whiff cross-validated $\\Delta R^2={float(self.pv['whiff']['cv_delta_r2']):+.3f}$ ($p<0.0001$), timing $\\Delta R^2={float(self.pv['timing']['cv_delta_r2']):+.3f}$ ($p<0.0001$)",
@@ -278,8 +289,7 @@ class Report:
         return "\n".join(out)
 
     def cross_model(self) -> str:
-        gw, gt = self.r("whiff", "avg_velocity_gap_from_prev"), self.r("timing", "avg_velocity_gap_from_prev")
-        rw, rt = self.r("whiff", "repeat_pct"), self.r("timing", "repeat_pct")
+        gw, gt = self.r("whiff", "velocity_gap_per_switch"), self.r("timing", "velocity_gap_per_switch")
         vw, vt = self.r("whiff", "vaa_cross_pitch_std"), self.r("timing", "vaa_cross_pitch_std")
         sm_w = self.r("whiff", "spin_mirror_score_mean")
         pw, pt = self.r("whiff", "tempo_bases_empty_sec"), self.r("timing", "tempo_bases_empty_sec")
@@ -294,27 +304,20 @@ class Report:
 
 \\subsection*{{Statistically Validated Universal Factors}}
 
-\\feat{{Velocity Gap From Previous Pitch}}
+\\feat{{Velocity Gap When Switching Pitch Types}}
 \\begin{{itemize}}
-\\item Both Models: significant and positive after correction (whiff ${gw['coef']:+.5f}$, ${peq(gw['p'])}$, $q={gw['q']:.4f}$; timing ${gt['coef']:+.5f}$, $p<0.0001$)
-\\item Strategic Value: the single most consistently validated driver across both the rate and the magnitude dimension of swing-and-miss deception.
-\\end{{itemize}}
-
-\\feat{{Same-Pitch-Type Repeat Rate}}
-\\begin{{itemize}}
-\\item Both Models: significant and positive after correction (whiff ${peq(rw['p'])}$, $q={rw['q']:.4f}$; timing ${peq(rt['p'])}$)
-\\item Strategic Value: significant in two independent scored outcomes, but weak on its own and entangled with velocity gap; see Findings That Need Careful Reading below.
+\\item Both Models: significant and positive after correction (whiff ${gw['coef']:+.5f}$, ${peq(gw['p'])}$, $q={gw['q']:.4f}$; timing ${gt['coef']:+.5f}$, ${peq(gt['p'])}$, $q={gt['q']:.4f}$)
+\\item Strategic Value: the most consistently validated driver across both the rate and the magnitude dimension of swing-and-miss deception. It tracks how far apart a pitcher's pitch types sit in speed ($r={self.r_spread}$), so it is largely an arsenal property.
 \\end{{itemize}}
 
 \\subsection*{{Findings That Need Careful Reading}}
 
-\\feat{{Why Velocity Gap and Repeat Rate Both Come Out Positive}}
+\\feat{{Why Velocity Gap and Repeat Rate No Longer Both Come Out Positive}}
 \\begin{{itemize}}
-\\item Both Models: positive, significant coefficients for both features (repeat rate: whiff ${peq(rw['p'])}$, timing ${peq(rt['p'])}$). They can look contradictory, since mixing speeds and repeating the same pitch seem to be opposite behaviors.
-\\item The apparent contradiction comes from how the features are built. Velocity gap averages the speed change over all consecutive pitches, repeats included (a repeat adds about zero), so it mixes how often a pitcher switches with how big the jump is when they do. The two features correlate at $r={self.r_between:.2f}$.
-\\item Each is only weakly related to the whiff residual on its own ($r={self.r_gap:+.2f}$ for velocity gap, ${self.r_repeat:+.2f}$ for repeat rate; roughly {self.joint_share * 100:.1f}\\% of its variance together). Because the two offset each other, each coefficient looks stronger with both in the regression: the standardized coefficients implied by those three correlations are about ${self.beta_gap:.2f}$ and ${self.beta_repeat:.2f}$. That pattern is called cooperative suppression, and it is not a contradiction.
-\\item A cleaner measure splits the feature into switch rate and gap per switch. An earlier check found the per-switch gap correlates about $+0.12$ with the whiff residual, stronger than either raw feature; that split is not yet part of the pipeline.
-\\item Strategic Implication: this is not evidence that repeating pitches creates deception, or that mixing them does. The effect is small, observational, and partly an artifact of feature construction. It also cannot separate ``thrown again because it's dominant'' from ``dominant because it's thrown again.''
+\\item Before the split: the velocity gap averaged the speed change over all consecutive pitches, repeats included (a repeat adds about zero), so it mixed how often a pitcher switches with how big the jump is when they do. Both it and repeat rate came out positive in both models, which looked contradictory, since mixing speeds and repeating the same pitch seem to be opposite behaviors.
+\\item After the split: the gap is taken on switches only. {self.sequencing_summary()}. The two features correlate at $r={self.r_between:.2f}$ now.
+\\item Each is only weakly related to the whiff residual on its own ($r={self.r_gap:+.2f}$ for the gap per switch, ${self.r_repeat:+.2f}$ for repeat rate).
+\\item Strategic Implication: this is not evidence that mixing speeds creates deception, or that repeating pitches does. The effect is small and observational, and it cannot separate a pitcher whose pitches differ a lot in speed from one who sequences them well.
 \\end{{itemize}}
 
 \\feat{{{vaa_title}}}
@@ -414,7 +417,7 @@ Unlike a single in-sample year-effect coefficient, Deception+ already runs a gen
         return f"""\\section*{{Key Strategic Takeaways}}
 
 \\begin{{enumerate}}
-\\item \\textbf{{Sequencing Features Carry a Weak Signal}}: pitch-to-pitch velocity change and repeat rate are both significant and positive in two separate scored outcomes, but each is only weakly related to the residual ($r={self.r_gap:+.2f}$ and ${self.r_repeat:+.2f}$ for whiff) and the two partly offset each other. They are better read as a weak signal about how a pitcher switches between pitches than as proof that mixing or repeating pitches creates deception.
+\\item \\textbf{{The Sequencing Signal Is a Speed Gap, Not a Repeat Rate}}: {self.sequencing_summary()}.
 \\item \\textbf{{{tunnel_title}}}: {tunnel}
 \\item \\textbf{{Season-Level Traits Explain Little of the Residual}}: $R^2$ of ${min(w['r2'], t['r2']):.3f}$ to ${max(w['r2'], t['r2']):.3f}$ means over 90\\% of the scored residual is still unexplained by these 14 traits. This is an explanatory layer on top of Deception+, not a predictive one, and should be read as such.
 \\item \\textbf{{Temporal Stability Is Verified, Not Assumed}}: whiff and timing both pass a genuine held-out year-ahead forecast test, and so does every other member; called strike and horizontal alignment clear the gate only with a small fraction of a member's gain, and lower the composite's stability, which is why Deception+'s composite excludes them.

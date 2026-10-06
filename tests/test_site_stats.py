@@ -11,7 +11,7 @@ def test_sequencing_feature_overlap_reports_the_correlation_between_the_features
     gap = 8 * (1 - repeat) + rng.normal(scale=0.2, size=400)          # more repeats, smaller average gap
     residual = 0.01 * gap + 0.02 * repeat + rng.normal(scale=0.05, size=400)
     pairs = pd.DataFrame({"pitcher": np.arange(400), "season": 2025})
-    driver = pairs.assign(avg_velocity_gap_from_prev=gap, repeat_pct=repeat)
+    driver = pairs.assign(velocity_gap_per_switch=gap, repeat_pct=repeat)
     ps = pairs.assign(whiff_diff_adj_shrunk=residual)
 
     result = sequencing_feature_overlap(driver, ps)
@@ -23,7 +23,7 @@ def test_sequencing_feature_overlap_reports_the_correlation_between_the_features
 
 def test_sequencing_feature_overlap_skips_pitcher_seasons_missing_a_feature_or_the_residual():
     driver = pd.DataFrame({"pitcher": [1, 2, 3, 4], "season": 2025,
-                           "avg_velocity_gap_from_prev": [1.0, 2.0, 3.0, np.nan], "repeat_pct": [0.5, 0.4, 0.3, 0.2]})
+                           "velocity_gap_per_switch": [1.0, 2.0, 3.0, np.nan], "repeat_pct": [0.5, 0.4, 0.3, 0.2]})
     ps = pd.DataFrame({"pitcher": [1, 2, 3, 4], "season": 2025, "whiff_diff_adj_shrunk": [0.1, 0.2, np.nan, 0.4]})
 
     result = sequencing_feature_overlap(driver, ps)
@@ -207,3 +207,71 @@ def test_check_page_text_refuses_nan_and_inf_figures_but_not_words_that_contain_
         check_page_text({"STUFF_R": "nan"}, [])
     with pytest.raises(ValueError, match="whiff.yoy"):
         check_page_text({}, [{"key": "whiff", "yoy": "inf"}])
+
+
+def test_sequencing_survivors_lists_the_outcomes_where_each_feature_clears_the_correction():
+    from driver_features import FEATURE_LABELS
+    from export_site_stats import sequencing_survivors
+
+    gap, repeat = FEATURE_LABELS["velocity_gap_per_switch"], FEATURE_LABELS["repeat_pct"]
+    analysis = {
+        "whiff": {"features": [{"feature": gap, "q": 0.001}, {"feature": repeat, "q": 0.4}]},
+        "weak": {"features": [{"feature": gap, "q": 0.02}, {"feature": repeat, "q": 0.5}]},
+        "timing": {"features": [{"feature": gap, "q": 0.2}, {"feature": repeat, "q": 0.9}]},
+        "align": {"features": [{"feature": gap, "q": 0.6}, {"feature": repeat, "q": 0.03}]},
+    }
+
+    out = sequencing_survivors(analysis)
+
+    assert out["SEQ_GAP_SURVIVES"] == "whiff and weak contact"
+    assert out["SEQ_REPEAT_SURVIVES"] == "horizontal alignment"
+    assert sequencing_survivors({"whiff": {"features": [{"feature": gap, "q": 0.5}]}})["SEQ_GAP_SURVIVES"] == "none of the outcomes"
+
+
+def test_speed_spread_correlation_compares_the_gap_per_switch_with_the_pitch_types_speed_spread():
+    from export_site_stats import speed_spread_correlation
+
+    # three pitchers with two pitch types each; the spread is the pitch-weighted SD of the two average speeds
+    pitch_types = pd.DataFrame({
+        "pitcher": [1, 1, 2, 2, 3, 3, 4, 4], "season": 2025, "pitches": [50, 50, 50, 50, 50, 50, 50, 5],
+        "release_speed_mean": [95.0, 85.0, 95.0, 90.0, 95.0, 93.0, 95.0, 70.0]})
+    driver = pd.DataFrame({"pitcher": [1, 2, 3, 4], "season": 2025, "velocity_gap_per_switch": [10.0, 5.0, 2.0, 1.0]})
+
+    assert speed_spread_correlation(driver, pitch_types) == pytest.approx(1.0)   # pitcher 4's second type is under 20 pitches, so no spread
+
+
+def test_location_text_reports_the_correlations_and_the_member_regression_coefficients():
+    from export_site_stats import location_text
+
+    rng = np.random.default_rng(1)
+    location = rng.normal(100, 10, 300)
+    ps = pd.DataFrame({"qualified": True, "location_plus": location, "deception_plus": 100 - location + rng.normal(0, 1, 300),
+                       "stuff_plus": rng.normal(100, 10, 300), "whiffmiss_index": 100 - location, "whiff_index": 100 - location, "chase_index": 100 - location})
+    ps.loc[:9, "qualified"] = False                                       # unqualified rows stay out of the correlations
+    ps.loc[10, "location_plus"] = np.nan                                  # so do rows with no Location+
+    validation = {"coefficients": {"k_pct": {"location_plus": {"p": 0.83}},
+                                   "xwoba": {"location_plus": {"coef": -0.0042, "lo": -0.0061, "hi": -0.0023, "p": 0.0000004}}}}
+
+    out = location_text(ps, validation)
+
+    assert float(out["LOC_DECEPTION_R"]) < -0.9
+    assert float(out["LOC_WHIFFMISS_R"]) == pytest.approx(-1.0)
+    assert out["LOC_XWOBA"].startswith("-4.2 points of xwOBA allowed (lower is better; 95% interval -6.1 to -2.3, p <0.0001")
+    assert out["LOC_K_P"] == "0.83"
+
+
+def test_pitch_type_text_gives_the_reliability_range_and_the_best_and_worst_types():
+    from export_site_stats import pitch_type_text
+
+    summary = {"types": {
+        "CH": {"whiff": {"reliability": 0.76, "median_n": 93.0}, "chase": {"reliability": 0.64, "median_n": 101.0}},
+        "SI": {"whiff": {"reliability": 0.39, "median_n": 101.0}, "chase": {"reliability": 0.40, "median_n": 94.0}},
+        "KC": {"whiff": {"reliability": None, "median_n": 110.0}, "chase": {"reliability": 0.63, "median_n": 145.0}},
+    }}
+
+    out = pitch_type_text(summary)
+
+    assert out["PT_WHIFF_REL_RANGE"] == "0.39 to 0.76"                         # a type with no estimate is left out of the range
+    assert out["PT_WHIFF_BEST"] == "changeups (0.76)" and out["PT_WHIFF_WORST"] == "sinkers (0.39)"
+    assert out["PT_CHASE_REL_RANGE"] == "0.40 to 0.64"
+    assert out["PT_MEDIAN_N"] == "101"

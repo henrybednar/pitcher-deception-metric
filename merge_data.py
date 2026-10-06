@@ -110,12 +110,16 @@ def compute_sequencing_features(path: str) -> pd.DataFrame:
     df["is_repeat"] = df["pitch_type"] == df["prev_pitch_type"]
 
     sequenced = df[df["has_prev"]]
-    agg = sequenced.groupby(["pitcher", "pitch_type", "season"]).agg(
-        avg_velocity_gap_from_prev=("velocity_gap", "mean"),
-        repeat_pct=("is_repeat", "mean"),
-        n_sequenced=("is_repeat", "size"),
-    ).reset_index()
-    return agg
+    keys = ["pitcher", "pitch_type", "season"]
+    agg = sequenced.groupby(keys).agg(repeat_pct=("is_repeat", "mean"), n_sequenced=("is_repeat", "size"))
+    # The speed change is taken over switches only. Averaged over every pair, repeats included (a repeat adds about
+    # zero), it mixed how often a pitcher switches with how big the jump is when they do, and that overlap with repeat
+    # rate made both look positive at once.
+    switches = sequenced[~sequenced["is_repeat"]].groupby(keys).agg(
+        avg_velocity_gap_per_switch=("velocity_gap", "mean"), n_switched=("velocity_gap", "count"))
+    out = agg.join(switches).reset_index()
+    out["n_switched"] = out["n_switched"].fillna(0).astype(int)
+    return out
 
 
 # ---------------------------------------------------------------------------

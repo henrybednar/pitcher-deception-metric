@@ -71,4 +71,7 @@ def test_backtest_reports_the_projection_against_the_raw_score_and_the_league_av
     assert result["rmse_projection"] < result["rmse_raw_score"] and result["rmse_projection"] < result["rmse_league_average"]
     assert result["pairs"] == 1000 and result["triples"] == 500
     assert result["two_season_gain_lo"] < result["two_season_gain"] < result["two_season_gain_hi"]
+    q = frame.dropna(subset=["nxt", "prev"])["qualified"].sum()
+    assert result["qualified_triples"] == q                                                 # the same comparison on qualified pitchers only
+    assert result["qualified_two_season_gain_lo"] < result["qualified_two_season_gain"] < result["qualified_two_season_gain_hi"]
     assert result["r_projection"] == pytest.approx(result["r_raw_score"], abs=0.05)         # same ranking information, better scale

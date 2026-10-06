@@ -101,9 +101,27 @@ def test_sequencing_features_count_only_regular_season_pitches(tmp_path):
     out = merge_data.compute_sequencing_features(path)
 
     row = out[out["pitch_type"] == "SL"].iloc[0]
-    assert row["avg_velocity_gap_from_prev"] == pytest.approx(10.0)
+    assert row["avg_velocity_gap_per_switch"] == pytest.approx(10.0)
+    assert row["n_switched"] == 1
     assert row["repeat_pct"] == 0.0
     assert out[out["pitch_type"] == "FF"].empty                      # the only FF with a previous pitch was in spring training
+
+
+def test_velocity_gap_is_taken_on_switches_only_so_repeats_do_not_dilute_it(tmp_path):
+    base = {"game_pk": 1, "pitcher": 10, "at_bat_number": 1, "season": 2025, "game_type": "R"}
+    path = pitch_file(tmp_path, [
+        {**base, "pitch_number": 1, "pitch_type": "FF", "release_speed": 95.0},
+        {**base, "pitch_number": 2, "pitch_type": "FF", "release_speed": 94.0},    # a repeat, 1 mph off
+        {**base, "pitch_number": 3, "pitch_type": "SL", "release_speed": 85.0},    # a switch, 9 mph off
+    ])
+
+    out = merge_data.compute_sequencing_features(path).set_index("pitch_type")
+
+    assert out.loc["SL", "avg_velocity_gap_per_switch"] == pytest.approx(9.0)
+    assert out.loc["SL", "n_switched"] == 1
+    assert out.loc["FF", "repeat_pct"] == 1.0
+    assert np.isnan(out.loc["FF", "avg_velocity_gap_per_switch"])             # the only FF after a pitch repeated one
+    assert out.loc["FF", "n_switched"] == 0
 
 
 def test_pitch_characteristics_average_only_regular_season_pitches(tmp_path):

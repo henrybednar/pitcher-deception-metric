@@ -82,17 +82,26 @@ def add_projection(frame: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def two_season_gain(triples: pd.DataFrame, n_boot: int) -> tuple[float, float, float]:
+    """How much the typical miss (RMSE) falls when the earlier season is added to the projection, on rows that have both,
+    with a 95% interval from resampling rows."""
+    rng = np.random.default_rng(0)
+    idx = rng.integers(0, len(triples), (n_boot, len(triples)))
+    nxt, one, two = (triples[c].to_numpy() for c in ("nxt", "proj1", "proj2"))
+    boot = [np.sqrt(np.mean((nxt[i] - one[i]) ** 2)) - np.sqrt(np.mean((nxt[i] - two[i]) ** 2)) for i in idx]
+    return float(np.mean(boot)), float(np.percentile(boot, 2.5)), float(np.percentile(boot, 97.5))
+
+
 def backtest(frame: pd.DataFrame, n_boot: int = N_BOOT) -> dict:
     """Out-of-sample errors of the projection, of the raw score used as the guess, and of the league average, over every
     row that has a next season; and the one-season against two-season comparison on the rows that have both."""
     pairs = frame.dropna(subset=["nxt"])
     triples = pairs.dropna(subset=["prev"])
     qualified = pairs[pairs["qualified"]]
-    # one-season against two-season on the same pitchers, with an interval from resampling pitchers
-    rng = np.random.default_rng(0)
-    idx = rng.integers(0, len(triples), (n_boot, len(triples)))
-    boot = [np.sqrt(np.mean((triples["nxt"].to_numpy()[i] - triples["proj1"].to_numpy()[i]) ** 2))
-            - np.sqrt(np.mean((triples["nxt"].to_numpy()[i] - triples["proj2"].to_numpy()[i]) ** 2)) for i in idx]
+    # one-season against two-season on the same pitchers, with an interval from resampling rows
+    gain, gain_lo, gain_hi = two_season_gain(triples, n_boot)
+    q_triples = triples[triples["qualified"]]
+    q_gain, q_gain_lo, q_gain_hi = two_season_gain(q_triples, n_boot)
     return {
         "pairs": int(len(pairs)), "triples": int(len(triples)), "qualified_pairs": int(len(qualified)),
         "rmse_projection": rmse(pairs["nxt"], pairs["projection"]),
@@ -104,8 +113,9 @@ def backtest(frame: pd.DataFrame, n_boot: int = N_BOOT) -> dict:
         "qualified_rmse_raw_score": rmse(qualified["nxt"], qualified["cur"]),
         "triples_rmse_one_season": rmse(triples["nxt"], triples["proj1"]),
         "triples_rmse_two_seasons": rmse(triples["nxt"], triples["proj2"]),
-        "two_season_gain": float(np.mean(boot)), "two_season_gain_lo": float(np.percentile(boot, 2.5)),
-        "two_season_gain_hi": float(np.percentile(boot, 97.5)),
+        "two_season_gain": gain, "two_season_gain_lo": gain_lo, "two_season_gain_hi": gain_hi,
+        "qualified_triples": int(len(q_triples)), "qualified_two_season_gain": q_gain,
+        "qualified_two_season_gain_lo": q_gain_lo, "qualified_two_season_gain_hi": q_gain_hi,
         "coverage_80": float(((pairs["nxt"] >= pairs["proj_lo"]) & (pairs["nxt"] <= pairs["proj_hi"])).mean()),
     }
 

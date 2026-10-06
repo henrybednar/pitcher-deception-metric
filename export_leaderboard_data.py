@@ -4,7 +4,8 @@ Pitcher Deception Project: export leaderboard_data.json from the canonical pitch
 build_leaderboard.py only reads this JSON. It holds every scored pitcher-season with the
 component indexes, sample sizes, 95% intervals for Deception+ and every component, the next-season projection with its 80% range
 and basis (projection.py), the role label from export_site_stats.pitcher_roles(), and the
-signed timing readout in inches (timing_bias_inches). Ground ball is scored and shown but is not
+signed timing readout in inches (timing_bias_inches), and each row's whiff and chase scores by pitch type
+(`types`, from pitch_type_scores.py). Ground ball is scored and shown but is not
 part of Deception+. See COMPOSITE_OUTCOMES in reliability_and_ci.py.
 """
 
@@ -13,6 +14,7 @@ import json
 import pandas as pd
 
 from export_site_stats import pitcher_roles
+from pitch_type_scores import leaderboard_lists
 
 ps = pd.read_csv("output/pitcher_season.csv")
 raw = pd.read_csv("raw/statcast_pitch_level_2024_2026.csv", usecols=["pitcher", "season", "game_pk", "game_type"], low_memory=False)
@@ -33,7 +35,9 @@ cols = [
     "timing_bias_inches", "timing_bias_ci_lo", "timing_bias_ci_hi", "timingdir_n",
     "stuff_plus", "role", "med_pitches_per_app", "proj", "proj_lo", "proj_hi", "proj_basis",
 ]
-out = ps.dropna(subset=["deception_plus"])[cols].rename(columns={"player_name": "name"})
+scored = ps.dropna(subset=["deception_plus"])
+keys = list(zip(scored["pitcher"].astype(int), scored["season"].astype(int)))
+out = scored[cols].rename(columns={"player_name": "name"})
 
 INT_COLS = {"season", "whiff_n", "chase_n", "gb_n", "weak_n", "timing_n", "timingdir_n",
             "whiffmiss_n", "stuff_plus", "proj_basis"}
@@ -47,8 +51,11 @@ for c in out.columns:
         out[c] = out[c].round(1)
 
 rows = json.loads(out.to_json(orient="records"))
+types = leaderboard_lists(pd.read_csv("output/pitch_type_scores.csv"))
+for row, key in zip(rows, keys):
+    row["types"] = types.get(key, [])
 
 with open("output/leaderboard_data.json", "w", encoding="utf-8") as f:
     json.dump(rows, f, separators=(",", ":"))
 
-print(f"Saved leaderboard_data.json: {len(rows):,} rows, {len(cols)} fields each.")
+print(f"Saved leaderboard_data.json: {len(rows):,} rows, {len(cols) + 1} fields each.")

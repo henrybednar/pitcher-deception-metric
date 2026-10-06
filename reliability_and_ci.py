@@ -158,8 +158,11 @@ CONTINUOUS_OUTCOMES = {
 #                             forecast gains and reliability
 ALL_OUTCOMES = list(BINARY_OUTCOMES) + list(CONTINUOUS_OUTCOMES)
 COMPOSITE_OUTCOMES = ["whiff", "chase", "weak", "timing", "whiffmiss"]
-QUALIFY_MIN_N = {"whiff": 100, "chase": 100, "timing": 75, "gb": 40, "weak": 40, "calledstrike": 100,
-                 "align": 75, "whiffmiss": 40}
+# Sample needed to be "qualified": the board's default view, the population the score is centered and scaled on, and
+# every qualified-pair statistic. These are 1.5 times the earlier minimums (100, 75 and 40), which keeps pitchers whose
+# score is mostly shrinkage off the default board: 1,542 pitcher-seasons qualified at the old bar and 1,291 at this one.
+QUALIFY_MIN_N = {"whiff": 150, "chase": 150, "timing": 110, "gb": 60, "weak": 60, "calledstrike": 150,
+                 "align": 110, "whiffmiss": 60}
 QUALIFY_MIN = {f"{label}_n": QUALIFY_MIN_N[label] for label in COMPOSITE_OUTCOMES}
 
 

@@ -91,7 +91,7 @@ def test_cross_pitch_features_skip_pitchers_with_one_pitch_type_and_thin_pitch_t
         "pitcher": [1, 1, 2, 3, 3], "season": 2025, "pitches": [100, 100, 300, 200, 5],
         "arm_angle_mean": [40.0, 50.0, 45.0, 30.0, 60.0], "release_pos_x_mean": [1.0, 1.0, 1.0, 1.0, 5.0],
         "release_pos_z_mean": [5.0, 5.2, 5.0, 5.0, 4.0], "vaa_mean": [-4.0, -5.0, -4.5, -4.0, -8.0],
-        "avg_velocity_gap_from_prev": [5.0, 7.0, 6.0, 4.0, 9.0], "repeat_pct": [0.4, 0.2, 0.5, 0.3, 0.1],
+        "avg_velocity_gap_per_switch": [5.0, 7.0, 6.0, 4.0, 9.0], "n_switched": [10, 30, 50, 40, 2], "repeat_pct": [0.4, 0.2, 0.5, 0.3, 0.1],
         "release_extension_mean": [6.0, 6.2, 6.1, 6.0, 5.0],
     })
 
@@ -100,4 +100,14 @@ def test_cross_pitch_features_skip_pitchers_with_one_pitch_type_and_thin_pitch_t
     assert list(out.index) == [1]                               # pitcher 2 has one type, pitcher 3's second type has under 20 pitches
     assert out.loc[1, "n_pitch_types"] == 2
     assert out.loc[1, "arm_angle_cross_pitch_std"] == pytest.approx(5.0)
-    assert out.loc[1, "avg_velocity_gap_from_prev"] == pytest.approx(6.0)
+    assert out.loc[1, "velocity_gap_per_switch"] == pytest.approx(6.5)     # (5 x 10 + 7 x 30) / 40, weighted by switches
+
+
+def test_pooled_gap_per_switch_skips_types_with_no_switches_and_is_nan_when_none_switched():
+    from driver_features import pooled_gap_per_switch
+
+    mixed = pd.DataFrame({"avg_velocity_gap_per_switch": [4.0, np.nan, 10.0], "n_switched": [30, 0, 10]})
+    none = pd.DataFrame({"avg_velocity_gap_per_switch": [np.nan, np.nan], "n_switched": [0, 0]})
+
+    assert pooled_gap_per_switch(mixed) == pytest.approx(5.5)            # (4 x 30 + 10 x 10) / 40
+    assert np.isnan(pooled_gap_per_switch(none))
