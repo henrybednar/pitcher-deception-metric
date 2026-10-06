@@ -311,6 +311,23 @@ def pitch_type_text(summary: dict) -> dict:
     return text
 
 
+COVERAGE_SD_TOLERANCE = 0.08     # the page says the intervals held only if every z SD (overall and by third) is within this of 1 ...
+COVERAGE_95_MINIMUM = 0.93       # ... and at least this share of errors fall within 1.96
+
+
+def coverage_text(coverage: dict) -> dict:
+    """Page text from interval_coverage.json: how far the out-of-sample standardized errors are from SD 1 and 95% coverage, over
+    whiff, chase and weak contact, and the largest SD in any third of the sample size or of the scored pitches per game."""
+    sds = [r["z_sd"] for r in coverage.values()]
+    thirds = [sd for r in coverage.values() for sd in r["z_sd_by_sample_third"] + r.get("z_sd_by_cluster_third", [])]
+    within = [r["within_95"] for r in coverage.values()]
+    held = max(abs(sd - 1) for sd in sds + thirds) <= COVERAGE_SD_TOLERANCE and min(within) >= COVERAGE_95_MINIMUM
+    return {"COV_VERDICT": "They held" if held else "They did not all hold",
+            "COV_SD_RANGE": f"{min(sds):.2f} to {max(sds):.2f}", "COV_SD_THIRD_MAX": f"{max(thirds):.2f}",
+            "COV_95_RANGE": f"{min(within):.1%} to {max(within):.1%}".replace(".0%", "%"),
+            "COV_N": f"{min(r['n'] for r in coverage.values()):,}"}
+
+
 def location_text(ps: pd.DataFrame, validation: dict) -> dict:
     """Page text on Location+: how it correlates with Deception+, Stuff+ and the members among qualified pitcher-seasons
     (negatively, unlike the other scores), and what it does on the field in the member regression."""
@@ -356,11 +373,12 @@ def component_yoy(ps: pd.DataFrame, key: str) -> float:
 
 
 def check_page_text(text: dict, components: list) -> None:
-    """Refuse to publish a figure that came out as nan or inf (an empty sample, a merge that found nothing). Every
+    """Refuse to publish a figure that came out as nan, inf or None (an empty sample, a merge that found nothing). Every
     placeholder value on the pages and every cell of the validation table is checked."""
-    bad = {k: v for k, v in text.items() if re.search(r"(?i)\b(nan|inf)\b", str(v))}
+    non_finite = re.compile(r"(?i)\b(nan|inf|none)\b")
+    bad = {k: v for k, v in text.items() if non_finite.search(str(v))}
     for c in components:
-        bad.update({f"{c['key']}.{k}": v for k, v in c.items() if isinstance(v, str) and re.search(r"(?i)\b(nan|inf)\b", v)})
+        bad.update({f"{c['key']}.{k}": v for k, v in c.items() if isinstance(v, str) and non_finite.search(v)})
     if bad:
         raise ValueError(f"page text has non-finite figures, refusing to write site_stats.json: {bad}")
 
@@ -443,7 +461,9 @@ def main() -> None:
     most = max(member_rel, key=member_rel.get)
     least = min(member_rel, key=member_rel.get)
     yoy_by_component = {k: component_yoy(ps, k) for k, _ in COMPONENTS}
-    design_effects = [float(rr.loc[k, "design_effect"]) for k, _ in COMPONENTS]
+    with open("output/design_effects.json", encoding="utf-8") as f:
+        curves = json.load(f)
+    design_effects = [factor for k, _ in COMPONENTS for _, factor in curves[k]]
     label_of = dict(COMPONENTS)
 
     stuff = stuff_plus_correlations(ps)
@@ -497,6 +517,8 @@ def main() -> None:
         seq_r2 = [m["r2"] for m in json.load(f).values()]
     with open("output/pitch_type_scores.json", encoding="utf-8") as f:
         pitch_type_summary = json.load(f)
+    with open("output/interval_coverage.json", encoding="utf-8") as f:
+        interval_coverage = json.load(f)
     with open("output/model_validation.json", encoding="utf-8") as f:
         validation = json.load(f)
     with open("output/membership_check.json", encoding="utf-8") as f:
@@ -593,13 +615,14 @@ def main() -> None:
         **projection_text(projection),
         **outcome_text(outcome_validation),
         **location_text(ps, outcome_validation),
+        **coverage_text(interval_coverage),
         **pitch_type_text(pitch_type_summary),
     }
 
     check_page_text(text, components)
     out = {"text": text, "components": components}
     with open("output/site_stats.json", "w", encoding="utf-8") as f:
-        json.dump(out, f, indent=2)
+        json.dump(out, f, indent=2, allow_nan=False)
     print(f"Saved site_stats.json ({len(text)} text fields, {len(components)} table rows).")
     print(f"data through {text['DATA_THROUGH']}; reliever mean {text['RP_MEAN']} vs starter mean {text['SP_MEAN']}; "
           f"{text['RP_TOP25']} of top 25 qualified are relievers.")

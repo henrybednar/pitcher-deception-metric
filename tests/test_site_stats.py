@@ -275,3 +275,51 @@ def test_pitch_type_text_gives_the_reliability_range_and_the_best_and_worst_type
     assert out["PT_WHIFF_BEST"] == "changeups (0.76)" and out["PT_WHIFF_WORST"] == "sinkers (0.39)"
     assert out["PT_CHASE_REL_RANGE"] == "0.40 to 0.64"
     assert out["PT_MEDIAN_N"] == "101"
+
+
+def test_coverage_text_reports_the_range_of_the_spread_and_coverage_and_the_worst_third():
+    from export_site_stats import coverage_text
+
+    coverage = {"whiff": {"n": 1291, "z_sd": 1.026, "within_95": 0.945, "z_sd_by_sample_third": [0.98, 1.03, 1.06]},
+                "chase": {"n": 1291, "z_sd": 1.009, "within_95": 0.948, "z_sd_by_sample_third": [1.04, 0.99, 0.99]},
+                "weak": {"n": 1287, "z_sd": 1.001, "within_95": 0.944, "z_sd_by_sample_third": [1.01, 1.0, 1.0]}}
+
+    out = coverage_text(coverage)
+
+    assert out == {"COV_VERDICT": "They held", "COV_SD_RANGE": "1.00 to 1.03", "COV_SD_THIRD_MAX": "1.06", "COV_95_RANGE": "94.4% to 94.8%", "COV_N": "1,287"}
+
+
+def test_coverage_text_prints_a_whole_percent_without_a_decimal_zero():
+    from export_site_stats import coverage_text
+
+    coverage = {"whiff": {"n": 10, "z_sd": 1.0, "within_95": 0.948, "z_sd_by_sample_third": [1.0, 1.0, 1.0]},
+                "chase": {"n": 10, "z_sd": 1.0, "within_95": 0.95, "z_sd_by_sample_third": [1.0, 1.0, 1.0]}}
+
+    assert coverage_text(coverage)["COV_95_RANGE"] == "94.8% to 95%"
+
+
+def test_coverage_text_takes_the_worst_third_over_sample_size_and_cluster_size():
+    from export_site_stats import coverage_text
+
+    coverage = {"whiff": {"n": 10, "z_sd": 1.0, "within_95": 0.95, "z_sd_by_sample_third": [1.0, 1.02, 1.01], "z_sd_by_cluster_third": [0.98, 1.0, 1.09]}}
+
+    assert coverage_text(coverage)["COV_SD_THIRD_MAX"] == "1.09"
+
+
+def test_check_page_text_refuses_a_figure_that_came_out_as_none():
+    from export_site_stats import check_page_text
+
+    with pytest.raises(ValueError):
+        check_page_text({"COV_SD_RANGE": "None to None"}, [])
+
+
+def test_coverage_verdict_says_held_only_when_every_third_and_the_coverage_are_within_tolerance():
+    from export_site_stats import coverage_text
+
+    good = {"whiff": {"n": 100, "z_sd": 1.03, "within_95": 0.945, "z_sd_by_sample_third": [0.99, 1.04, 1.06], "z_sd_by_cluster_third": [1.0, 1.05, 1.02]}}
+    wide_third = {"whiff": {**good["whiff"], "z_sd_by_cluster_third": [1.0, 1.05, 1.13]}}
+    thin_coverage = {"whiff": {**good["whiff"], "within_95": 0.90}}
+
+    assert coverage_text(good)["COV_VERDICT"] == "They held"
+    assert coverage_text(wide_third)["COV_VERDICT"] == "They did not all hold"
+    assert coverage_text(thin_coverage)["COV_VERDICT"] == "They did not all hold"

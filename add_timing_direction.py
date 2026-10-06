@@ -14,7 +14,7 @@ direction, so a pitcher can be high on one and near zero on the other.
 
 import pandas as pd
 
-from reliability_and_ci import game_level_table, pitcher_season_point_estimate, process_outcome, shrink_and_scale
+from reliability_and_ci import design_effect_for, game_level_table, pitcher_season_point_estimate, process_outcome, shrink_and_scale
 
 if __name__ == "__main__":
     print("loading per-pitch predictions...", flush=True)
@@ -34,11 +34,11 @@ if __name__ == "__main__":
     sub["_var_contrib"] = (resid ** 2).groupby(sub["pitch_type"]).transform("mean")
     full_games = game_level_table(sub, "timingdir", "timing_dir_raw", baseline="stuffloc", var_col="_var_contrib")
     full_agg = pitcher_season_point_estimate(full_games)
-    # Reuse process_outcome's own design_effect (not a fresh estimate) so
+    # Reuse process_outcome's own design-effect curve (not a fresh estimate) so
     # this recomputed league_std is exactly consistent with the ci_lo/ci_hi
     # values it's about to invert — a different estimate here would silently
     # misconvert the CI back to inches.
-    _, _, league_std, *_ = shrink_and_scale(full_agg, rel["design_effect"])
+    _, _, league_std, *_ = shrink_and_scale(full_agg, design_effect_for(full_agg, rel["design_effect_curve"]))
 
     result = result.rename(columns={"timingdir_diff_adj_shrunk": "timing_bias_inches"})
     result["timing_bias_ci_lo"] = (result["timingdir_ci_lo"] - 100) * league_std / 10
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     rr = pd.read_csv("output/reliability_report.csv")
     rr = rr[rr["label"] != "timingdir"]
-    rr = pd.concat([rr, pd.DataFrame([rel])], ignore_index=True)
+    rr = pd.concat([rr, pd.DataFrame([rel]).drop(columns="design_effect_curve")], ignore_index=True)
     rr.to_csv("output/reliability_report.csv", index=False)
 
     print(f"\ntiming_bias_inches: mean={ps['timing_bias_inches'].mean():.3f}, "

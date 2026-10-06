@@ -295,6 +295,15 @@ def test_fit_full_outcome_adds_extra_features_between_location_and_context(monke
     assert cols.index("plate_z_norm") < cols.index("inning") < cols.index("balls")
 
 
+def test_models_let_each_split_see_half_the_features_and_stay_reproducible():
+    for kind in ("classify", "regress"):
+        model = fit_full_model.make_model(kind, ["season", "balls"])
+
+        assert model.max_features == 0.5
+        assert model.random_state == 42                                # the feature subsampling is seeded
+        assert model.categorical_features == ["season"]
+
+
 def test_filter_regular_season_drops_postseason_and_spring_training_and_the_game_type_column():
     frame = pd.DataFrame({"pitcher": [1, 2, 3, 4], "game_type": ["R", "S", "D", "W"]})
 
@@ -506,3 +515,136 @@ def test_the_half_split_follows_game_parity_so_both_halves_of_a_pitchers_games_e
     out = build_pitch_table.add_half(pd.DataFrame({"game_pk": [101, 102, 103, 104, 105]}))
 
     assert out["half"].tolist() == [1, 0, 1, 0, 1]
+
+
+def test_plan_models_follows_the_size_rule_without_groups():
+    counts = pd.Series({"FF": 9000, "SL": 6000, "KC": 4000, "FA": 3000})
+
+    plan = fit_full_model.plan_models(counts)
+
+    assert plan == {"FF": ["FF"], "SL": ["SL"], "OTHER": ["KC", "FA"]}          # no curveball model for the knuckle curve to join; 7,000 rows share OTHER
+
+
+def test_plan_models_pools_a_small_type_with_its_partner_when_the_partner_has_a_model():
+    counts = pd.Series({"CU": 8000, "KC": 4000})
+
+    assert fit_full_model.plan_models(counts) == {"CU": ["CU", "KC"]}
+
+
+def test_plan_models_groups_override_size_and_leave_other_types_on_the_size_rule():
+    counts = pd.Series({"FF": 9000, "SL": 8000, "KC": 6000, "CU": 7000, "CH": 6500, "FS": 300, "FA": 200})
+
+    plan = fit_full_model.plan_models(counts, [fit_full_model.BREAKING, fit_full_model.OFFSPEED])
+
+    assert plan == {"SL": ["SL", "CU", "KC"], "CH": ["CH", "FS"], "FF": ["FF"]}      # KC pools although above 5,000 rows, a 300-row FS joins CH, FA (200 rows) is too small to model
+
+
+def test_plan_models_ignores_group_members_that_are_absent_and_models_a_lone_survivor_on_its_own():
+    counts = pd.Series({"FF": 9000, "CH": 100})
+
+    plan = fit_full_model.plan_models(counts, [fit_full_model.BREAKING, fit_full_model.OFFSPEED])
+
+    assert plan == {"CH": ["CH"], "FF": ["FF"]}
+
+
+def test_only_the_tested_outcomes_have_model_groups():
+    assert set(fit_full_model.MODEL_GROUPS) == {"whiff", "chase", "weak", "gb", "timing", "whiffmiss"}
+    for label in ("chase", "timing"):
+        assert fit_full_model.MODEL_GROUPS[label] == [fit_full_model.BREAKING, fit_full_model.OFFSPEED]
+        assert fit_full_model.FASTBALLS not in fit_full_model.MODEL_GROUPS[label]              # pooling the fastballs hurt both
+
+
+def test_fit_tier_with_groups_scores_every_type_in_a_group_with_one_shared_model(small_pitch_frame):
+    df = small_pitch_frame
+    df["pitch_type"] = np.where(df.index % 3 == 0, "SL", np.where(df.index % 3 == 1, "CU", "FF"))
+    mask = pd.Series(True, index=df.index)
+
+    fit_tier(df, "expected", "target", mask, "regress", STUFF_FEATURES + LOCATION_FEATURES, with_tendencies=False,
+             groups=[["SL", "CU"]])
+
+    assert df["expected"].notna().all()
+    assert np.corrcoef(df["expected"], df["target"])[0, 1] > 0.9
+
+
+def test_fit_full_outcome_hands_each_outcome_its_own_model_groups(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(fit_full_model, "fit_tier", lambda df, out_col, target, mask, kind, cols, **kw: seen.update({out_col: kw.get("groups")}))
+
+    fit_full_model.fit_full_outcome(None, "chase", "is_swing", None, "classify")
+    fit_full_model.fit_full_outcome(None, "align", "align_dev_abs", None, "regress")
+
+    assert seen["chase_expected_full"] == fit_full_model.MODEL_GROUPS["chase"]
+    assert seen["align_expected_full"] is None                                    # untested outcomes keep the size rule
+
+
+def test_plan_models_boundary_of_the_other_pool_is_half_the_size_threshold():
+    assert fit_full_model.plan_models(pd.Series({"FF": 9000, "FA": 2500})) == {"FF": ["FF"], "OTHER": ["FA"]}
+    assert fit_full_model.plan_models(pd.Series({"FF": 9000, "FA": 2499})) == {"FF": ["FF"]}
+    assert fit_full_model.plan_models(pd.Series({"FF": 9000, "FA": 5000})) == {"FF": ["FF"], "FA": ["FA"]}      # at the threshold a type gets its own model
+
+
+def test_every_group_label_is_an_outcome_the_pipeline_fits():
+    import fit_swing_alignment
+
+    assert set(fit_full_model.MODEL_GROUPS) <= set(fit_full_model.OUTCOMES) | set(fit_swing_alignment.OUTCOMES)
+
+
+def test_fit_tier_fits_one_model_per_group_and_one_per_remaining_type(small_pitch_frame, monkeypatch):
+    df = small_pitch_frame
+    df["pitch_type"] = np.where(df.index % 3 == 0, "SL", np.where(df.index % 3 == 1, "CU", "FF"))
+    fitted = []
+    real = fit_full_model.fit_oof
+
+    def recording(sub, *args, **kwargs):
+        fitted.append(frozenset(sub["pitch_type"].astype(str)))
+        return real(sub, *args, **kwargs)
+
+    monkeypatch.setattr(fit_full_model, "fit_oof", recording)
+
+    fit_tier(df, "expected", "target", pd.Series(True, index=df.index), "regress", STUFF_FEATURES + LOCATION_FEATURES, with_tendencies=False,
+             groups=[["SL", "CU"]])
+
+    assert sorted(map(sorted, fitted)) == [["CU", "SL"], ["FF"]]
+
+
+def type_season_frame():
+    # six pitchers; curveballs ran 0.04 above expectation in 2024 and four-seamers were right; a rare type (SV) ran 0.20 above in 2024
+    rows = []
+    for pitcher in range(6):
+        for pitch_type, shift, n in (("CU", 0.04, 60), ("FF", 0.0, 60), ("SV", 0.20, 4)):
+            for k in range(n):
+                rows.append({"pitcher": pitcher, "pitch_type": pitch_type, "season": 2024, "year_month": "2024-06", "expected": 0.30,
+                             "whiff": 0.30 + shift + (0.01 if k % 2 else -0.01)})
+    return pd.DataFrame(rows)
+
+
+def test_a_group_level_needs_enough_other_pitchers_rows_before_it_is_removed():
+    df = type_season_frame().assign(group=lambda d: d["pitch_type"])
+
+    adjusted = fit_full_model.recalibrate_oof_by_group(df, "whiff", "expected", "group", binary=True, min_group_n=100)
+
+    cu, sv = (df["pitch_type"] == "CU").to_numpy(), (df["pitch_type"] == "SV").to_numpy()
+    assert adjusted[cu].mean() == pytest.approx(0.34, abs=0.003)             # curveballs: 250 rows among the other pitchers, so the 0.04 is removed from the expectation's gap
+    assert adjusted[sv].tolist() == pytest.approx([0.30] * sv.sum())          # the rare type has 20 rows among the others: no offset
+
+
+def test_recalibrate_scored_removes_the_pitch_type_season_level_then_the_month_level(monkeypatch):
+    monkeypatch.setattr(fit_full_model, "PITCH_TYPE_RECALIBRATION_MIN_N", 100)
+    df = type_season_frame()
+    df["whiff_expected_full"] = df["expected"]
+    df["whiff_actual"] = df["whiff"]
+
+    fit_full_model.recalibrate_scored(df, "whiff", "whiff_actual", binary=True)
+
+    residual = df["whiff_actual"] - df["whiff_expected_full"]
+    by_type = residual.groupby(df["pitch_type"]).mean()
+    assert abs(by_type["CU"]) < 0.01 and abs(by_type["FF"]) < 0.01            # curveballs ran 0.04 above, now centred
+    assert abs(residual.mean()) < 0.005                                       # and the month level is gone too
+
+
+def test_every_fitted_outcome_gets_the_pitch_type_recalibration():
+    import inspect
+
+    import fit_swing_alignment
+
+    assert "recalibrate_scored(" in inspect.getsource(fit_full_model) and "recalibrate_scored(df, label" in inspect.getsource(fit_swing_alignment)

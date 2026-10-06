@@ -41,7 +41,7 @@ import pandas as pd
 from sklearn.metrics import r2_score
 
 from build_pitch_table import PITCH_LEVEL_FILE, load_pitch_data, read_aligned_predictions, save_predictions
-from fit_full_model import FOLD_SEEDS, fit_full_outcome, prepare_context, recalibrate_oof_isotonic, recalibrate_scored_by_month
+from fit_full_model import FOLD_SEEDS, fit_full_outcome, prepare_context, recalibrate_oof_isotonic, recalibrate_scored
 
 EXTRA_FEATURES = ["plate_x_inside"]
 OUTCOMES = {
@@ -88,6 +88,6 @@ if __name__ == "__main__":
           flush=True)
 
     for label, spec in OUTCOMES.items():
-        recalibrate_scored_by_month(df, label, spec["target"], binary=False)
+        recalibrate_scored(df, label, spec["target"], binary=False)
 
     save_predictions(existing, df, new_cols)

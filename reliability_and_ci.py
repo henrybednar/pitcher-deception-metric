@@ -27,8 +27,9 @@ Statistical fixes from the sabermetric audit, all applied here:
   within a pitcher-season, so the pooled formula overstated the variance by 1.3x
   (whiff), 1.5x (chase) and 4.8x (called strike).
 - The design effect is the game-weighted ratio of the cluster-bootstrap variance
-  to that analytic variance, with the (g-1)/g bootstrap bias undone. It used to be a median
-  of per-pitcher ratios, which is biased low for short samples.
+  to that analytic variance, with the (g-1)/g bootstrap bias undone, estimated within quartiles of
+  scored pitches per game (see estimate_design_effect_curve). It used to be a median of
+  per-pitcher ratios, which is biased low for short samples, and then one pooled ratio per outcome.
 - Continuous outcomes (timing) now use a PITCH-TYPE-WEIGHTED sampling
   variance instead of one pooled constant across every pitch type — a
   four-seamer and a curveball don't have the same residual noise, so a
@@ -64,19 +65,25 @@ Statistical fixes from the sabermetric audit, all applied here:
 - Only pitches with a model expectation count toward n and the actual total. Pitch types outside
   the scored set are blanked upstream (pitch_hygiene.py), and rows without an expectation would
   otherwise add actual outcomes with no expected outcomes.
-- `estimate_design_effect` reconciles a real inconsistency: bootstrap_ci
+- `estimate_design_effect_curve` reconciles a real inconsistency: bootstrap_ci
   treats games as clusters (pitches in a game aren't independent draws),
   but shrink_and_scale's sampling_var used to assume plain i.i.d. Bernoulli/
   per-pitch variance regardless — two different implicit data models in
-  the same pipeline. Now a single empirically-estimated inflation factor
-  (median ratio of bootstrap variance to the naive formula, per outcome)
-  is applied consistently to both.
+  the same pipeline. Now the empirically-estimated inflation (bootstrap variance
+  over the naive formula) is estimated within quartiles of scored pitches per game
+  and each pitcher-season gets the factor for its own cluster size
+  (`design_effect_for`), applied consistently to both. It used to be one pooled
+  factor per outcome; starters (many scored pitches per game) carry more game-level
+  noise than relievers, and a split-half check showed the pooled factor too small
+  in the top third of whiff samples (z SD 1.11) and too large for short outings.
 
 Also relevant, upstream: fit_full_model.py's batter/catcher tendency features
 use leave-one-PITCHER-out mean encoding. A plain groupby().mean() includes each
 pitch's own outcome in its own "opponent quality" feature, and leave-one-row-out
 still lets a catcher's average re-encode the pitcher he usually catches.
 """
+
+import json
 
 import numpy as np
 import pandas as pd
@@ -102,6 +109,8 @@ def merge_fangraphs_columns(ps: pd.DataFrame, covariates: pd.DataFrame) -> pd.Da
     return ps
 MIN_N_FOR_SCORE = 30
 N_BOOTSTRAP = 300
+DESIGN_EFFECT_BINS = 4   # quartiles of scored pitches per game
+MIN_SEASONS_PER_BIN = 50   # fewer pitcher-seasons than this per bin and the factor is mostly noise (pitch types with few pitchers get fewer bins)
 RNG = np.random.default_rng(42)  # bootstrap seed
 # Floor for every population-std used as a scaling divisor (league_std,
 # pop_std, std_h). A degenerate population (e.g. a filtering bug collapsing
@@ -282,27 +291,24 @@ def pitcher_season_point_estimate(game_tbl: pd.DataFrame) -> pd.DataFrame:
     return agg
 
 
-def estimate_design_effect(game_tbl: pd.DataFrame, point_est: pd.DataFrame, n_boot: int = 200,
-                            min_games: int = 5) -> float:
-    """Ratio of empirical (game-cluster bootstrap) variance of `diff` to the
-    analytic pitch-level `sampling_var`, pooled across pitcher-seasons with
-    enough games: the sum over seasons of games x bootstrap variance divided by the
-    sum of games x analytic variance. A bootstrap over g clusters understates the
-    variance by (g-1)/g, so each bootstrap variance is scaled by g/(g-1) first.
+def estimate_design_effect_curve(game_tbl: pd.DataFrame, point_est: pd.DataFrame, n_boot: int = 200,
+                                 min_games: int = 5, n_bins: int = DESIGN_EFFECT_BINS) -> list[tuple[float, float]]:
+    """Variance inflation from within-game correlation, by cluster size: (median scored pitches per game, factor)
+    for each quartile of pitcher-seasons ordered by pitches per game.
 
-    bootstrap_ci already treats games as clusters (pitches within a game
-    aren't independent draws) — but shrink_and_scale's sampling_var used
-    the naive analytic formula unconditionally, an inconsistency between
-    two parts of the same pipeline that implicitly assumed two different
-    data-generating processes. >1 means pitches are positively correlated
-    within a game (the expected direction — hot/cold outings, sequencing,
-    matchup effects), so the naive formula understated true noise and
-    shrinkage was too weak, not too strong. Floored at 1.0: a noisy
-    estimate should never be allowed to REDUCE variance below the already-
-    conservative analytic baseline.
-    """
+    bootstrap_ci already treats games as clusters (pitches within a game aren't independent draws), but
+    shrink_and_scale's sampling_var used the naive analytic formula, so the two parts of the pipeline assumed
+    different data-generating processes. The factor in each bin is the pooled ratio of empirical (game-cluster
+    bootstrap) variance of `diff` to the analytic pitch-level `sampling_var` over pitcher-seasons with enough
+    games: sum of games x bootstrap variance over sum of games x analytic variance. A bootstrap over g clusters
+    understates the variance by (g-1)/g, so each bootstrap variance is scaled by g/(g-1) first. A factor above 1
+    means pitches are positively correlated within a game (hot and cold outings, matchups), so the naive formula
+    understated true noise and shrinkage was too weak, not too strong. It grows with the pitches per game
+    (starters against relievers) but not always linearly (chase flattens near 1.08 where whiff keeps rising), hence
+    bins and not a fitted slope. Floored at 1.0: a noisy estimate should never reduce variance below the already
+    conservative analytic baseline."""
     pv = point_est.set_index(["pitcher", "season"])["sampling_var"]
-    weighted_empirical = weighted_analytic = 0.0
+    rows = []
     for (pitcher, season), g in game_tbl.groupby(["pitcher", "season"]):
         if len(g) < min_games:
             continue
@@ -318,12 +324,27 @@ def estimate_design_effect(game_tbl: pd.DataFrame, point_est: pd.DataFrame, n_bo
         boot_diff = (a_arr[idx].sum(axis=1) - e_arr[idx].sum(axis=1)) / boot_n
         empirical_var = boot_diff.var() * len(g) / (len(g) - 1)
         if np.isfinite(empirical_var):
-            weighted_empirical += len(g) * empirical_var
-            weighted_analytic += len(g) * analytic_var
-    return max(weighted_empirical / weighted_analytic, 1.0) if weighted_analytic > 0 else 1.0
+            rows.append((len(g), n_arr.sum() / len(g), analytic_var, empirical_var))
+    if not rows:
+        return [(1.0, 1.0)]
+    frame = pd.DataFrame(rows, columns=["games", "m", "analytic", "empirical"])
+    bins = max(1, min(n_bins, len(frame) // MIN_SEASONS_PER_BIN))
+    frame["bin"] = pd.qcut(frame["m"].rank(method="first"), bins, labels=False)   # ranks, so ties cannot collapse a bin
+    curve = []
+    for _, d in frame.groupby("bin"):
+        factor = (d["games"] * d["empirical"]).sum() / (d["games"] * d["analytic"]).sum()
+        curve.append((float(d["m"].median()), max(float(factor), 1.0)))
+    return curve
 
 
-def shrink_and_scale(agg: pd.DataFrame, design_effect: float = 1.0):
+def design_effect_for(agg: pd.DataFrame, curve: list[tuple[float, float]]) -> pd.Series:
+    """Each row's variance inflation: the curve from estimate_design_effect_curve read at its scored pitches per game
+    (n over n_games), interpolated between bins and held flat beyond the first and last."""
+    xs, ys = zip(*sorted(curve))
+    return pd.Series(np.interp(agg["n"] / agg["n_games"], xs, ys), index=agg.index)
+
+
+def shrink_and_scale(agg: pd.DataFrame, design_effect: float | pd.Series = 1.0):
     """Empirical-Bayes shrinkage and rescale to 100/10.
     Returns (shrunk_diff, index, league_std, true_var, center).
 
@@ -332,12 +353,13 @@ def shrink_and_scale(agg: pd.DataFrame, design_effect: float = 1.0):
     whole scale and not every pitcher. `shrunk_diff` is the deviation from that center, so index 100
     is the average scored pitcher-season.
 
-    `design_effect` (see estimate_design_effect) inflates the naive per-observation sampling_var to
-    account for within-game correlation. Pitches in the same outing aren't independent draws, the
+    `design_effect` (a number, or a Series aligned with `agg`; see design_effect_for) inflates the naive
+    per-observation sampling_var to account for within-game correlation. Pitches in the same outing aren't independent draws, the
     same reason the CI bootstrap resamples whole games rather than individual pitches.
     """
     scored = agg[agg["n"] >= MIN_N_FOR_SCORE].copy()
-    sampling_var = scored["sampling_var"].values * design_effect
+    scored_effect = design_effect.loc[scored.index].to_numpy() if isinstance(design_effect, pd.Series) else design_effect
+    sampling_var = scored["sampling_var"].values * scored_effect
     diff_c, sampling_var_c = collapse_repeated_pitchers(
         scored["pitcher"].values, scored["n"].values, scored["diff"].values, sampling_var)
     if has_between_pitcher_spread(diff_c, sampling_var_c):
@@ -360,15 +382,18 @@ def shrink_and_scale(agg: pd.DataFrame, design_effect: float = 1.0):
     return out_shrunk, out_index, league_std, true_var, center
 
 
-def posterior_sd_z(sampling_var, design_effect: float, true_var: float, league_std: float) -> np.ndarray:
+def posterior_sd_z(sampling_var, design_effect: float | pd.Series, true_var: float, league_std: float) -> np.ndarray:
     """Posterior standard deviation of a component's estimate on the z scale (index 10 points = 1 z).
     The normal-normal posterior variance is true_var x s2 / (true_var + s2), reliability x sampling variance."""
-    s2 = np.asarray(sampling_var, dtype=float) * design_effect
+    sampling_var, design_effect = np.asarray(sampling_var, dtype=float), np.asarray(design_effect, dtype=float)
+    if design_effect.ndim and design_effect.shape != sampling_var.shape:
+        raise ValueError(f"design effect has {design_effect.shape} values for {sampling_var.shape} sampling variances; they must be the same rows")
+    s2 = sampling_var * design_effect
     return np.sqrt(true_var * s2 / (true_var + s2)) / league_std
 
 
 def analytic_interval(agg: pd.DataFrame, index: pd.Series, league_std: float, true_var: float,
-                      design_effect: float) -> pd.DataFrame:
+                      design_effect: float | pd.Series) -> pd.DataFrame:
     """95% posterior interval for the empirical-Bayes estimate, on the index scale.
 
     The posterior variance of a normal-normal estimate is reliability x sampling variance, so the
@@ -381,10 +406,11 @@ def analytic_interval(agg: pd.DataFrame, index: pd.Series, league_std: float, tr
 
 
 def bootstrap_ci(game_tbl: pd.DataFrame, league_std: float, true_var: float,
-                  design_effect: float = 1.0, min_n: int = MIN_N_FOR_SCORE, center: float = 0.0):
+                  design_effect: float | dict = 1.0, min_n: int = MIN_N_FOR_SCORE, center: float = 0.0):
     """Game-level cluster bootstrap CI, vectorized per pitcher-season. Uses
     the SAME sampling-variance formula as the point estimate (summed pitch-level
-    variance, scaled by the same design_effect used in shrink_and_scale),
+    variance, scaled by the same design effect used in shrink_and_scale: a number, or a dict from
+    (pitcher, season) to that pitcher-season's own factor),
     recomputed per bootstrap draw since resampled games change both n and the
     pitch mix."""
     results = []
@@ -406,7 +432,8 @@ def bootstrap_ci(game_tbl: pd.DataFrame, league_std: float, true_var: float,
         boot_diff = (boot_a[valid] - boot_e[valid]) / boot_n[valid]
 
         boot_v = v_arr[idx].sum(axis=1)[valid]
-        samp_var = boot_v / (boot_n[valid] ** 2) * design_effect
+        group_effect = design_effect[(pitcher, season)] if isinstance(design_effect, dict) else design_effect
+        samp_var = boot_v / (boot_n[valid] ** 2) * group_effect
         reliability = true_var / (true_var + samp_var)
         boot_shrunk = (boot_diff - center) * reliability
         boot_index = 100 + 10 * boot_shrunk / league_std
@@ -479,15 +506,18 @@ def process_outcome(df: pd.DataFrame, label: str, spec: dict, is_binary: bool, b
     full_games = game_level_table(sub, label, target, baseline, var_col)
     full_agg = pitcher_season_point_estimate(full_games)
     # Calibrate ONCE from the full season (a stable estimate) and reuse the
-    # same scalar for both halves and the bootstrap — consistent with how
-    # the composite's reliability weights are also fixed from the full
-    # season rather than re-derived on smaller, noisier half-samples.
-    design_effect = estimate_design_effect(full_games, full_agg)
+    # same curve for both halves and the bootstrap (each row reads it at its own
+    # pitches per game) — consistent with how the composite's reliability
+    # weights are also fixed from the full season rather than re-derived on
+    # smaller, noisier half-samples.
+    curve = estimate_design_effect_curve(full_games, full_agg)
+    design_effect = design_effect_for(full_agg, curve)
     full_shrunk, full_index, league_std, true_var, center = shrink_and_scale(full_agg, design_effect)
     full_agg[f"{label}_diff_adj"] = full_agg["diff"]
     full_agg[f"{label}_diff_adj_shrunk"] = full_shrunk
     full_agg[f"{label}_index"] = full_index
     full_agg = full_agg.rename(columns={"n": f"{label}_n"})
+    scored_rows = full_agg[f"{label}_n"] >= MIN_N_FOR_SCORE
     full_agg[f"{label}_post_sd_z"] = posterior_sd_z(full_agg["sampling_var"], design_effect, true_var, league_std)
 
     # --- split half ---
@@ -495,7 +525,7 @@ def process_outcome(df: pd.DataFrame, label: str, spec: dict, is_binary: bool, b
     for h in (0, 1):
         h_games = game_level_table(sub[sub["half"] == h], label, target, baseline, var_col)
         h_agg = pitcher_season_point_estimate(h_games)
-        h_shrunk, h_index, *_ = shrink_and_scale(h_agg, design_effect)
+        h_shrunk, h_index, *_ = shrink_and_scale(h_agg, design_effect_for(h_agg, curve))
         h_agg[f"{label}_index_h{h}"] = h_index
         half_scores[h] = h_agg[["pitcher", "season", f"{label}_index_h{h}", "n"]].rename(
             columns={"n": f"{label}_n_h{h}"})
@@ -509,7 +539,8 @@ def process_outcome(df: pd.DataFrame, label: str, spec: dict, is_binary: bool, b
     # The interval is the wider of the game-cluster bootstrap and the analytic posterior interval. The
     # bootstrap captures within-game clustering, the analytic one never collapses to zero width and
     # covers pitcher-seasons with fewer than 3 games.
-    ci = bootstrap_ci(full_games, league_std, true_var, design_effect, center=center)
+    effect_by_group = dict(zip(zip(full_agg["pitcher"], full_agg["season"]), design_effect))
+    ci = bootstrap_ci(full_games, league_std, true_var, effect_by_group, center=center)
     an = analytic_interval(full_agg, full_agg[f"{label}_index"], league_std, true_var, design_effect)
     full_agg = full_agg.merge(ci, on=["pitcher", "season"], how="left").merge(an, on=["pitcher", "season"], how="left")
     full_agg["ci_lo"] = np.fmin(full_agg["ci_lo"], full_agg["an_lo"])
@@ -518,12 +549,13 @@ def process_outcome(df: pd.DataFrame, label: str, spec: dict, is_binary: bool, b
 
     print(f"{label}: n_scored={len(full_agg.dropna(subset=[f'{label}_index']))}, "
           f"n_half_reliable={len(reliable)}, split-half r={r_half:.3f}, "
-          f"Spearman-Brown corrected full-season r={r_full_sb:.3f}, design_effect={design_effect:.2f}", flush=True)
+          f"Spearman-Brown corrected full-season r={r_full_sb:.3f}, design_effect by pitches per game "
+          f"{', '.join(f'{m:.0f}: {e:.2f}' for m, e in curve)} (mean over scored rows {design_effect[scored_rows].mean():.2f})", flush=True)
 
     return full_agg[["pitcher", "season", f"{label}_n", f"{label}_diff_adj", f"{label}_diff_adj_shrunk",
                       f"{label}_index", f"{label}_ci_lo", f"{label}_ci_hi", f"{label}_post_sd_z"]], {
         "label": label, "r_half": r_half, "r_full_spearman_brown": r_full_sb, "n_half_reliable": len(reliable),
-        "design_effect": design_effect,
+        "design_effect": float(design_effect[scored_rows].mean()), "design_effect_curve": curve,
     }, half_merged
 
 
@@ -646,6 +678,11 @@ if __name__ == "__main__":
                           "timing_index", "timing_ci_lo", "timing_ci_hi"]].to_string(index=False))
 
     ps.to_csv("output/pitcher_season.csv", index=False)
-    pd.DataFrame(reliability_report).to_csv("output/reliability_report.csv", index=False)
+    # The design-effect curves are lists, so they go to their own JSON (interval_coverage.py and add_timing_direction.py
+    # read it) and the CSV keeps one number per label.
+    curves = {r["label"]: r["design_effect_curve"] for r in reliability_report if "design_effect_curve" in r}
+    with open("output/design_effects.json", "w", encoding="utf-8") as f:
+        json.dump(curves, f, indent=2)
+    pd.DataFrame(reliability_report).drop(columns="design_effect_curve").to_csv("output/reliability_report.csv", index=False)
     half_all.to_csv("output/half_scores.csv", index=False)      # every outcome's odd-game and even-game index, read by membership_check.py
     print("\nSaved pitcher_season.csv, reliability_report.csv and half_scores.csv. Done.", flush=True)

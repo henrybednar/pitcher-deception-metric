@@ -66,10 +66,12 @@ STEPS = [
     Step("fit_called_strike", ("fit_called_strike.py",), ("output/per_pitch_predictions.csv",),
          "called strike model (validation table only)"),
     Step("reliability_and_ci", ("reliability_and_ci.py",),
-         ("output/pitcher_season.csv", "output/reliability_report.csv", "output/half_scores.csv"),
+         ("output/pitcher_season.csv", "output/reliability_report.csv", "output/half_scores.csv", "output/design_effects.json"),
          "shrinkage, bootstrap intervals, composite, split-half reliability, player names and Stuff+"),
     Step("add_timing_direction", ("add_timing_direction.py",), ("output/pitcher_season.csv", "output/reliability_report.csv"),
          "signed timing diagnostic with intervals"),
+    Step("interval_coverage", ("interval_coverage.py",), ("output/interval_coverage.json",),
+         "are the shrinkage intervals calibrated? one half of a season's games predicts the other half"),
     Step("driver_analysis", ("driver_analysis.py",), ("output/driver_analysis.json",),
          "what explains each residual? (season level)"),
     Step("predictive_validity", ("predictive_validity.py",), ("output/predictive_validity_report.csv",),
@@ -96,6 +98,8 @@ STEPS = [
     Step("build_pages", ("build_artifact.py", "build_leaderboard.py"),
          ("deception_dashboard.html", "deception_leaderboard.html"),
          "standalone HTML pages (add --artifact to a build script for the Claude artifact fragment)"),
+    Step("check_readme_claims", ("check_readme_claims.py",), ("output/readme_claims_check.txt",),
+         "last, so a stale README never blocks the pages: do the README's headline numbers match this run's outputs? (fails when one is stale; fix the README, then --only check_readme_claims)"),
 ]
 
 

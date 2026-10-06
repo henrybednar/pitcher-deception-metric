@@ -42,6 +42,8 @@ from physics_features import PHYSICS_FEATURES
 from tendencies import build_totals, tendency_for_rows
 
 MIN_N_FOR_MODEL = 5000
+MAX_FEATURES = 0.5   # share of features each split may use (see make_model)
+PITCH_TYPE_RECALIBRATION_MIN_N = 5000   # rows of a pitch type in a season, among the other pitchers, before its league-wide level is removed
 # A pitcher's expectation depends on which other pitchers share their cross-validation fold, and with one
 # fixed assignment that dependence shows up as noise in the score: two random assignments gave component
 # indexes that differed by an SD of 2.5 to 3.0 index points (corr 0.96 to 0.97, largest gaps 12 to 32), so
@@ -88,6 +90,28 @@ CATEGORICAL = ["p_throws", "stand", "home_team", "pitch_type", "season"]
 # skill, log loss 0.694 against 0.693 for a constant. With curveballs they gain 0.025, 0.034 and 0.063
 # (log loss, log loss, squared error), and curveballs gain a little too.
 POOLED_WITH = {"KC": "CU"}
+# Pitch types that share one model, with pitch type as a feature, by outcome (the rest follow the size rule above). Held out
+# by pitcher (log loss, seeds 0 and 1, pitcher-clustered intervals), one model per pitch type was too fragmented: every
+# pair tried (knuckle curve with curveball, splitter with changeup, sweeper with slider, cutter with slider) improved BOTH
+# members, by 0.004 to 0.026 on the smaller type and 0.001 to 0.004 on the larger, for whiff, chase and weak contact.
+# By family, breaking (SL, ST, CU, KC) and offspeed (CH, FS) pools gained whiff +0.0018 [+0.0015, +0.0021] and chase
+# +0.0018 for the pooled rows (knuckle curves +0.020, splitters +0.009), and the fastball family helped weak contact
+# (four-seam +0.0014, sinker +0.0015, cutter +0.0062) but hurt chase (four-seam -0.0017, sinker -0.0014), and one model
+# for every pitch type lost 0.0016 on chase. Ground ball shares weak contact's rows and was tested only for
+# knuckle curve with curveball (+0.015), so that is all it gets. The regressors (squared error): whiff miss distance gained
+# 0.008 (0.9%) with all three families pooled, every type better (knuckle curves +7.6%, splitters +3.1%, four-seamers +0.1%);
+# timing gained 0.058 with the families but pooling the fastballs cost sinkers 0.2% and cutters 0.4%, so only the breaking
+# and offspeed pools are used (knuckle curves +4.4%, splitters +1.7%, curveballs +1.0%, sweepers +0.9%). Alignment and called
+# strike keep the size rule.
+FASTBALLS, BREAKING, OFFSPEED = ["FF", "SI", "FC"], ["SL", "ST", "CU", "KC"], ["CH", "FS"]
+MODEL_GROUPS = {
+    "whiff": [BREAKING, OFFSPEED],
+    "chase": [BREAKING, OFFSPEED],
+    "weak": [FASTBALLS, BREAKING, OFFSPEED],
+    "gb": [["CU", "KC"]],
+    "timing": [BREAKING, OFFSPEED],
+    "whiffmiss": [FASTBALLS, BREAKING, OFFSPEED],
+}
 # name -> (key_col, split_by_hand). batter_tendency_same_hand matches each row against only the
 # training batters' outcomes vs pitchers who share ITS OWN pitcher's handedness, instead of one
 # blended number across both. A held-out test found this adds real signal for whiff (+0.0008 AUC,
@@ -139,9 +163,17 @@ def make_model(kind: str, feature_cols: list[str]):
     # l2_regularization=3.0: a hyperparameter sweep (four-seam whiff, held-out pitchers) found this
     # beats the old 1.0 by +2.66e-4 logloss with a 95% CI entirely above zero ([+0.36, +4.66]e-4).
     # learning_rate and max_leaf_nodes were swept too and are already at their local optimum.
+    # max_features=0.5 (each split sees a random half of the features): held out by pitcher, paired and clustered on
+    # pitcher, it gained log loss on 9 of 9 classifier tasks and 7 of them cleared +0.0003 with an interval above zero
+    # and a positive sign in both season pairs (four-seam chase +0.00042, slider whiff +0.00044, curveball whiff +0.00080,
+    # curveball chase +0.00095, sinker chase +0.00059). On the regressors it cut squared error for slider and changeup
+    # timing (about 0.1%), four-seam and slider whiff miss distance (0.0014 and 0.0030 on the log scale) and did not move
+    # four-seam timing (+0.006, interval -0.004 to +0.017). The gain is larger where samples are smaller. min_samples_leaf,
+    # max_depth and early-stopping patience gained nothing; stopping on held-out pitchers instead of random rows gained up
+    # to 0.0004 more on small pitch types for twice the fit time and was not adopted.
     cls = HistGradientBoostingClassifier if kind == "classify" else HistGradientBoostingRegressor
     return cls(
-        max_iter=300, max_leaf_nodes=31, learning_rate=0.05, l2_regularization=3.0,
+        max_iter=300, max_leaf_nodes=31, learning_rate=0.05, l2_regularization=3.0, max_features=MAX_FEATURES,
         early_stopping=True, validation_fraction=0.1, n_iter_no_change=20,
         categorical_features=[c for c in CATEGORICAL if c in feature_cols], random_state=42,
     )
@@ -187,9 +219,36 @@ def fit_oof_once(sub: pd.DataFrame, y: np.ndarray, groups: np.ndarray, feature_c
     return oof
 
 
+def plan_models(counts: pd.Series, groups: list[list[str]] | None = None) -> dict[str, list[str]]:
+    """Which pitch types share which model. Types in `groups` share their group's model whatever their size (those present
+    in the data). Of the rest, a type with at least MIN_N_FOR_MODEL rows gets its own model, a smaller one joins POOLED_WITH's
+    model, and what is left shares an OTHER model if it adds up to half the size threshold."""
+    model_types: dict[str, list[str]] = {}
+    grouped: set[str] = set()
+    for group in groups or []:
+        present = [t for t in group if t in counts.index]
+        if present:
+            model_types[present[0]] = present
+            grouped.update(present)
+    free = [t for t in counts.index if t not in grouped]
+    for t in free:
+        if counts[t] >= MIN_N_FOR_MODEL:
+            model_types[t] = [t]
+    other = []
+    for t in (t for t in free if t not in model_types):
+        if POOLED_WITH.get(t) in model_types:
+            model_types[POOLED_WITH[t]].append(t)
+        else:
+            other.append(t)
+    if other and counts[other].sum() >= MIN_N_FOR_MODEL // 2:
+        model_types["OTHER"] = other
+    return model_types
+
+
 def fit_tier(df: pd.DataFrame, out_col: str, target_col: str, subset_mask: pd.Series, kind: str,
-             feature_cols: list[str], with_tendencies: bool = True, fold_seeds: tuple[int, ...] | None = None) -> None:
-    """Writes out_col for every scored pitch type. Rare types join POOLED_WITH's model, or else share an OTHER model."""
+             feature_cols: list[str], with_tendencies: bool = True, fold_seeds: tuple[int, ...] | None = None,
+             groups: list[list[str]] | None = None) -> None:
+    """Writes out_col for every scored pitch type, with the models planned by plan_models."""
     df[out_col] = np.nan
     outcome_rows = subset_mask & df["pitch_type"].notna()
     totals = ({name: build_totals(df, outcome_rows, key_col, target_col, split_by_hand=split_by_hand)
@@ -197,15 +256,7 @@ def fit_tier(df: pd.DataFrame, out_col: str, target_col: str, subset_mask: pd.Se
               if with_tendencies else None)
 
     counts = df.loc[outcome_rows, "pitch_type"].value_counts()
-    model_types = {t: [t] for t in counts.index if counts[t] >= MIN_N_FOR_MODEL}
-    other = []
-    for t in (t for t in counts.index if t not in model_types):
-        if POOLED_WITH.get(t) in model_types:
-            model_types[POOLED_WITH[t]].append(t)
-        else:
-            other.append(t)
-    if other and counts[other].sum() >= MIN_N_FOR_MODEL // 2:
-        model_types["OTHER"] = other
+    model_types = plan_models(counts, groups)
 
     for home, types in model_types.items():
         mask = outcome_rows & df["pitch_type"].isin(types)
@@ -226,7 +277,8 @@ def fit_full_outcome(df: pd.DataFrame, label: str, target_col: str, subset_mask:
                      extra_features: list[str] | None = None, fold_seeds: tuple[int, ...] | None = None) -> None:
     """Writes {label}_expected_full."""
     feature_cols = STUFF_FEATURES + LOCATION_FEATURES + (extra_features or []) + CONTEXT_FEATURES
-    fit_tier(df, f"{label}_expected_full", target_col, subset_mask, kind, feature_cols, fold_seeds=fold_seeds)
+    fit_tier(df, f"{label}_expected_full", target_col, subset_mask, kind, feature_cols, fold_seeds=fold_seeds,
+             groups=MODEL_GROUPS.get(label))
 
 
 def recalibrate_oof_isotonic(sub: pd.DataFrame, target_col: str, expected_col: str, n_splits: int = 5) -> np.ndarray:
@@ -248,8 +300,8 @@ def recalibrate_oof_isotonic(sub: pd.DataFrame, target_col: str, expected_col: s
 
 
 def recalibrate_oof_by_group(sub: pd.DataFrame, target_col: str, expected_col: str, group_col: str,
-                             binary: bool, n_splits: int = 5) -> np.ndarray:
-    """Removes the league-wide level of each group (here year and month) from an out-of-fold expectation.
+                             binary: bool, n_splits: int = 5, min_group_n: int = 0) -> np.ndarray:
+    """Removes the league-wide level of each group (year and month, or pitch type and season) from an out-of-fold expectation.
 
     Actual minus expected ran from -0.3 to +1.3 percentage points between months for whiff, and from
     -0.9 to +3.1 for ground ball, with no feature in the model that could see the date. A pitcher who
@@ -258,7 +310,9 @@ def recalibrate_oof_by_group(sub: pd.DataFrame, target_col: str, expected_col: s
     the 95th percentile. Adding the date as a model feature barely moved the gap (four-seam whiff, SD
     0.54 to 0.51 percentage points), so this is a second out-of-fold step instead, grouped by pitcher
     like the models: each pitcher's offsets come only from other pitchers, so a pitcher's own outcomes
-    never set the offset that scores them. A group the other pitchers never threw in gets no offset.
+    never set the offset that scores them. A group the other pitchers never threw in gets no offset, and
+    neither does one with fewer than `min_group_n` rows among them (a mean over a few hundred pitches is
+    mostly noise, and applying it would add that noise to everyone who throws the pitch).
     Binary expectations stay inside [0, 1]."""
     groups = sub["pitcher"].to_numpy()
     expected = sub[expected_col].to_numpy(float)
@@ -266,14 +320,34 @@ def recalibrate_oof_by_group(sub: pd.DataFrame, target_col: str, expected_col: s
     keys = sub[group_col].to_numpy()
     out = np.full(len(sub), np.nan)
     for train_idx, test_idx in GroupKFold(n_splits=n_splits).split(sub, resid, groups=groups):
-        offset = pd.Series(resid[train_idx]).groupby(keys[train_idx]).mean()
+        stats = pd.Series(resid[train_idx]).groupby(keys[train_idx]).agg(["mean", "count"])
+        offset = stats.loc[stats["count"] >= max(min_group_n, 1), "mean"]
         adjusted = expected[test_idx] + pd.Series(keys[test_idx]).map(offset).fillna(0.0).to_numpy()
         out[test_idx] = np.clip(adjusted, 0.0, 1.0) if binary else adjusted
     return out
 
 
+def recalibrate_scored(df: pd.DataFrame, label: str, target_col: str, binary: bool) -> None:
+    """Removes the league-wide level of every pitch type in every season, then of every month, from {label}_expected_full for
+    every pitch that has one, in place.
+
+    The pitch-type step came from a check by pitch type and season after the models were pooled: actual minus expected averaged up to
+    0.27 inches for timing and 0.9 points for weak contact in some pitch-type seasons (curveballs and sweepers ran -0.2 inches
+    on timing in 2024), the same before pooling, and a pitcher who throws one pitch inherited it as skill (SD 3.5% to 6% of the
+    spread of the raw scores, up to a third of it for the extreme specialists). Month goes last, so the monthly level stays
+    exactly removed."""
+    col = f"{label}_expected_full"
+    scored = df[col].notna()
+    sub = df.loc[scored]
+    type_season = sub["pitch_type"].astype(str) + "_" + sub["season"].astype(str)
+    adjusted = recalibrate_oof_by_group(sub.assign(pitch_type_season=type_season), target_col, col, "pitch_type_season", binary,
+                                        min_group_n=PITCH_TYPE_RECALIBRATION_MIN_N)
+    df.loc[scored, col] = adjusted
+    df.loc[scored, col] = recalibrate_oof_by_group(df.loc[scored], target_col, col, "year_month", binary)
+
+
 def recalibrate_scored_by_month(df: pd.DataFrame, label: str, target_col: str, binary: bool) -> None:
-    """Applies recalibrate_oof_by_group to every pitch that has a {label}_expected_full, in place."""
+    """Applies the month recalibration alone to every pitch that has a {label}_expected_full, in place (see recalibrate_scored)."""
     col = f"{label}_expected_full"
     scored = df[col].notna()
     df.loc[scored, col] = recalibrate_oof_by_group(df.loc[scored], target_col, col, "year_month", binary)
@@ -289,6 +363,6 @@ if __name__ == "__main__":
         print(f"\n=== {label.upper()} (full tier: stuff+location+opponent+catcher+context) ===", flush=True)
         fit_full_outcome(df, label, spec["target"], df[spec["subset"]], spec["kind"], extra_features=spec.get("extra"),
                          fold_seeds=FOLD_SEEDS)
-        recalibrate_scored_by_month(df, label, spec["target"], binary=True)
+        recalibrate_scored(df, label, spec["target"], binary=True)
         new_cols.append(f"{label}_expected_full")
     save_predictions(existing, df, new_cols)
