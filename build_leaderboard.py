@@ -38,6 +38,7 @@ def main() -> None:
         replacements={
             "__ROWS_JSON__": json_for_script(rows),
             "__DASHBOARD_URL__": page_links(args.artifact)["dashboard"],
+            "__METHODOLOGY_URL__": page_links(args.artifact)["methodology"],
         },
     )
     out_path = args.out or ("deception_leaderboard_artifact.html" if args.artifact else LEADERBOARD_FILE)

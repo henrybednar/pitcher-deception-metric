@@ -354,6 +354,8 @@ def validation_text(validation: dict) -> dict:
 
     member_slopes = [outcomes[k]["calibration"]["slope"] for k in COMPOSITE_OUTCOMES]
     return {
+        "VAL_AUC_WHIFF": span("whiff", "auc"),
+        "VAL_AUC_CHASE": span("chase", "auc"),
         "VAL_AUC_GB": span("gb", "auc"),
         "VAL_AUC_CALLEDSTRIKE": span("calledstrike", "auc"),
         "VAL_R2_TIMING": span("timing", "r2"),

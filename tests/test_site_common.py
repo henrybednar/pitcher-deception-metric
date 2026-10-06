@@ -88,3 +88,55 @@ def test_the_artifact_fragment_does_not_default_to_the_published_pages_file(tmp_
                                         (build_leaderboard, "LEADERBOARD_FILE", "deception_leaderboard_artifact.html")):
         source = open(module.__file__, encoding="utf-8").read()
         assert fragment in source and f'else {published})' in source
+
+
+def test_the_artifact_fragment_of_the_methodology_page_does_not_default_to_the_published_file():
+    import build_methodology
+
+    source = open(build_methodology.__file__, encoding="utf-8").read()
+
+    assert "deception_methodology_artifact.html" in source and "else METHODOLOGY_FILE)" in source
+
+
+def test_page_links_name_all_three_pages_in_both_modes():
+    standalone, artifact = sc.page_links(False), sc.page_links(True)
+
+    assert set(standalone) == set(artifact) == {"dashboard", "leaderboard", "methodology"}
+    assert standalone["methodology"] == sc.METHODOLOGY_FILE
+    assert artifact["methodology"].endswith(sc.METHODOLOGY_FILE) and artifact["methodology"].startswith("https://")
+
+
+def test_shared_head_carries_the_fonts_and_the_stylesheet_both_pages_use():
+    head = sc.shared_head()
+
+    assert head.startswith("<link") and "fonts.googleapis.com" in head
+    assert ".dxroot {" in head and head.rstrip().endswith("</style>")
+    for template in ("templates/dashboard.html", "templates/methodology.html"):
+        text = open(template, encoding="utf-8").read()
+        assert "__SHARED_HEAD__" in text and "<style>" not in text      # the stylesheet lives in one file
+
+
+def test_every_methodology_anchor_the_other_pages_link_to_exists():
+    import re
+
+    methodology = open("templates/methodology.html", encoding="utf-8").read()
+    ids = set(re.findall(r'\bid="([^"]+)"', methodology))
+    linked = set()
+    for template in ("templates/dashboard.html", "templates/leaderboard.html", "templates/methodology.html"):
+        text = open(template, encoding="utf-8").read()
+        linked |= set(re.findall(r'__METHODOLOGY_URL__#([a-z-]+)', text))
+        if template.endswith("methodology.html"):
+            linked |= set(re.findall(r'href="#([a-z-]+)"', text))
+
+    assert linked, "no anchors found, so the test checks nothing"
+    assert linked <= ids, sorted(linked - ids)
+
+
+def test_each_page_links_to_the_other_two():
+    expected = {"templates/dashboard.html": ("__LEADERBOARD_URL__", "__METHODOLOGY_URL__"),
+                "templates/methodology.html": ("__DASHBOARD_URL__", "__LEADERBOARD_URL__"),
+                "templates/leaderboard.html": ("__DASHBOARD_URL__", "__METHODOLOGY_URL__")}
+    for template, tokens in expected.items():
+        text = open(template, encoding="utf-8").read()
+        for token in tokens:
+            assert token in text, (template, token)

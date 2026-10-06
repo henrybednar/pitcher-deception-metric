@@ -1,9 +1,10 @@
 """
-Shared helpers for build_artifact.py and build_leaderboard.py.
+Shared helpers for build_artifact.py (dashboard), build_methodology.py and build_leaderboard.py.
 
 Templates hold the page markup. Two kinds of tokens are filled at build time:
   {{KEY}}        a text figure from site_stats.json (never typed into the HTML by hand)
   __TOKEN__      a JSON payload or structural block supplied by the build script
+The dashboard and methodology pages share templates/style.css, supplied as __SHARED_HEAD__.
 
 Two output modes:
   standalone  a complete HTML document with relative links between the pages
@@ -17,10 +18,20 @@ from pathlib import Path
 
 DASHBOARD_FILE = "deception_dashboard.html"
 LEADERBOARD_FILE = "deception_leaderboard.html"
+METHODOLOGY_FILE = "deception_methodology.html"
+STYLE_FILE = "templates/style.css"
 ARTIFACT_URLS = {
     "dashboard": "https://claude.ai/artifact/8Tv4rsUay43bAfsr8A6aSJ",
     "leaderboard": "https://claude.ai/artifact/X1byK2MquLxXN44J9DrYwa",
+    # no artifact for this page: the fragment links to the GitHub Pages copy
+    "methodology": "https://henrybednar.github.io/pitcher-deception-metric/" + METHODOLOGY_FILE,
 }
+FONT_LINKS = (
+    '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+    '<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Source+Sans+3:wght@400;500;600&'
+    'family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">\n'
+)
 FAVICON = (
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E"
     "%3Crect width='32' height='32' rx='7' fill='%23141b22'/%3E"
@@ -57,8 +68,13 @@ def fill_stats(template: str, text: dict) -> str:
 
 def page_links(artifact_mode: bool) -> dict:
     if artifact_mode:
-        return {"dashboard": ARTIFACT_URLS["dashboard"], "leaderboard": ARTIFACT_URLS["leaderboard"]}
-    return {"dashboard": DASHBOARD_FILE, "leaderboard": LEADERBOARD_FILE}
+        return dict(ARTIFACT_URLS)
+    return {"dashboard": DASHBOARD_FILE, "leaderboard": LEADERBOARD_FILE, "methodology": METHODOLOGY_FILE}
+
+
+def shared_head() -> str:
+    """Font links and the stylesheet the dashboard and methodology pages share (the __SHARED_HEAD__ payload)."""
+    return FONT_LINKS + "<style>\n" + Path(STYLE_FILE).read_text(encoding="utf-8").rstrip() + "\n</style>"
 
 
 def head_block(title: str, description: str, artifact_mode: bool = False) -> str:
