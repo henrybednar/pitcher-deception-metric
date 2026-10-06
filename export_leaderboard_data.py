@@ -56,6 +56,6 @@ for row, key in zip(rows, keys):
     row["types"] = types.get(key, [])
 
 with open("output/leaderboard_data.json", "w", encoding="utf-8") as f:
-    json.dump(rows, f, separators=(",", ":"))
+    json.dump(rows, f, separators=(",", ":"), allow_nan=False)
 
 print(f"Saved leaderboard_data.json: {len(rows):,} rows, {len(cols) + 1} fields each.")

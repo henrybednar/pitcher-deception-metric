@@ -66,6 +66,6 @@ for name, season in LORE_PICKS:
     })
 
 with open("output/artifact_data.json", "w", encoding="utf-8") as f:
-    json.dump({"points": points, "lore": lore}, f, separators=(",", ":"))
+    json.dump({"points": points, "lore": lore}, f, separators=(",", ":"), allow_nan=False)
 
 print(f"Saved artifact_data.json: {len(points):,} points, {len(lore)} lore rows.")

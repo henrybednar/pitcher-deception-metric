@@ -64,3 +64,27 @@ def test_pitch_type_rows_list_each_type_with_the_sample_and_reliability_of_whiff
     assert row.startswith('<tr><th scope="row">Sliders</th>')
     assert "<td>1,084</td><td>98</td><td>0.64</td>" in row
     assert "<td>1,156</td><td>104</td><td>-</td>" in row                      # a reliability that could not be estimated reads as a dash
+
+
+def test_json_for_script_refuses_nan_and_infinity():
+    for bad in (float("nan"), float("inf")):
+        with pytest.raises(ValueError):
+            sc.json_for_script({"x": [1.0, bad]})
+
+
+def test_render_page_rejects_a_template_token_nobody_supplied(tmp_path):
+    template = tmp_path / "t.html"
+    template.write_text("__HEAD__\n<script>var rows = __ROWS_JSON__; var more = __OTHER_JSON__;</script>", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="__OTHER_JSON__"):
+        sc.render_page(str(template), title="t", description="d", artifact_mode=True, text={}, replacements={"__ROWS_JSON__": "[]"})
+
+
+def test_the_artifact_fragment_does_not_default_to_the_published_pages_file(tmp_path, monkeypatch):
+    import build_artifact
+    import build_leaderboard
+
+    for module, published, fragment in ((build_artifact, "DASHBOARD_FILE", "deception_dashboard_artifact.html"),
+                                        (build_leaderboard, "LEADERBOARD_FILE", "deception_leaderboard_artifact.html")):
+        source = open(module.__file__, encoding="utf-8").read()
+        assert fragment in source and f'else {published})' in source

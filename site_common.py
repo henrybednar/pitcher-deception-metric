@@ -37,8 +37,9 @@ PAYLOAD_PATTERN = re.compile(r"__[A-Z0-9_]+__")
 
 def json_for_script(obj) -> str:
     """JSON that is safe inside an inline <script>: every `<` becomes a backslash-u-003c escape, so neither
-    `</script>` nor `<!--` can appear in the page whatever the data holds, and the parser reads the same JSON."""
-    return json.dumps(obj, separators=(",", ":"), ensure_ascii=False).replace("<", "\\u003c")
+    `</script>` nor `<!--` can appear in the page whatever the data holds, and the parser reads the same JSON.
+    NaN and infinity are refused (they are not JSON, and would reach a chart as a missing or broken value)."""
+    return json.dumps(obj, separators=(",", ":"), ensure_ascii=False, allow_nan=False).replace("<", "\\u003c")
 
 
 def load_stats(path: str = "output/site_stats.json") -> dict:
@@ -87,6 +88,9 @@ def render_page(template_path: str, *, title: str, description: str, artifact_mo
     for token in replacements:
         if token not in body:
             raise ValueError(f"{template_path} has no {token} token")
+    unsupplied = sorted(set(PAYLOAD_PATTERN.findall(body)) - set(replacements))
+    if unsupplied:
+        raise ValueError(f"{template_path} has tokens with no replacement: {unsupplied}")
     # one pass, so a payload that happens to contain another token's text is never expanded
     body = PAYLOAD_PATTERN.sub(lambda m: replacements.get(m.group(0), m.group(0)), body)
     head = head_block(title, description, artifact_mode)

@@ -22,7 +22,7 @@ DESCRIPTION = (
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact", action="store_true", help="emit an artifact fragment linking to published URLs")
-    parser.add_argument("--out", default=LEADERBOARD_FILE)
+    parser.add_argument("--out", default=None, help="default: the published page, or deception_leaderboard_artifact.html with --artifact")
     args = parser.parse_args()
 
     with open("output/leaderboard_data.json", encoding="utf-8") as f:
@@ -40,9 +40,10 @@ def main() -> None:
             "__DASHBOARD_URL__": page_links(args.artifact)["dashboard"],
         },
     )
-    with open(args.out, "w", encoding="utf-8") as f:
+    out_path = args.out or ("deception_leaderboard_artifact.html" if args.artifact else LEADERBOARD_FILE)
+    with open(out_path, "w", encoding="utf-8") as f:
         f.write(page)
-    print(f"wrote {args.out} ({'artifact' if args.artifact else 'standalone'}), {len(page):,} chars")
+    print(f"wrote {out_path} ({'artifact' if args.artifact else 'standalone'}), {len(page):,} chars")
 
 
 if __name__ == "__main__":

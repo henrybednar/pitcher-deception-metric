@@ -261,8 +261,8 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
     if (!r.types || !r.types.length) return '';
     var items = r.types.map(function(t) {
       function part(label, n, index) {
-        if (index === null) return '';
-        return label + ' <span class="chip" style="background:' + cellColor(index) + '">' + index.toFixed(1) + '</span> <i>n ' + n + '</i>';
+        if (index == null) return '';
+        return label + ' <span class="chip" style="background:' + cellColor(index) + '">' + Number(index).toFixed(1) + '</span> <i>n ' + esc(n) + '</i>';
       }
       var parts = [part('whiff', t[1], t[2]), part('chase', t[3], t[4])].filter(Boolean);
       return '<span class="pt"><b title="' + esc(PT_NAMES[t[0]] || t[0]) + '">' + esc(t[0]) + '</b> ' + parts.join(' &middot; ') + '</span>';
