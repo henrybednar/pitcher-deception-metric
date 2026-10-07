@@ -140,3 +140,21 @@ def test_each_page_links_to_the_other_two():
         text = open(template, encoding="utf-8").read()
         for token in tokens:
             assert token in text, (template, token)
+
+
+def test_a_gain_cell_shades_only_when_the_interval_is_above_zero_and_stacks_the_interval_under_the_gain():
+    clear = sc.gain_cell({"gain": 0.071, "lo": 0.032, "hi": 0.110})
+    unclear = sc.gain_cell({"gain": -0.002, "lo": -0.010, "hi": 0.004})
+
+    assert clear.startswith('<td class="dx-pass">') and "+0.071" in clear and "[+0.032, +0.110]" in clear
+    assert unclear.startswith('<td class="">') and "-0.002" in unclear and "[-0.010, +0.004]" in unclear
+
+
+def test_the_component_table_marks_pass_and_status_with_labelled_badges_not_colour_alone():
+    base = {"key": "gb", "label": "Ground ball", "reliability": "0.446", "yoy": "0.353", "delta": "+0.030", "p": "<0.0001", "n": 913}
+
+    kept = sc.component_table_rows([{**base, "passes": True, "in_score": True}])
+    left_out = sc.component_table_rows([{**base, "passes": False, "in_score": False}])
+
+    assert "dx-badge-pass" in kept and ">Pass<" in kept and "dx-badge-yes" in kept and ">In the score<" in kept
+    assert "dx-badge-fail" in left_out and ">Fails<" in left_out and "dx-badge-no" in left_out and ">Left out<" in left_out

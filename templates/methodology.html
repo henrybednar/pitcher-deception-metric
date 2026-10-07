@@ -2,14 +2,24 @@ __HEAD__
 __SHARED_HEAD__
 <div class="dxroot">
 <h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Methodology and validation for Deception+, a composite pitcher index built from {{N_COMPOSITE}} residual metrics. The page validates the pitch models, explains how a score is built, shows which components are in the score and why, tests the season-level traits that might explain the gap, and lists the known limits and an audit log.</h2>
-<div class="dx-wrap">
+<header class="dx-topbar">
+  <div class="dx-topbar-inner">
+    <a class="dx-brand" href="__DASHBOARD_URL__">Deception<b>+</b></a>
+    <nav class="dx-topnav" aria-label="Pages">
+      <a class="dx-page-link" href="__DASHBOARD_URL__">Dashboard</a>
+      <a class="dx-page-link" href="__LEADERBOARD_URL__">Leaderboard</a>
+      <a class="dx-page-link" href="#top" aria-current="page">Methodology</a>
+    </nav>
+  </div>
+</header>
 
-  <div class="dx-hero">
+<div class="dx-wrap" id="top">
+
+  <div class="dx-hero dx-hero-single">
     <div>
-      <p class="dx-eyebrow">Methodology and validation &middot; data through {{DATA_THROUGH}}</p>
       <h1>How Deception+ is built and checked</h1>
       <p class="dx-hero-sub">The dashboard has the headline checks. This page has what sits behind them: the pitch models and their validation, how a score is built, which components are in it and why, the season-level traits tested as explanations, the known limits, and an audit log of the leaks and bugs found along the way.</p>
-      <p class="dx-nav"><a href="__DASHBOARD_URL__">&larr; Dashboard</a> <a href="__LEADERBOARD_URL__">Sortable leaderboard &rarr;</a></p>
+      <p class="dx-meta">Data through {{DATA_THROUGH}}.</p>
     </div>
   </div>
 
@@ -48,7 +58,7 @@ __SHARED_HEAD__
         <p>Ground ball ranks pitches poorly (AUC {{VAL_AUC_GB}} across pitch types), though its calibration slope is {{VAL_SLOPE_GB}}. Timing and whiff miss distance explain little of their outcomes (R&sup2; {{VAL_R2_TIMING}} and {{VAL_R2_WHIFFMISS}} across pitch types), so most of their variation stays unexplained. Reliability and the forecast test decide what enters the score.</p>
       </div>
     </div>
-    <div class="dx-toggle wrap" id="valToggle">
+    <div class="dx-toggle" id="valToggle" aria-label="Outcome to validate">
       <button data-metric="whiff" class="active">Whiff</button>
       <button data-metric="chase">Chase</button>
       <button data-metric="weak">Weak contact</button>
@@ -128,7 +138,7 @@ __PITCHTYPE_ROWS__
         <h2>What explains the gap?</h2>
         <p class="dx-section-note">A regression of each component's score on 14 season-level pitcher traits, among them tempo, arm slot, extension, release-point consistency, spin mirroring, repertoire size, and a pitch-pair tunnel differential. With 14 tests per component a few would look significant by chance, so a bar is drawn only when its effect is distinguishable from zero after a Benjamini-Hochberg correction (q below 0.05), longest first. Standard errors cluster on pitcher, because most pitchers appear in more than one season and a pitcher's rows are strongly dependent. Savant's season-level leaderboard stats (flailed %, tied-up %, early and late %, miss distance) are left out because they summarize the same swings the components score. Fit is weak for every component (cross-validated R&sup2; {{DRIVER_R2_RANGE}}), so even the bars shown explain little. <span id="driverR2Note"></span></p>
       </div>
-      <div class="dx-toggle wrap" id="driverToggle">
+      <div class="dx-toggle" id="driverToggle" aria-label="Outcome to explain">
         <button data-metric="whiff" class="active">Whiff</button>
         <button data-metric="chase">Chase</button>
         <button data-metric="gb">Ground ball (separate)</button>
@@ -221,12 +231,19 @@ __PITCHTYPE_ROWS__
   function cssVar(name) {
     return getComputedStyle(document.querySelector('.dxroot')).getPropertyValue(name).trim();
   }
+  Chart.defaults.font.family = cssVar('--font-body');
+  Chart.defaults.animation = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? false : { duration: 350 };
   function bindToggle(id, onPick) {
-    document.getElementById(id).addEventListener('click', function(e) {
+    var group = document.getElementById(id);
+    group.setAttribute('role', 'group');
+    group.querySelectorAll('button').forEach(function(b) { b.setAttribute('aria-pressed', b.classList.contains('active') ? 'true' : 'false'); });
+    group.addEventListener('click', function(e) {
       var btn = e.target.closest('button');
       if (!btn) return;
-      this.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
+      group.querySelectorAll('button').forEach(function(b) {
+        b.classList.toggle('active', b === btn);
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+      });
       onPick(btn.dataset.metric);
     });
   }

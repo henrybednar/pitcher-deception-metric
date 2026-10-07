@@ -122,6 +122,13 @@ def format_gain(g: dict) -> str:
     return f"{g['gain']:+.3f} [{g['lo']:+.3f}, {g['hi']:+.3f}]"
 
 
+def gain_cell(g: dict) -> str:
+    """A table cell for a gain: the gain on one line and its 95% interval under it, shaded when the interval is above zero."""
+    shade = "dx-pass" if g["lo"] > 0 else ""
+    return (f'<td class="{shade}"><span class="dx-gain">{g["gain"]:+.3f}</span>'
+            f'<span class="dx-ci">[{g["lo"]:+.3f}, {g["hi"]:+.3f}]</span></td>')
+
+
 def pitch_type_rows(summary: dict) -> str:
     """Rows of the by-pitch-type table: for each pitch type, the pitcher-seasons scored, the median sample and the
     split-half reliability (Spearman-Brown corrected) of the whiff and chase scores."""
@@ -149,9 +156,9 @@ def outcome_table_rows(validation: dict) -> str:
         r2 = o["r2"]
         g1, g2 = o["deception_over_stuff_location"], o["deception_over_own_stuff_location"]
         cells = [f'<th scope="row">{esc(o["label"])}</th>', f'<td>{r2["stuff_location"]:.3f}</td>', f'<td>{r2["stuff_location_deception"]:.3f}</td>',
-                 f'<td class="{"dx-pass" if g1["lo"] > 0 else ""}">{esc(format_gain(g1))}</td>',
+                 gain_cell(g1),
                  f'<td>{r2["own_stuff_location"]:.3f}</td>', f'<td>{r2["own_stuff_location_deception"]:.3f}</td>',
-                 f'<td class="{"dx-pass" if g2["lo"] > 0 else ""}">{esc(format_gain(g2))}</td>']
+                 gain_cell(g2)]
         rows.append("<tr>" + "".join(cells) + "</tr>")
     return "\n".join(rows)
 
@@ -182,13 +189,14 @@ def component_table_rows(components: list) -> str:
     esc = lambda value: html.escape(str(value), quote=True)
     rows = []
     for c in components:
-        verdict = "Pass" if c["passes"] else "Fails"
-        cls = "pass" if c["passes"] else "fail"
+        verdict, cls = ("Pass", "pass") if c["passes"] else ("Fails", "fail")
         total = "dx-row-total" if c["key"] == "composite" else ""
-        in_score = "Yes" if c["in_score"] else "No"
+        in_score, in_cls = ("In the score", "yes") if c["in_score"] else ("Left out", "no")
         rows.append(
             f'<tr class="{total}"><th scope="row">{html.escape(c["label"])}</th>'
             f'<td>{esc(c["reliability"])}</td><td>{esc(c["yoy"])}</td><td>{esc(c["delta"])}</td><td>{esc(c["p"])}</td>'
-            f'<td>{esc(c["n"])}</td><td class="dx-{cls}">{verdict}</td><td>{in_score}</td></tr>'
+            f'<td>{esc(c["n"])}</td>'
+            f'<td class="dx-badge-cell"><span class="dx-badge dx-badge-{cls}">{verdict}</span></td>'
+            f'<td class="dx-badge-cell"><span class="dx-badge dx-badge-{in_cls}">{in_score}</span></td></tr>'
         )
     return "\n".join(rows)
