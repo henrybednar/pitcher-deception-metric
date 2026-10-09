@@ -10,7 +10,7 @@ Reads leaderboard_data.json and site_stats.json.
 import argparse
 import json
 
-from site_common import LEADERBOARD_FILE, json_for_script, load_stats, page_links, render_page
+from site_common import LEADERBOARD_FILE, json_for_script, load_stats, page_links, render_page, shared_head
 
 TITLE = "Deception+ Leaderboard"
 DESCRIPTION = (
@@ -36,6 +36,7 @@ def main() -> None:
         artifact_mode=args.artifact,
         text=stats["text"],
         replacements={
+            "__SHARED_HEAD__": shared_head(),
             "__ROWS_JSON__": json_for_script(rows),
             "__DASHBOARD_URL__": page_links(args.artifact)["dashboard"],
             "__METHODOLOGY_URL__": page_links(args.artifact)["methodology"],

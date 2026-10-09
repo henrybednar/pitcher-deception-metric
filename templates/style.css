@@ -273,3 +273,9 @@
 }
 .dx-table tbody th, .dx-table thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
 .dx-row-total th { background: var(--surface-2); }
+.dxroot [hidden] { display: none !important; }
+.dx-input { font: 15px var(--font-body); padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 9px; background: var(--surface); color: var(--text-primary); min-width: 220px; transition: border-color 150ms ease; }
+.dx-input::placeholder { color: var(--text-muted); }
+.dx-input:hover { border-color: var(--accent); }
+.dx-input:focus-visible { border-color: var(--accent); outline-offset: 1px; }
+.dx-note { background: var(--accent-soft); border-radius: 12px; padding: 12px 16px; font-size: 14.5px; color: var(--text-primary); max-width: 90ch; }

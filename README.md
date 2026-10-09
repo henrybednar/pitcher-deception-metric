@@ -14,7 +14,7 @@ The gap between result and expectation is not proven to be deception. It is what
 - `deception_methodology.html` has everything behind those checks: the pitch-model validation (AUC, log loss, calibration), how a score is built, which components are in it and why, the interval check, the trait regression, the known limits, and an audit log of the leaks and bugs found along the way.
 - `deception_leaderboard.html` is a sortable table of every scored pitcher-season with 95% intervals and a starter or reliever filter.
 
-Open the pages from the same folder so their links work. The pages are built from `templates/` (the dashboard and methodology page share `templates/style.css`), and every figure in their text comes from `site_stats.json`, so a pipeline rerun cannot leave them out of date.
+Open the pages from the same folder so their links work. The pages are built from `templates/` (all three share `templates/style.css`), and every figure in their text comes from `site_stats.json`, so a pipeline rerun cannot leave them out of date.
 
 ## Run it
 

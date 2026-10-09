@@ -1,127 +1,70 @@
 __HEAD__
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+__SHARED_HEAD__
 <style>
-.lbroot {
-  color-scheme: light;
-  --bg: #f2f5f8;
-  --surface: #ffffff;
-  --surface-2: #eaeff3;
-  --border: #d8e0e7;
-  --border-strong: #b9c5cf;
-  --text-primary: #141b22;
-  --text-secondary: #55636f;
-  --text-muted: #85929c;
-  --accent: #b96f16;
-  --accent-ink: #ffffff;
-  --good: #e34948;
-  --good-ink: #791f1f;
-  --bad: #2a78d6;
-  --bad-ink: #0c447c;
-  --row-hover: #eef2f6;
-  --font-display: "Oswald", system-ui, sans-serif;
-  --font-body: "Source Sans 3", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  font-family: var(--font-body);
-  background: var(--bg);
-  color: var(--text-primary);
-  display: block;
-  width: 100%;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .lbroot {
-    color-scheme: dark;
-    --bg: #10151c;
-    --surface: #171e27;
-    --surface-2: #1e2833;
-    --border: #2a3542;
-    --border-strong: #3b4956;
-    --text-primary: #eef1f4;
-    --text-secondary: #a4b0bc;
-    --text-muted: #798591;
-    --accent: #e8a33d;
-    --accent-ink: #2c1c02;
-    --good: #e66767;
-    --good-ink: #fcebeb;
-    --bad: #3987e5;
-    --bad-ink: #cde2fb;
-    --row-hover: #1c2530;
-  }
-}
-:root[data-theme="dark"] .lbroot {
-  color-scheme: dark;
-  --bg: #10151c;
-  --surface: #171e27;
-  --surface-2: #1e2833;
-  --border: #2a3542;
-  --border-strong: #3b4956;
-  --text-primary: #eef1f4;
-  --text-secondary: #a4b0bc;
-  --text-muted: #798591;
-  --accent: #e8a33d;
-  --accent-ink: #2c1c02;
-  --good: #e66767;
-  --good-ink: #fcebeb;
-  --bad: #3987e5;
-  --bad-ink: #cde2fb;
-  --row-hover: #1c2530;
-}
-.lbroot * { box-sizing: border-box; }
-.lbroot p { margin: 0; }
-.lbroot h1, .lbroot h2 { font-family: var(--font-display); font-weight: 500; margin: 0; color: var(--text-primary); }
-.lb-wrap { max-width: 1240px; margin: 0 auto; padding: 1.25rem 1.25rem 3rem; display: flex; flex-direction: column; gap: 1rem; }
-.lb-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.75rem; border-bottom: 0.5px solid var(--border); padding-bottom: 1rem; }
-.lb-head h1 { font-size: 22px; }
-.lb-eyebrow { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); }
-.lb-sub { font-size: 13px; color: var(--text-secondary); max-width: 60ch; }
-.lb-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px; padding: 10px 12px; }
-.lb-controls input[type="text"] { min-width: 180px; }
-.lb-controls select { min-width: 100px; }
-.lb-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); cursor: pointer; user-select: none; }
-.lb-check input { width: 15px; height: 15px; cursor: pointer; }
-.lb-count { font-size: 12.5px; color: var(--text-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
-.lb-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--text-muted); align-items: center; }
-.lb-legend .swatch { display: inline-flex; align-items: center; gap: 5px; }
+/* the leaderboard table only; tokens, type, buttons, pills and notes come from the shared stylesheet */
+.lb-wrap { max-width: 1240px; padding-top: 2rem; gap: 1.1rem; }
+.dxroot.lb .dx-topbar-inner { max-width: 1240px; }
+.lb-head { display: flex; flex-direction: column; gap: 6px; }
+.lb-head h1 { font-size: clamp(34px, 5vw, 46px); line-height: 1.05; }
+.lb-head .dx-lede { margin-top: 4px; max-width: 70ch; font-size: 16px; }
+.lb-controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.lb-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lb-group-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.lb-check { display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--text-secondary); cursor: pointer; user-select: none; }
+.lb-check input { width: 16px; height: 16px; cursor: pointer; }
+.lb-reset { padding: 6px 12px; font-size: 13.5px; }
+.lb-count { font-size: 13.5px; color: var(--text-secondary); margin-left: auto; font-variant-numeric: tabular-nums; }
+.lb-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--text-secondary); align-items: center; }
+.lb-legend .swatch { display: inline-flex; align-items: center; gap: 6px; }
 .lb-legend i { width: 28px; height: 9px; border-radius: 3px; display: inline-block; }
-.lb-table-wrap { overflow-x: auto; background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; }
-table.lb-table { border-collapse: collapse; width: 100%; font-size: 13px; }
-table.lb-table th, table.lb-table td { padding: 7px 8px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lb-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+table.lb-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.lb-table th, table.lb-table td { padding: 9px 9px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 table.lb-table th { white-space: normal; vertical-align: bottom; line-height: 1.25; }
-table.lb-table th:first-child, table.lb-table td:first-child { text-align: left; padding-left: 14px; }
+table.lb-table th:first-child, table.lb-table td:first-child { text-align: left; padding-left: 16px; }
 table.lb-table th:nth-child(2), table.lb-table td:nth-child(2) { text-align: left; }
 table.lb-table thead th {
-  position: sticky; top: 0; background: var(--surface-2); color: var(--text-secondary);
-  font-family: var(--font-body); font-weight: 500; font-size: 11.5px; letter-spacing: 0.02em;
-  text-transform: uppercase; cursor: pointer; border-bottom: 0.5px solid var(--border-strong); user-select: none;
+  position: sticky; top: 50px; z-index: 2; background: var(--surface-2); color: var(--text-secondary);
+  font-weight: 600; font-size: 12.5px; cursor: pointer; border-bottom: 1px solid var(--border-strong); user-select: none;
+  transition: color 150ms ease;
 }
+table.lb-table thead th:first-child { border-top-left-radius: 11px; }
+table.lb-table thead th:last-child { border-top-right-radius: 11px; }
 table.lb-table thead th:hover { color: var(--text-primary); }
 table.lb-table thead th.sorted { color: var(--accent); }
+table.lb-table thead th[aria-sort="descending"]::after, table.lb-table thead th[aria-sort="ascending"]::after {
+  content: ""; display: inline-block; margin-left: 6px; vertical-align: middle;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+}
+table.lb-table thead th[aria-sort="descending"]::after { border-top: 5px solid currentColor; }
+table.lb-table thead th[aria-sort="ascending"]::after { border-bottom: 5px solid currentColor; }
 table.lb-table thead th:focus-visible, table.lb-table tr.row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-table.lb-table tbody tr { border-bottom: 0.5px solid var(--border); }
-table.lb-table tbody tr:hover { background: var(--row-hover); }
-table.lb-table td.name { font-weight: 500; }
-table.lb-table td.mono { font-family: var(--font-mono); }
-table.lb-table td.composite { font-family: var(--font-mono); font-weight: 500; font-size: 14px; }
+table.lb-table tbody tr.row { border-top: 1px solid var(--border); }
+table.lb-table tbody tr.row:hover td { box-shadow: inset 0 0 0 999px rgba(127, 140, 152, 0.1); }
+table.lb-table td.name { font-weight: 600; }
+table.lb-table td.mono { font-family: var(--font-mono); font-size: 13.5px; }
+table.lb-table td.composite { font-family: var(--font-mono); font-weight: 600; font-size: 15px; }
 .unsure { color: var(--text-muted); font-size: 11px; font-weight: 400; margin-left: 4px; }
 table.lb-table tr.unqualified td { opacity: 0.55; }
-.lb-badge { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); margin-left: 4px; }
-.lb-link { color: var(--accent); text-decoration: underline; white-space: nowrap; }
-.lb-note { font-size: 13px; color: var(--text-secondary); line-height: 1.6; background: var(--surface); border: 0.5px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; max-width: 90ch; }
-.lb-footnote { font-size: 12.5px; color: var(--text-muted); line-height: 1.65; display: flex; flex-direction: column; gap: 0.6rem; max-width: 90ch; }
-.lb-footnote p { margin: 0; }
-.role-tag { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); border: 0.5px solid var(--border-strong); border-radius: 4px; padding: 0 4px; margin-left: 6px; vertical-align: 1px; }
+.role-tag { font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; color: var(--text-secondary); background: var(--surface-2); border-radius: 4px; padding: 1px 5px; margin-left: 7px; vertical-align: 1px; }
+.season-tag { display: none; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-secondary); margin-left: 6px; }
+.lb-empty { text-align: left; padding: 28px 16px; color: var(--text-secondary); white-space: normal; }
 tr.detail { display: none; }
 tr.detail.open { display: table-row; }
 tr.row.expandable { cursor: pointer; }
 .detail .pt-list { display: block; margin-top: 2px; line-height: 1.9; }
 .detail .pt { display: inline-block; margin-right: 18px; white-space: nowrap; }
-.detail .pt i { color: var(--text-muted); font-style: normal; font-size: 11.5px; }
+.detail .pt i { color: var(--text-muted); font-style: normal; font-size: 12px; }
 .detail .pt .chip { font-family: var(--font-mono); padding: 0 5px; border-radius: 3px; }
-tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; color: var(--text-secondary); font-size: 12.5px; background: var(--surface-2); }
+tr.detail td { text-align: left; white-space: normal; padding: 6px 16px 12px; color: var(--text-secondary); font-size: 13.5px; background: var(--surface-2); }
 .detail .di { display: none; margin-right: 14px; white-space: nowrap; }
-.detail .di b { font-weight: 500; color: var(--text-primary); }
+.detail .di b { font-weight: 600; color: var(--text-primary); }
 .narrow-only { display: none; }
+.lb-about h2 { font-size: 16.5px; margin: 1rem 0 0.2rem; }
+.lb-about p { max-width: 90ch; }
+/* a window below 1100px may need the table to scroll sideways, so the sticky header only applies above it */
+@media (max-width: 1100px) { .lb-table-wrap { overflow-x: auto; } table.lb-table thead th { top: 0; } }
+@media (min-width: 1101px) { .lb-table-wrap { overflow: visible; } }
 /* Optional columns drop out as the window narrows (c1 first); a tapped row lists what is hidden. */
 @media (max-width: 960px) {
   .c1 { display: none; }
@@ -131,15 +74,15 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
   .narrow-only { display: inline; }
 }
 @media (max-width: 860px) { .c2 { display: none; } .detail .di.c2 { display: inline; } }
-@media (max-width: 660px) { .c3 { display: none; } .detail .di.c3 { display: inline; } }
+@media (max-width: 660px) { .c3 { display: none; } .detail .di.c3 { display: inline; } .season-tag { display: inline; } }
 @media (max-width: 580px) {
   .c4 { display: none; } .detail .di.c4 { display: inline; }
   table.lb-table td.name { white-space: normal; }
 }
 @media (max-width: 440px) {
-  table.lb-table th, table.lb-table td { padding: 7px 5px; }
-  table.lb-table td { font-size: 12.5px; }
-  table.lb-table th { font-size: 10.5px; }
+  table.lb-table th, table.lb-table td { padding: 8px 5px; }
+  table.lb-table td { font-size: 13px; }
+  table.lb-table th { font-size: 11px; }
   .role-tag { margin-left: 4px; }
 }
 @media (max-width: 400px) { .c5 { display: none; } .detail .di.c5 { display: inline; } }
@@ -147,44 +90,65 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
 @media (max-width: 480px) {
   .lb-controls { flex-direction: column; align-items: stretch; }
   .lb-count { margin-left: 0; }
+  .dx-input { min-width: 0; width: 100%; }
 }
 </style>
-<div class="lbroot">
-<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Sortable, searchable leaderboard of Deception+ scores and its component indexes for every scored pitcher-season, 2024-2026.</h2>
-<div class="lb-wrap">
+<div class="dxroot lb" id="top">
+<a class="dx-skip" href="#main">Skip to the table</a>
+
+<header class="dx-topbar">
+  <div class="dx-topbar-inner">
+    <a class="dx-brand" href="__DASHBOARD_URL__">Deception<b>+</b></a>
+    <nav class="dx-topnav" aria-label="Pages">
+      <a class="dx-page-link" href="__DASHBOARD_URL__">Dashboard</a>
+      <a class="dx-page-link" href="#top" aria-current="page">Leaderboard</a>
+      <a class="dx-page-link" href="__METHODOLOGY_URL__">Methodology</a>
+    </nav>
+  </div>
+</header>
+
+<main class="dx-wrap lb-wrap" id="main">
+  <noscript><p class="dx-note">The leaderboard table is built with JavaScript, so it needs scripts turned on.</p></noscript>
 
   <div class="lb-head">
-    <div>
-      <p class="lb-eyebrow">2024-26 &middot; Deception+ &middot; data through {{DATA_THROUGH}}</p>
-      <h1>Deception+ leaderboard</h1>
-      <p class="lb-sub">Pitcher results beyond what the pitch's measured traits predict. Click a column to sort. Hover an index for its sample size and 95% interval. A <span class="unsure">&#9675;</span> beside a Deception+ score means its interval includes 100, so it is not clearly different from average. Rows below the minimum sample for one or more components are dimmed and hidden by default. <span class="narrow-only">Tap a row for the columns that do not fit. </span><a class="lb-link" href="__DASHBOARD_URL__">&larr; Dashboard</a> &middot; <a class="lb-link" href="__METHODOLOGY_URL__">Methodology</a></p>
-    </div>
+    <h1>Leaderboard</h1>
+    <p class="dx-lede">Every scored pitcher-season, 2024 to 2026, from results beyond what the pitch's measured traits predict. Search a name, sort by any column, and click a row for that pitcher's scores by pitch type. Data through {{DATA_THROUGH}}.</p>
   </div>
 
-  <p class="lb-note">Qualified relievers still average {{RP_MEAN}} against {{SP_MEAN}} for starters even after the model controls for in-game fatigue and times through the order. Use the role filter to compare like with like.</p>
+  <p class="dx-note">Qualified relievers still average {{RP_MEAN}} against {{SP_MEAN}} for starters even after the model controls for in-game fatigue and times through the order. Use the role filter to compare like with like.</p>
 
-  <div class="lb-controls">
-    <input type="text" id="searchBox" placeholder="Search player" aria-label="Search player">
-    <select id="seasonFilter" aria-label="Season">
-      <option value="all">All seasons</option>
-      <option value="2024">2024</option>
-      <option value="2025">2025</option>
-      <option value="2026">2026</option>
-    </select>
-    <select id="roleFilter" aria-label="Role">
-      <option value="all">All roles</option>
-      <option value="SP">Starters</option>
-      <option value="RP">Relievers</option>
-      <option value="MR">Mixed</option>
-    </select>
+  <div class="lb-controls" role="search">
+    <input type="search" id="searchBox" class="dx-input" placeholder="Search a pitcher" aria-label="Search player" autocomplete="off">
+    <div class="lb-group">
+      <span class="lb-group-label" id="seasonLabel">Season</span>
+      <div class="dx-toggle" id="seasonFilter" aria-labelledby="seasonLabel">
+        <button data-value="all" class="active">All</button>
+        <button data-value="2024">2024</button>
+        <button data-value="2025">2025</button>
+        <button data-value="2026">2026</button>
+      </div>
+    </div>
+    <div class="lb-group">
+      <span class="lb-group-label" id="roleLabel">Role</span>
+      <div class="dx-toggle" id="roleFilter" aria-labelledby="roleLabel">
+        <button data-value="all" class="active">All</button>
+        <button data-value="SP">Starters</button>
+        <button data-value="RP">Relievers</button>
+        <button data-value="MR">Mixed</button>
+      </div>
+    </div>
     <label class="lb-check"><input type="checkbox" id="qualifiedOnly" checked> Qualified only</label>
-    <span class="lb-count" id="rowCount"></span>
+    <button type="button" class="dx-btn lb-reset" id="resetFilters" hidden>Reset filters</button>
+    <span class="lb-count" id="rowCount" aria-live="polite"></span>
   </div>
 
   <div class="lb-legend">
     <span class="swatch"><i style="background:var(--good)"></i>Above average</span>
     <span class="swatch"><i style="background:linear-gradient(90deg,var(--good),transparent 50%,var(--bad))"></i>100 = average</span>
     <span class="swatch"><i style="background:var(--bad)"></i>Below average</span>
+    <span class="swatch"><span class="unsure" style="margin:0">&#9675;</span>Interval includes 100</span>
+    <span>Dimmed rows are below the minimum sample</span>
+    <span>Hover a value for its sample and 95% interval<span class="narrow-only">. Tap a row for hidden columns.</span></span>
   </div>
 
   <div class="lb-table-wrap">
@@ -210,23 +174,34 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
     </table>
   </div>
 
-  <div class="lb-footnote">
+  <details class="dx-more lb-about">
+    <summary>About these columns and the method</summary>
+    <h2>What the numbers are</h2>
     <p>Each index is the pitcher's actual rate minus the rate a model expects from the pitch's measured traits (velocity, spin, movement, location), the batter, the catcher, the count, the park, and pitcher-batter handedness. Small samples are shrunk toward the average. 100 is the average scored pitcher-season for each index and the average qualified pitcher-season for Deception+, and 10 points is one standard deviation. Deception+ is a reliability-weighted average of {{N_COMPOSITE}} components: whiff, chase, weak contact, timing and whiff miss distance.</p>
+    <h2>Qualified</h2>
     <p>Qualified means {{QUALIFY_TEXT}}. Pitchers below that bar are still scored, shrunk toward 100, and show up when Qualified only is turned off.</p>
-    <p>By pitch type: click a row to open its whiff and chase scores for each pitch type with at least {{PT_MIN_N}} swings (whiff) or pitches outside the zone (chase). Each pitch type is scored against the same pitch type only, with the same shrinkage and 100/10 scale as the season scores. They are noisier than the season score: split-half reliability runs {{PT_WHIFF_REL_RANGE}} for whiff and {{PT_CHASE_REL_RANGE}} for chase, depending on the pitch type. The <a class="lb-link" href="__METHODOLOGY_URL__">methodology page</a> has the table.</p>
+    <h2>By pitch type</h2>
+    <p>Click a row to open its whiff and chase scores for each pitch type with at least {{PT_MIN_N}} swings (whiff) or pitches outside the zone (chase). Each pitch type is scored against the same pitch type only, with the same shrinkage and 100/10 scale as the season scores. They are noisier than the season score: split-half reliability runs {{PT_WHIFF_REL_RANGE}} for whiff and {{PT_CHASE_REL_RANGE}} for chase, depending on the pitch type. The <a class="dx-link" href="__METHODOLOGY_URL__">methodology page</a> has the table.</p>
+    <h2>Timing, whiff miss and ground ball</h2>
     <p>Timing is the gap between where the bat met the ball and the hitter's estimated ideal contact depth, so early and late contact both count. It is scored on swings that made contact. Whiff miss distance is Statcast's distance between ball and barrel at closest approach on swings and misses. *Ground ball is scored and shown but is not part of Deception+, because it is a different skill from the other components (its index correlates at most {{GB_CORR_MAX}} with them). Timing dir is the signed timing gap in inches on contact swings, against a stuff-and-location baseline: positive means contact farther out front than the hitter's ideal (earlier) and negative means deeper (later). It is not shaded because it is not on the 100 scale.</p>
+    <h2>Next season</h2>
     <p>Next season is a projection of the pitcher's Deception+ for the following season ({{PROJ_NEXT_SEASON}} on the latest rows) from this season and the one before it, pulled toward 100. Its typical miss against what happened is {{PROJ_RMSE}} points, against {{PROJ_RMSE_RAW}} for using this season's score as the guess; hover a value for its 80% range.</p>
-    <p>Role, the tag beside each name, comes from each pitcher's real share of appearances that were starts: {{ROLE_GS_MIN}} or more is a starter (SP), under {{ROLE_GS_MAX}} is a reliever (RP), and anything between is mixed (MR). Where that isn't available, role falls back to a proxy from median pitches per appearance: {{ROLE_SP_MIN}} or more is a starter, under {{ROLE_RP_MAX}} is a reliever.</p>
-    <p>Deception+ has a full-season reliability of r={{COMPOSITE_R}} (split-half, Spearman-Brown corrected) and a year-over-year correlation of r={{YOY_R}} across every scored pitcher and pair of consecutive seasons ({{YOY_QUAL_R}} among the {{YOY_QUAL_N}} pairs where the pitcher qualified in both seasons). Among its members {{MOST_LABEL}} is the most reliable (r={{MOST_R}}) and {{LEAST_LABEL}} the least (r={{LEAST_R}}). Called strike was removed from the score and this table because it is stable within a season but does not carry over between seasons (year-over-year r={{YOY_CALLEDSTRIKE}}). Deception+ correlates r={{STUFF_R}} with Stuff+, so the score is not independent of pitch quality. The dashboard has its numbers and shows where that relationship sits.</p>
-    <p>Pitch data comes from Baseball Savant (Statcast). Stuff+ comes from FanGraphs and was entered by hand. This project is independent and not affiliated with MLB, Baseball Savant, or FanGraphs. The <a class="lb-link" href="__DASHBOARD_URL__">dashboard</a> has the checks, and the <a class="lb-link" href="__METHODOLOGY_URL__">methodology page</a> has the full method, the validation of the pitch models, and the audit log.</p>
-  </div>
+    <h2>Role</h2>
+    <p>The tag beside each name comes from each pitcher's real share of appearances that were starts: {{ROLE_GS_MIN}} or more is a starter (SP), under {{ROLE_GS_MAX}} is a reliever (RP), and anything between is mixed (MR). Where that isn't available, role falls back to a proxy from median pitches per appearance: {{ROLE_SP_MIN}} or more is a starter, under {{ROLE_RP_MAX}} is a reliever.</p>
+    <h2>How far to trust it</h2>
+    <p>Deception+ has a full-season reliability of r={{COMPOSITE_R}} (split-half, Spearman-Brown corrected) and a year-over-year correlation of r={{YOY_R}} across every scored pitcher and pair of consecutive seasons ({{YOY_QUAL_R}} among the {{YOY_QUAL_N}} pairs where the pitcher qualified in both seasons). Among its members {{MOST_LABEL}} is the most reliable (r={{MOST_R}}) and {{LEAST_LABEL}} the least (r={{LEAST_R}}). Called strike was removed from the score and this table because it is stable within a season but does not carry over between seasons (year-over-year r={{YOY_CALLEDSTRIKE}}). Deception+ correlates r={{STUFF_R}} with Stuff+, so the score is not independent of pitch quality. The <a class="dx-link" href="__DASHBOARD_URL__">dashboard</a> has its numbers and shows where that relationship sits.</p>
+  </details>
 
-</div>
+  <footer class="dx-footnote">
+    Pitch data comes from Baseball Savant (Statcast). Stuff+ comes from FanGraphs and was entered by hand. This project is independent and not affiliated with MLB, Baseball Savant, or FanGraphs. The <a href="__DASHBOARD_URL__">dashboard</a> has the checks, and the <a href="__METHODOLOGY_URL__">methodology page</a> has the full method, the validation of the pitch models, and the audit log.
+  </footer>
+
+</main>
 </div>
 <script>
 (function() {
   var ROWS = __ROWS_JSON__;
-  var root = document.querySelector('.lbroot');
+  var root = document.querySelector('.dxroot');
   function cssVar(name) { return getComputedStyle(root).getPropertyValue(name).trim(); }
 
   var CI_PAIRS = { whiff_index: ['whiff_ci_lo', 'whiff_ci_hi'], chase_index: ['chase_ci_lo', 'chase_ci_hi'],
@@ -239,7 +214,8 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
                    KC: 'Knuckle curve', CH: 'Changeup', FS: 'Splitter' };
 
   var NARROW = window.matchMedia('(max-width: 960px)');   // below this width a row is tapped to show the columns that are hidden
-  var state = { sortKey: 'deception_plus', sortDir: -1, search: '', season: 'all', role: 'all', qualifiedOnly: true };
+  var DEFAULTS = { search: '', season: 'all', role: 'all', qualifiedOnly: true };
+  var state = { sortKey: 'deception_plus', sortDir: -1, search: DEFAULTS.search, season: DEFAULTS.season, role: DEFAULTS.role, qualifiedOnly: DEFAULTS.qualifiedOnly };
 
   function cellColor(val) {
     if (val === null || val === undefined) return 'transparent';
@@ -276,6 +252,10 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
     return (v > 0 ? '+' : '') + v.toFixed(1) + (v > 0 ? ' early' : ' late');
   }
 
+  function isFiltered() {
+    return state.search !== DEFAULTS.search || state.season !== DEFAULTS.season || state.role !== DEFAULTS.role || state.qualifiedOnly !== DEFAULTS.qualifiedOnly;
+  }
+
   function render() {
     var filtered = ROWS.filter(function(r) {
       if (state.qualifiedOnly && !r.qualified) return false;
@@ -294,8 +274,14 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
     });
 
     document.getElementById('rowCount').textContent = filtered.length.toLocaleString() + ' pitcher-seasons';
+    document.getElementById('resetFilters').hidden = !isFiltered();
 
     var body = document.getElementById('lbBody');
+    if (filtered.length === 0) {
+      body.innerHTML = '<tr><td class="lb-empty" colspan="13">No pitcher-seasons match these filters.' +
+        (state.qualifiedOnly ? ' Turning off Qualified only also shows pitchers with small samples.' : '') + ' Use Reset filters to start over.</td></tr>';
+      return;
+    }
     var html = [];
     filtered.forEach(function(r, i) {
       var cls = r.qualified ? '' : ' unqualified';
@@ -329,7 +315,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
       }
       var stuff = r.stuff_plus !== null ? r.stuff_plus.toFixed(0) : '-';
       var cells = ['<td class="mono c4">' + (i + 1) + '</td>',
-                   '<td class="name">' + esc(r.name.split(', ').reverse().join(' ')) + roleTag + '</td>',
+                   '<td class="name">' + esc(r.name.split(', ').reverse().join(' ')) + roleTag + '<span class="season-tag">&rsquo;' + String(r.season).slice(2) + '</span></td>',
                    '<td class="mono c3">' + r.season + '</td>',
                    dpCell(r), projCell(r),
                    indexCell('whiff_index', ''), indexCell('chase_index', ' c5'), indexCell('weak_index', ' c3'),
@@ -379,20 +365,44 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr.row')) { e.preventDefault(); toggleDetail(e.target); }
   });
   NARROW.addEventListener('change', render);
+
+  // a pill group (season, role) behaves like a radio group: one value is active and the state follows it
+  function setGroup(id, value) {
+    document.querySelectorAll('#' + id + ' button').forEach(function(b) {
+      var on = b.dataset.value === value;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function bindGroup(id, key) {
+    var group = document.getElementById(id);
+    group.setAttribute('role', 'group');
+    setGroup(id, state[key]);
+    group.addEventListener('click', function(e) {
+      var btn = e.target.closest('button');
+      if (!btn) return;
+      state[key] = btn.dataset.value;
+      setGroup(id, state[key]);
+      render();
+    });
+  }
+  bindGroup('seasonFilter', 'season');
+  bindGroup('roleFilter', 'role');
+
   document.getElementById('searchBox').addEventListener('input', function(e) {
     state.search = e.target.value.trim().toLowerCase();
     render();
   });
-  document.getElementById('seasonFilter').addEventListener('change', function(e) {
-    state.season = e.target.value;
-    render();
-  });
-  document.getElementById('roleFilter').addEventListener('change', function(e) {
-    state.role = e.target.value;
-    render();
-  });
   document.getElementById('qualifiedOnly').addEventListener('change', function(e) {
     state.qualifiedOnly = e.target.checked;
+    render();
+  });
+  document.getElementById('resetFilters').addEventListener('click', function() {
+    state.search = DEFAULTS.search; state.season = DEFAULTS.season; state.role = DEFAULTS.role; state.qualifiedOnly = DEFAULTS.qualifiedOnly;
+    document.getElementById('searchBox').value = '';
+    document.getElementById('qualifiedOnly').checked = DEFAULTS.qualifiedOnly;
+    setGroup('seasonFilter', state.season);
+    setGroup('roleFilter', state.role);
     render();
   });
 

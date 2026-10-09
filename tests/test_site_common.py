@@ -185,9 +185,25 @@ def test_the_leaderboard_opens_on_a_pitcher_when_linked_with_a_hash():
 def test_each_page_starts_with_its_h1_and_has_main_and_footer_landmarks():
     import re
 
-    for template in ("templates/dashboard.html", "templates/methodology.html"):
+    for template in ("templates/dashboard.html", "templates/methodology.html", "templates/leaderboard.html"):
         text = open(template, encoding="utf-8").read()
         headings = re.findall(r"<(h[1-6])\b", text)
 
         assert headings[0] == "h1" and headings.count("h1") == 1, template
         assert "<main " in text and "</main>" in text and "<footer " in text and 'href="#main"' in text, template
+
+
+def test_the_leaderboard_shares_the_stylesheet_and_its_filters_are_labelled_pill_groups():
+    text = open("templates/leaderboard.html", encoding="utf-8").read()
+
+    assert "__SHARED_HEAD__" in text and 'class="dxroot lb"' in text and "lbroot" not in text
+    for group in ("seasonFilter", "roleFilter"):
+        assert f'id="{group}"' in text and f'bindGroup(\'{group}\'' in text
+    assert 'id="resetFilters"' in text and "aria-live" in text            # a reset control and an announced row count
+    assert "season-tag" in text                                           # the season stays visible beside the name on a phone
+
+
+def test_the_leaderboard_builder_supplies_the_shared_head():
+    import build_leaderboard
+
+    assert "shared_head()" in open(build_leaderboard.__file__, encoding="utf-8").read()
