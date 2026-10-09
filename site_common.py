@@ -39,10 +39,13 @@ FAVICON = (
     "%3Ctext x='16' y='23' font-family='Arial,sans-serif' font-size='20' font-weight='700' "
     "text-anchor='middle' fill='%23e8a33d'%3ED%2B%3C/text%3E%3C/svg%3E"
 )
-STANDALONE_BODY_STYLE = (
-    "<style>html,body{margin:0;background:#f2f5f8}"
-    "@media (prefers-color-scheme:dark){html,body{background:#10151c}}</style>"
+# the page ground matches --bg; an explicit light or dark choice in the artifact host wins over the system setting
+BODY_STYLE = (
+    "<style>html,body{margin:0;background:#f4f6f8}"
+    '@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body{background:#10151c}}'
+    ':root[data-theme="dark"] body{background:#10151c}</style>'
 )
+STANDALONE_BODY_STYLE = BODY_STYLE
 TOKEN_PATTERN = re.compile(r"\{\{([A-Z0-9_]+)\}\}")
 PAYLOAD_PATTERN = re.compile(r"__[A-Z0-9_]+__")
 
@@ -80,8 +83,8 @@ def shared_head() -> str:
 
 def head_block(title: str, description: str, artifact_mode: bool = False) -> str:
     if artifact_mode:
-        # the artifact host supplies charset, viewport and the document skeleton
-        return f"<title>{html.escape(title)}</title>\n"
+        # the artifact host supplies charset, viewport and the document skeleton; the body ground is still ours to set
+        return f"<title>{html.escape(title)}</title>\n{BODY_STYLE}\n"
     desc = html.escape(description, quote=True)
     return (
         '<meta charset="utf-8">\n'

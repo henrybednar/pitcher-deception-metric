@@ -207,3 +207,10 @@ def test_the_leaderboard_builder_supplies_the_shared_head():
     import build_leaderboard
 
     assert "shared_head()" in open(build_leaderboard.__file__, encoding="utf-8").read()
+
+
+def test_the_artifact_head_names_the_page_first_and_sets_the_page_ground_for_both_themes():
+    head = sc.head_block("Deception+", "d", artifact_mode=True)
+
+    assert head.startswith("<title>Deception+</title>")                    # the host reads the title from the first 8KB
+    assert "#f4f6f8" in head and '[data-theme="dark"] body' in head and "prefers-color-scheme:dark" in head

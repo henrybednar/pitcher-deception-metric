@@ -103,7 +103,7 @@
 .dx-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; display: flex; flex-direction: column; gap: 3.25rem; }
 
 /* top bar: one nav across the pages, with the current section highlighted on the dashboard */
-.dx-topbar { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); }
+.dx-topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); }
 .dx-topbar-inner { max-width: 980px; margin: 0 auto; padding: 0 1.25rem; display: flex; align-items: center; gap: 1rem; height: 50px; }
 .dx-brand { font-family: var(--font-display); font-weight: 600; font-size: 19px; color: var(--text-primary); text-decoration: none; flex-shrink: 0; }
 .dx-brand b { color: var(--accent); font-weight: 600; }
