@@ -122,15 +122,31 @@ def render_page(template_path: str, *, title: str, description: str, artifact_mo
     )
 
 
-def format_gain(g: dict) -> str:
-    return f"{g['gain']:+.3f} [{g['lo']:+.3f}, {g['hi']:+.3f}]"
+FOREST_W, FOREST_H = 170, 22
 
 
-def gain_cell(g: dict) -> str:
-    """A table cell for a gain: the gain on one line and its 95% interval under it, shaded when the interval is above zero."""
-    shade = "dx-pass" if g["lo"] > 0 else ""
-    return (f'<td class="{shade}"><span class="dx-gain">{g["gain"]:+.3f}</span>'
-            f'<span class="dx-ci">[{g["lo"]:+.3f}, {g["hi"]:+.3f}]</span></td>')
+def forest_svg(g: dict, lo_dom: float, hi_dom: float) -> str:
+    """A dot (the gain) and a line (its 95% interval) on a scale shared by every row, with a dashed zero line.
+    The mark turns green when the interval is above zero."""
+    def x(v: float) -> float:
+        return 4 + (v - lo_dom) / (hi_dom - lo_dom) * (FOREST_W - 8)
+
+    mid = FOREST_H / 2
+    label = f'gain {g["gain"]:+.3f}, 95% interval {g["lo"]:+.3f} to {g["hi"]:+.3f}'
+    return (f'<svg class="dx-forest{" clear" if g["lo"] > 0 else ""}" viewBox="0 0 {FOREST_W} {FOREST_H}" role="img" aria-label="{label}">'
+            f'<line class="zero" x1="{x(0):.1f}" x2="{x(0):.1f}" y1="1" y2="{FOREST_H - 1}"/>'
+            f'<line class="ci" x1="{x(g["lo"]):.1f}" x2="{x(g["hi"]):.1f}" y1="{mid}" y2="{mid}"/>'
+            f'<circle class="pt" cx="{x(g["gain"]):.1f}" cy="{mid}" r="4.5"/></svg>')
+
+
+def bar_cell(text: str, lo: float = 0.0, hi: float = 1.0) -> str:
+    """A number with a thin bar under it showing where it sits between lo and hi (a correlation, so 0 to 1)."""
+    esc_text = html.escape(str(text), quote=True)
+    try:
+        share = min(1.0, max(0.0, (float(text) - lo) / (hi - lo)))
+    except ValueError:
+        return f"<td>{esc_text}</td>"
+    return f'<td><span class="dx-barcell">{esc_text}<span class="dx-minibar" aria-hidden="true"><i style="--v:{share:.3f}"></i></span></span></td>'
 
 
 def pitch_type_rows(summary: dict) -> str:
@@ -151,19 +167,25 @@ def pitch_type_rows(summary: dict) -> str:
 
 
 def outcome_table_rows(validation: dict) -> str:
-    """Rows of the on-field validation table: for each outcome, cross-validated R2 of Stuff+ and Location+ and with Deception+
-    added, then the same with last season's own result in the model, each gain with its 95% interval (shaded when the
-    interval is above zero)."""
+    """Rows of the on-field table: for each outcome, cross-validated R2 without and with Deception+ added and a forest plot of the gain
+    (dot) and its 95% interval (line), first against Stuff+ and Location+ alone, then also with last season's own result."""
     esc = lambda value: html.escape(str(value), quote=True)
+    outcomes = list(validation["outcomes"].values())
+    gains = [g for o in outcomes for g in (o["deception_over_stuff_location"], o["deception_over_own_stuff_location"])]
+    lo_dom, hi_dom = min(0.0, min(g["lo"] for g in gains)), max(g["hi"] for g in gains)
+    pad = (hi_dom - lo_dom) * 0.06
+    lo_dom, hi_dom = lo_dom - pad, hi_dom + pad
+
+    def cell(before: float, after: float, g: dict) -> str:
+        return (f'<td class="dx-forest-cell"><span class="dx-r2">R&sup2; {before:.3f} to {after:.3f}</span>'
+                f'<span class="dx-forest-row">{forest_svg(g, lo_dom, hi_dom)}<span class="dx-gain">{g["gain"]:+.3f}</span></span></td>')
+
     rows = []
-    for o in validation["outcomes"].values():
+    for o in outcomes:
         r2 = o["r2"]
-        g1, g2 = o["deception_over_stuff_location"], o["deception_over_own_stuff_location"]
-        cells = [f'<th scope="row">{esc(o["label"])}</th>', f'<td>{r2["stuff_location"]:.3f}</td>', f'<td>{r2["stuff_location_deception"]:.3f}</td>',
-                 gain_cell(g1),
-                 f'<td>{r2["own_stuff_location"]:.3f}</td>', f'<td>{r2["own_stuff_location_deception"]:.3f}</td>',
-                 gain_cell(g2)]
-        rows.append("<tr>" + "".join(cells) + "</tr>")
+        rows.append(f'<tr><th scope="row">{esc(o["label"])}</th>'
+                    + cell(r2["stuff_location"], r2["stuff_location_deception"], o["deception_over_stuff_location"])
+                    + cell(r2["own_stuff_location"], r2["own_stuff_location_deception"], o["deception_over_own_stuff_location"]) + "</tr>")
     return "\n".join(rows)
 
 
@@ -208,15 +230,17 @@ COEFFICIENT_ROWS = [("stuff_plus", "Stuff+"), ("location_plus", "Location+"), ("
 
 def outcome_coefficient_rows(validation: dict) -> str:
     """Rows of the member table: the change in the next season's strikeout rate (percentage points) and xwOBA allowed (points of
-    xwOBA) per standard deviation of each score, with the others held fixed, and the p-value."""
+    xwOBA) per standard deviation of each score, with the others held fixed, and the p-value under each, shaded when p < 0.05."""
     esc = lambda value: html.escape(str(value), quote=True)
     k, x = validation["coefficients"]["k_pct"], validation["coefficients"]["xwoba"]
+
+    def cell(c: dict, scale: int, digits: int) -> str:
+        return (f'<td class="{"dx-sig" if c["p"] < 0.05 else ""}"><span class="dx-gain">{c["coef"] * scale:+.{digits}f}</span>'
+                f'<span class="dx-ci">p {esc(p_text(c["p"]))}</span></td>')
+
     rows = []
     for key, label in COEFFICIENT_ROWS:
-        cells = [f'<th scope="row">{esc(label)}</th>',
-                 f'<td class="{"dx-pass" if k[key]["p"] < 0.05 else ""}">{k[key]["coef"] * 100:+.2f} (p {esc(p_text(k[key]["p"]))})</td>',
-                 f'<td class="{"dx-pass" if x[key]["p"] < 0.05 else ""}">{x[key]["coef"] * 1000:+.1f} (p {esc(p_text(x[key]["p"]))})</td>']
-        rows.append("<tr>" + "".join(cells) + "</tr>")
+        rows.append(f'<tr><th scope="row">{esc(label)}</th>' + cell(k[key], 100, 2) + cell(x[key], 1000, 1) + "</tr>")
     return "\n".join(rows)
 
 
@@ -229,9 +253,9 @@ def component_table_rows(components: list) -> str:
         in_score, in_cls = ("In the score", "yes") if c["in_score"] else ("Left out", "no")
         rows.append(
             f'<tr class="{total}"><th scope="row">{html.escape(c["label"])}</th>'
-            f'<td>{esc(c["reliability"])}</td><td>{esc(c["yoy"])}</td><td>{esc(c["delta"])}</td><td>{esc(c["p"])}</td>'
-            f'<td>{esc(c["n"])}</td>'
-            f'<td class="dx-badge-cell"><span class="dx-badge dx-badge-{cls}">{verdict}</span></td>'
+            + bar_cell(c["reliability"]) + bar_cell(c["yoy"]) + f'<td>{esc(c["delta"])}</td>'
+            f'<td class="dx-badge-cell"><span class="dx-badge dx-badge-{cls}">{verdict}</span>'
+            f'<span class="dx-ci">p {esc(c["p"])} &middot; n {esc(c["n"])}</span></td>'
             f'<td class="dx-badge-cell"><span class="dx-badge dx-badge-{in_cls}">{in_score}</span></td></tr>'
         )
     return "\n".join(rows)

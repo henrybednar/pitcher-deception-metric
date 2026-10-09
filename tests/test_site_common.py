@@ -48,7 +48,7 @@ def test_the_component_table_escapes_every_cell():
     html_rows = sc.component_table_rows([row])
 
     assert "<b>Whiff</b>" not in html_rows and "&lt;b&gt;" in html_rows
-    assert "<td><0.0001</td>" not in html_rows and "<td>&lt;0.0001</td>" in html_rows
+    assert "p <0.0001" not in html_rows and "p &lt;0.0001" in html_rows
 
 
 def test_pitch_type_rows_list_each_type_with_the_sample_and_reliability_of_whiff_and_chase():
@@ -142,12 +142,44 @@ def test_each_page_links_to_the_other_two():
             assert token in text, (template, token)
 
 
-def test_a_gain_cell_shades_only_when_the_interval_is_above_zero_and_stacks_the_interval_under_the_gain():
-    clear = sc.gain_cell({"gain": 0.071, "lo": 0.032, "hi": 0.110})
-    unclear = sc.gain_cell({"gain": -0.002, "lo": -0.010, "hi": 0.004})
+def test_a_forest_mark_turns_green_only_when_its_interval_is_above_zero_and_sits_on_the_shared_scale():
+    clear = sc.forest_svg({"gain": 0.071, "lo": 0.032, "hi": 0.110}, -0.02, 0.12)
+    unclear = sc.forest_svg({"gain": -0.002, "lo": -0.010, "hi": 0.004}, -0.02, 0.12)
 
-    assert clear.startswith('<td class="dx-pass">') and "+0.071" in clear and "[+0.032, +0.110]" in clear
-    assert unclear.startswith('<td class="">') and "-0.002" in unclear and "[-0.010, +0.004]" in unclear
+    assert 'class="dx-forest clear"' in clear and 'class="dx-forest"' in unclear
+    assert "gain +0.071, 95% interval +0.032 to +0.110" in clear                 # the mark is described for a screen reader
+    assert float(clear.split('class="zero" x1="')[1].split('"')[0]) == float(unclear.split('class="zero" x1="')[1].split('"')[0])   # zero sits in the same place on every row
+
+
+def test_the_on_field_rows_hold_two_forest_plots_each_with_the_r2_before_and_after():
+    gains = {"gain": 0.05, "lo": 0.01, "hi": 0.09}
+    validation = {"outcomes": {"k_pct": {"label": "strikeout rate", "r2": {"stuff_location": 0.2, "stuff_location_deception": 0.25,
+                                                                          "own_stuff_location": 0.4, "own_stuff_location_deception": 0.41},
+                                         "deception_over_stuff_location": gains, "deception_over_own_stuff_location": {"gain": 0.01, "lo": -0.01, "hi": 0.03}}}}
+
+    row = sc.outcome_table_rows(validation)
+
+    assert row.count("<svg") == 2 and row.count("dx-forest clear") == 1
+    assert "R&sup2; 0.200 to 0.250" in row and "R&sup2; 0.400 to 0.410" in row
+
+
+def test_the_coefficient_table_shows_the_p_value_under_each_value_and_marks_only_the_significant_ones():
+    cell = {"coef": 0.0123, "p": 0.0004}
+    quiet = {"coef": 0.001, "p": 0.4}
+    validation = {"coefficients": {"k_pct": {key: (cell if key == "whiff_index" else quiet) for key, _ in sc.COEFFICIENT_ROWS},
+                                   "xwoba": {key: quiet for key, _ in sc.COEFFICIENT_ROWS}}}
+
+    rows = sc.outcome_coefficient_rows(validation).splitlines()
+    whiff = next(r for r in rows if ">Whiff<" in r)
+
+    assert '<td class="dx-sig"><span class="dx-gain">+1.23</span><span class="dx-ci">p &lt;0.001</span>' in whiff
+    assert whiff.count("dx-sig") == 1
+
+
+def test_a_correlation_cell_draws_a_bar_scaled_from_zero_to_one_and_survives_text():
+    assert "--v:0.614" in sc.bar_cell("0.614")
+    assert "--v:1.000" in sc.bar_cell("1.7") and "--v:0.000" in sc.bar_cell("-0.2")      # clamped
+    assert sc.bar_cell("n/a") == "<td>n/a</td>"
 
 
 def test_the_component_table_marks_pass_and_status_with_labelled_badges_not_colour_alone():
