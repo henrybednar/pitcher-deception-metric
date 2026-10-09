@@ -112,10 +112,10 @@ tr.detail td { text-align: left; white-space: normal; padding: 6px 16px 12px; co
 
   <div class="lb-head">
     <h1>Leaderboard</h1>
-    <p class="dx-lede">Every scored pitcher-season, 2024 to 2026, from results beyond what the pitch's measured traits predict. Search a name, sort by any column, and click a row for that pitcher's scores by pitch type. Data through {{DATA_THROUGH}}.</p>
+    <p class="dx-lede">Every scored pitcher-season, 2024 to 2026. Search a name, sort any column, and click a row for pitch-type scores. Data through {{DATA_THROUGH}}.</p>
   </div>
 
-  <p class="dx-note">Qualified relievers still average {{RP_MEAN}} against {{SP_MEAN}} for starters even after the model controls for in-game fatigue and times through the order. Use the role filter to compare like with like.</p>
+  <p class="dx-note">Qualified relievers average {{RP_MEAN}} against {{SP_MEAN}} for starters even after adjusting for fatigue. Use the role filter to compare like with like.</p>
 
   <div class="lb-controls" role="search">
     <input type="search" id="searchBox" class="dx-input" placeholder="Search a pitcher" aria-label="Search player" autocomplete="off">
@@ -177,23 +177,23 @@ tr.detail td { text-align: left; white-space: normal; padding: 6px 16px 12px; co
   <details class="dx-more lb-about">
     <summary>About these columns and the method</summary>
     <h2>What the numbers are</h2>
-    <p>Each index is the pitcher's actual rate minus the rate a model expects from the pitch's measured traits (velocity, spin, movement, location), the batter, the catcher, the count, the park, and pitcher-batter handedness. Small samples are shrunk toward the average. 100 is the average scored pitcher-season for each index and the average qualified pitcher-season for Deception+, and 10 points is one standard deviation. Deception+ is a reliability-weighted average of {{N_COMPOSITE}} components: whiff, chase, weak contact, timing and whiff miss distance.</p>
+    <p>Each index is a pitcher's actual rate minus what a model expects from the pitch's measured traits, the batter, catcher, count, park and handedness. Small samples are shrunk toward the average. 100 is average and 10 points is one step (one standard deviation). Deception+ is a reliability-weighted average of {{N_COMPOSITE}} indexes: whiff, chase, weak contact, timing and whiff miss distance.</p>
     <h2>Qualified</h2>
-    <p>Qualified means {{QUALIFY_TEXT}}. Pitchers below that bar are still scored, shrunk toward 100, and show up when Qualified only is turned off.</p>
+    <p>Qualified means {{QUALIFY_TEXT}}. Other pitchers are still scored, shrunk toward 100, and appear when Qualified only is off.</p>
     <h2>By pitch type</h2>
-    <p>Click a row to open its whiff and chase scores for each pitch type with at least {{PT_MIN_N}} swings (whiff) or pitches outside the zone (chase). Each pitch type is scored against the same pitch type only, with the same shrinkage and 100/10 scale as the season scores. They are noisier than the season score: split-half reliability runs {{PT_WHIFF_REL_RANGE}} for whiff and {{PT_CHASE_REL_RANGE}} for chase, depending on the pitch type. The <a class="dx-link" href="__METHODOLOGY_URL__">methodology page</a> has the table.</p>
+    <p>Click a row for whiff and chase scores by pitch type (at least {{PT_MIN_N}} swings, or pitches outside the zone for chase). Each type is scored against the same type only. They are noisier than the season score: reliability runs {{PT_WHIFF_REL_RANGE}} for whiff and {{PT_CHASE_REL_RANGE}} for chase, where 0 is luck and 1 is a perfect match. The <a class="dx-link" href="__METHODOLOGY_URL__">methodology page</a> has the table.</p>
     <h2>Timing, whiff miss and ground ball</h2>
-    <p>Timing is the gap between where the bat met the ball and the hitter's estimated ideal contact depth, so early and late contact both count. It is scored on swings that made contact. Whiff miss distance is Statcast's distance between ball and barrel at closest approach on swings and misses. *Ground ball is scored and shown but is not part of Deception+, because it is a different skill from the other components (its index correlates at most {{GB_CORR_MAX}} with them). Timing dir is the signed timing gap in inches on contact swings, against a stuff-and-location baseline: positive means contact farther out front than the hitter's ideal (earlier) and negative means deeper (later). It is not shaded because it is not on the 100 scale.</p>
+    <p>Timing is how far the bat met the ball from the hitter's ideal contact depth, early or late, on contact swings. Timing dir keeps the sign in inches: positive is early, negative is late, and it is unshaded because it is not on the 100 scale. Whiff miss distance is how far the barrel was from the ball on swings and misses. *Ground ball is shown but is not in Deception+ because it is a different skill (r at most {{GB_CORR_MAX}} with the others).</p>
     <h2>Next season</h2>
-    <p>Next season is a projection of the pitcher's Deception+ for the following season ({{PROJ_NEXT_SEASON}} on the latest rows) from this season and the one before it, pulled toward 100. Its typical miss against what happened is {{PROJ_RMSE}} points, against {{PROJ_RMSE_RAW}} for using this season's score as the guess; hover a value for its 80% range.</p>
+    <p>A projection of Deception+ for {{PROJ_NEXT_SEASON}} (latest rows) from this season and the one before, pulled toward 100. It misses by {{PROJ_RMSE}} points on average, against {{PROJ_RMSE_RAW}} for repeating this season's score. Hover a value for its 80% range.</p>
     <h2>Role</h2>
-    <p>The tag beside each name comes from each pitcher's real share of appearances that were starts: {{ROLE_GS_MIN}} or more is a starter (SP), under {{ROLE_GS_MAX}} is a reliever (RP), and anything between is mixed (MR). Where that isn't available, role falls back to a proxy from median pitches per appearance: {{ROLE_SP_MIN}} or more is a starter, under {{ROLE_RP_MAX}} is a reliever.</p>
+    <p>Role comes from the share of a pitcher's appearances that were starts: {{ROLE_GS_MIN}} or more is SP, under {{ROLE_GS_MAX}} is RP, and in between is MR. Without that data it falls back to median pitches per appearance ({{ROLE_SP_MIN}} or more is a starter, under {{ROLE_RP_MAX}} a reliever).</p>
     <h2>How far to trust it</h2>
-    <p>Deception+ has a full-season reliability of r={{COMPOSITE_R}} (split-half, Spearman-Brown corrected) and a year-over-year correlation of r={{YOY_R}} across every scored pitcher and pair of consecutive seasons ({{YOY_QUAL_R}} among the {{YOY_QUAL_N}} pairs where the pitcher qualified in both seasons). Among its members {{MOST_LABEL}} is the most reliable (r={{MOST_R}}) and {{LEAST_LABEL}} the least (r={{LEAST_R}}). Called strike was removed from the score and this table because it is stable within a season but does not carry over between seasons (year-over-year r={{YOY_CALLEDSTRIKE}}). Deception+ correlates r={{STUFF_R}} with Stuff+, so the score is not independent of pitch quality. The <a class="dx-link" href="__DASHBOARD_URL__">dashboard</a> has its numbers and shows where that relationship sits.</p>
+    <p>Odd games against even games agree at r={{COMPOSITE_R}}, and one season against the next at r={{YOY_R}} ({{YOY_QUAL_R}} across the {{YOY_QUAL_N}} pairs where the pitcher qualified both years). {{MOST_LABEL}} is the steadiest piece (r={{MOST_R}}) and {{LEAST_LABEL}} the noisiest (r={{LEAST_R}}). Deception+ correlates r={{STUFF_R}} with Stuff+, so it is not independent of pitch quality. Called strike was dropped because it does not carry over between seasons (r={{YOY_CALLEDSTRIKE}}). The <a class="dx-link" href="__DASHBOARD_URL__">dashboard</a> has the checks.</p>
   </details>
 
   <footer class="dx-footnote">
-    Pitch data comes from Baseball Savant (Statcast). Stuff+ comes from FanGraphs and was entered by hand. This project is independent and not affiliated with MLB, Baseball Savant, or FanGraphs. The <a href="__DASHBOARD_URL__">dashboard</a> has the checks, and the <a href="__METHODOLOGY_URL__">methodology page</a> has the full method, the validation of the pitch models, and the audit log.
+    Pitch data: Baseball Savant (Statcast). Stuff+: FanGraphs, entered by hand. Independent of MLB, Baseball Savant and FanGraphs. <a href="__DASHBOARD_URL__">Dashboard</a> &middot; <a href="__METHODOLOGY_URL__">Methodology</a>
   </footer>
 
 </main>

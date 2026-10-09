@@ -51,7 +51,7 @@ __SHARED_HEAD__
       </div>
       <div class="dx-read">
         <h3>How to read the charts</h3>
-        <p>AUC measures how well a model ranks pitches: 0.5 is chance and 1.0 is perfect. The score needs a stricter property, that predicted rates are right on average within every slice of pitches. The calibration chart checks it, and a slope of 1.0 means predictions are neither too flat nor too extreme. Log loss, in the table below, scores the predicted probabilities themselves against a constant guess of each pitch type's base rate.</p>
+        <p>AUC: given one pitch that drew a whiff and one that did not, how often the model rates the whiff higher (50% is a coin flip, 100% is perfect). R&sup2;: the share of differences the model explains. Calibration: when the model says 30%, does it happen about 30% of the time? A slope of 1.0 means yes. Log loss scores the predicted probabilities against always guessing the pitch type's base rate, and lower is better.</p>
       </div>
       <div class="dx-read">
         <h3>Where the models are weak</h3>

@@ -285,7 +285,12 @@ def outcome_text(validation: dict) -> dict:
                   f"{per_sd('xwoba', 'whiff_index')} for whiff. The rule written down for timing is to demote it from the score if, on both outcomes, the upper end of its "
                   f"interval is under {rule['share']:.0%} of whiff's effect. That rule is not met "
                   f"(ratios {rule['outcomes']['k_pct']['ratio']:+.2f} for strikeout rate and {rule['outcomes']['xwoba']['ratio']:+.2f} for xwOBA), so it stays in.")
+    k_r2, k_gain = first["r2"], first["deception_over_stuff_location"]
+    example = (f"{first['label'].lower()} goes from {k_r2['stuff_location']:.0%} explained to {k_r2['stuff_location_deception']:.0%} "
+               f"with Deception+ added, a gain of {k_gain['gain'] * 100:.1f} points "
+               f"(95% interval {k_gain['lo'] * 100:.1f} to {k_gain['hi'] * 100:.1f})")
     return {
+        "OV_EXAMPLE": example,
         "OV_PAIRS": f"{first['n']:,}", "OV_PITCHERS": f"{first['pitchers']:,}", "OV_MIN_PA": str(validation["min_next_pa"]),
         "OV_SUMMARY": (f"Beyond Stuff+ and Location+, Deception+ adds clearly (95% interval above zero) for {join_labels(clear('deception_over_stuff_location'))}. "
                        f"Beyond last season's own result as well, it adds clearly for {join_labels(clear('deception_over_own_stuff_location'))}."),
@@ -352,8 +357,16 @@ def validation_text(validation: dict) -> dict:
         values = [r[metric] for r in outcomes[label]["by_pitch_type"]]
         return f"{min(values):.2f} to {max(values):.2f}"
 
+    def span_pct(label: str, metric: str) -> str:
+        values = [r[metric] for r in outcomes[label]["by_pitch_type"]]
+        return f"{min(values) * 100:.0f}% to {max(values) * 100:.0f}%"
+
     member_slopes = [outcomes[k]["calibration"]["slope"] for k in COMPOSITE_OUTCOMES]
     return {
+        "VAL_AUC_WHIFF_PCT": span_pct("whiff", "auc"),
+        "VAL_AUC_CHASE_PCT": span_pct("chase", "auc"),
+        "VAL_R2_TIMING_PCT": span_pct("timing", "r2"),
+        "VAL_R2_WHIFFMISS_PCT": span_pct("whiffmiss", "r2"),
         "VAL_AUC_WHIFF": span("whiff", "auc"),
         "VAL_AUC_CHASE": span("chase", "auc"),
         "VAL_AUC_GB": span("gb", "auc"),
@@ -573,6 +586,7 @@ def main() -> None:
         "MOST_R": fmt_r(rel[most]),
         "CORR_WHIFF_TIMING": fmt_r(float(qualified["whiff_index"].corr(qualified["timing_index"]))),
         "DELTA_TIMING": fmt_delta(float(pv.loc["timing", "cv_delta_r2"])),
+        "DELTA_TIMING_PCT": f"{float(pv.loc['timing', 'cv_delta_r2']) * 100:.1f}",
         "P_CALLEDSTRIKE": fmt_p(float(pv.loc["calledstrike", "p_value"])),
         "YOY_ALIGN": fmt_r(yoy_by_component["align"]),
         "YOY_CALLEDSTRIKE": fmt_r(yoy_by_component["calledstrike"]),
@@ -584,6 +598,8 @@ def main() -> None:
         "DRIVER_R2_RANGE": f"{min(driver_r2):.2f} to {max(driver_r2):.2f}",
         "SEQ_R2_RANGE": f"{min(seq_r2):.4f} to {max(seq_r2):.4f}",
         "STUFF_R": fmt_r(stuff["composite"]),
+        "STUFF_R2_PCT": f"{stuff['composite'] ** 2:.0%}",
+        "DRIVER_R2_MAX_PCT": f"{max(driver_r2):.0%}",
         "STUFF_R_BY_SEASON": join_words([f"{fmt_r(r)} in {season}" for season, r in sorted(stuff["by_season"].items())]),
         "YOY_BY_PAIR": join_words([f"{fmt_r(r)} for {pair.replace('-', ' to ')}" for pair, r in correlation_by_pair(yoy, "deception_plus").items()]),
         "YOY_QUAL_BY_PAIR": join_words([f"{fmt_r(r)} for {pair.replace('-', ' to ')}" for pair, r in yoy_q["by_pair"].items()]),

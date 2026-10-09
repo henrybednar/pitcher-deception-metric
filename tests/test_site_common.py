@@ -214,3 +214,26 @@ def test_the_artifact_head_names_the_page_first_and_sets_the_page_ground_for_bot
 
     assert head.startswith("<title>Deception+</title>")                    # the host reads the title from the first 8KB
     assert "#f4f6f8" in head and '[data-theme="dark"] body' in head and "prefers-color-scheme:dark" in head
+
+
+def test_the_dashboard_explains_each_statistic_it_shows_and_every_in_page_link_resolves():
+    import re
+
+    text = open("templates/dashboard.html", encoding="utf-8").read()
+    key = text[text.index('<dl class="dx-glossary">'):text.index("</dl>")]
+
+    for term in ("r (correlation)", "Reliability", "AUC", "R&sup2;", "Calibration slope", "Forecast gain", "<dt>p</dt>", "95% interval", "Percentile"):
+        assert term in key, term
+    ids = set(re.findall(r'\bid="([^"]+)"', text))
+    assert {a for a in re.findall(r'href="#([\w-]+)"', text)} <= ids
+
+
+def test_the_percentage_phrasings_of_the_model_fit_ranges_are_published_keys():
+    import json
+
+    stats = json.load(open("output/site_stats.json", encoding="utf-8"))["text"]
+
+    for key in ("VAL_AUC_WHIFF_PCT", "VAL_AUC_CHASE_PCT", "VAL_R2_TIMING_PCT", "VAL_R2_WHIFFMISS_PCT", "DELTA_TIMING_PCT", "STUFF_R2_PCT",
+                "DRIVER_R2_MAX_PCT", "OV_EXAMPLE"):
+        assert stats[key].strip(), key
+    assert stats["VAL_AUC_WHIFF_PCT"].count("%") == 2 and " to " in stats["VAL_AUC_WHIFF_PCT"]

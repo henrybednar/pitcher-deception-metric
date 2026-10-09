@@ -279,3 +279,9 @@
 .dx-input:hover { border-color: var(--accent); }
 .dx-input:focus-visible { border-color: var(--accent); outline-offset: 1px; }
 .dx-note { background: var(--accent-soft); border-radius: 12px; padding: 12px 16px; font-size: 14.5px; color: var(--text-primary); max-width: 90ch; }
+.dx-glossary { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; margin: 0; }
+.dx-glossary > div { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.dx-glossary dt { font-size: 14.5px; font-weight: 600; color: var(--text-primary); }
+.dx-glossary dd { margin: 3px 0 0; font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
+.dx-glossary small { display: block; margin-top: 5px; font-size: 12.5px; color: var(--text-muted); }
+.dx-section h3[id] { scroll-margin-top: 66px; }
