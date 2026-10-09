@@ -20,6 +20,7 @@ from site_common import (
     outcome_table_rows,
     page_links,
     render_page,
+    reputation_rows,
     shared_head,
 )
 
@@ -59,6 +60,7 @@ def main() -> None:
             "__COMPONENT_ROWS__": component_table_rows(stats["components"]),
             "__OUTCOME_ROWS__": outcome_table_rows(outcome_validation),
             "__OUTCOME_COEF_ROWS__": outcome_coefficient_rows(outcome_validation),
+            "__REPUTATION_ROWS__": reputation_rows(artifact_data["lore"], links["leaderboard"]),
             "__LEADERBOARD_URL__": links["leaderboard"],
             "__METHODOLOGY_URL__": links["methodology"],
         },

@@ -15,6 +15,7 @@ import html
 import json
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 DASHBOARD_FILE = "deception_dashboard.html"
 LEADERBOARD_FILE = "deception_leaderboard.html"
@@ -160,6 +161,37 @@ def outcome_table_rows(validation: dict) -> str:
                  f'<td>{r2["own_stuff_location"]:.3f}</td>', f'<td>{r2["own_stuff_location_deception"]:.3f}</td>',
                  gain_cell(g2)]
         rows.append("<tr>" + "".join(cells) + "</tr>")
+    return "\n".join(rows)
+
+
+def ordinal(n: int) -> str:
+    n = int(n)
+    if 11 <= n % 100 <= 13:
+        return f"{n}th"
+    return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
+
+
+def percentile_cell(value, pct) -> str:
+    """A table cell with a score, its percentile and a thin bar showing where that percentile sits."""
+    if value is None:
+        return "<td>n/a</td>"
+    return (f'<td><span class="dx-pcell">{value:.1f} ({ordinal(pct)})'
+            f'<span class="dx-pbar" aria-hidden="true"><i style="--p:{int(pct)}"></i></span></span></td>')
+
+
+def reputation_rows(lore: list, leaderboard_url: str) -> str:
+    """Rows of the reputation table. Each name links to the leaderboard already searching for that pitcher, so the
+    table needs no script and the reader can go from a name to every season of it."""
+    esc = lambda value: html.escape(str(value), quote=True)
+    rows = []
+    for p in lore:
+        last, _, first = p["name"].partition(", ")
+        href = f"{leaderboard_url}#q={quote(p['name'])}"
+        rows.append(
+            f'<tr><th scope="row"><a class="dx-link" href="{esc(href)}">{esc(f"{first} {last}".strip())}</a></th>'
+            f'<td>{esc(p["season"])}</td><td>{esc(p["n"])}</td>'
+            + percentile_cell(p["deception_plus"], p["dp_pctile"]) + percentile_cell(p["whiff_index"], p["pctile"])
+            + percentile_cell(p["gb_index"], p["gb_pctile"]) + "</tr>")
     return "\n".join(rows)
 
 

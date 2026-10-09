@@ -158,3 +158,36 @@ def test_the_component_table_marks_pass_and_status_with_labelled_badges_not_colo
 
     assert "dx-badge-pass" in kept and ">Pass<" in kept and "dx-badge-yes" in kept and ">In the score<" in kept
     assert "dx-badge-fail" in left_out and ">Fails<" in left_out and "dx-badge-no" in left_out and ">Left out<" in left_out
+
+
+def test_ordinals_handle_the_teens_and_the_100th():
+    assert [sc.ordinal(n) for n in (1, 2, 3, 4, 11, 12, 13, 21, 22, 64, 100)] == \
+        ["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "64th", "100th"]
+
+
+def test_reputation_rows_link_each_name_to_the_leaderboard_search_and_escape_it():
+    lore = [{"name": 'Skubal, <Tarik>', "season": 2025, "n": 1552, "deception_plus": 145.3, "dp_pctile": 100,
+             "whiff_index": 138.5, "pctile": 100, "gb_index": None, "gb_pctile": 3}]
+
+    row = sc.reputation_rows(lore, "deception_leaderboard.html")
+
+    assert 'href="deception_leaderboard.html#q=Skubal%2C%20%3CTarik%3E"' in row
+    assert "&lt;Tarik&gt; Skubal" in row and "<Tarik>" not in row
+    assert "145.3 (100th)" in row and "--p:100" in row and "<td>n/a</td>" in row      # a missing ground-ball index reads n/a, not nan
+
+
+def test_the_leaderboard_opens_on_a_pitcher_when_linked_with_a_hash():
+    text = open("templates/leaderboard.html", encoding="utf-8").read()
+
+    assert "#q=(.+)$" in text and "qualifiedOnly').checked = false" in text
+
+
+def test_each_page_starts_with_its_h1_and_has_main_and_footer_landmarks():
+    import re
+
+    for template in ("templates/dashboard.html", "templates/methodology.html"):
+        text = open(template, encoding="utf-8").read()
+        headings = re.findall(r"<(h[1-6])\b", text)
+
+        assert headings[0] == "h1" and headings.count("h1") == 1, template
+        assert "<main " in text and "</main>" in text and "<footer " in text and 'href="#main"' in text, template

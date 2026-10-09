@@ -116,6 +116,8 @@
 .dxroot h1, .dxroot h2, .dxroot h3 { font-family: var(--font-display); font-weight: 500; text-wrap: balance; margin: 0; color: var(--text-primary); }
 .dxroot p { margin: 0; line-height: 1.65; text-wrap: pretty; }
 .dxroot a { text-underline-offset: 3px; }
+.dx-skip { position: absolute; left: 12px; top: -48px; z-index: 20; background: var(--accent); color: var(--accent-ink); padding: 8px 14px; border-radius: 8px; font-weight: 600; text-decoration: none; }
+.dx-skip:focus { top: 8px; }
 .dx-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; display: flex; flex-direction: column; gap: 3.25rem; }
 
 /* top bar: one nav across the pages, with the current section highlighted on the dashboard */
@@ -150,8 +152,8 @@
 /* score ruler in the hero */
 .dx-ruler { margin: 0; min-width: 0; }
 .dx-ruler svg { display: block; width: 100%; overflow: visible; }
-.dx-ruler .bar { fill: var(--chart-muted); }
-.dx-ruler .bar-qual { fill: var(--series-1); }
+.dx-ruler .bar { fill: var(--border-strong); }
+.dx-ruler .bar-core { fill: var(--chart-muted); }
 .dx-ruler .axis { stroke: var(--border-strong); stroke-width: 1; }
 .dx-ruler .avg { stroke: var(--text-secondary); stroke-width: 1; stroke-dasharray: 3 3; }
 .dx-ruler .mark { stroke: var(--accent); stroke-width: 1.5; }
@@ -163,6 +165,7 @@
 
 /* sections */
 .dx-section { display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 66px; }
+.dx-section + .dx-section { border-top: 1px solid var(--border); padding-top: 2.5rem; }
 .dx-section-head { display: flex; flex-wrap: wrap; gap: 1rem; align-items: baseline; justify-content: space-between; }
 .dx-section h2 { font-size: 26px; }
 .dx-section h3 { font-size: 16.5px; }
@@ -239,7 +242,7 @@
 .dx-badge-fail { color: var(--fail); background: var(--fail-bg); }
 .dx-badge-yes { color: var(--accent); background: var(--accent-soft); }
 .dx-badge-no { color: var(--text-muted); background: var(--surface-2); }
-.dx-pcell { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.dx-pcell { white-space: nowrap; display: inline-flex; flex-direction: column; align-items: flex-end; gap: 5px; }
 .dx-pbar { width: 96px; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
 .dx-pbar i { display: block; height: 100%; width: calc(var(--p) * 1%); background: var(--accent); border-radius: 3px; }
 
@@ -264,8 +267,14 @@
 .dx-footnote { border-top: 1px solid var(--border); padding-top: 1.25rem; font-size: 13px; color: var(--text-muted); line-height: 1.7; }
 .dx-footnote a { color: var(--accent); }
 
+@media (pointer: coarse) {
+  .dx-toggle button { padding: 9px 14px; }
+  .dx-topnav a { padding: 11px 12px; }
+  .dx-more summary, .dx-tableview summary { padding: 10px 0; }
+}
 @media (max-width: 760px) {
   .dx-hero { grid-template-columns: minmax(0, 1fr); }
+  .dx-topnav { -webkit-mask-image: linear-gradient(to right, #000 88%, transparent); mask-image: linear-gradient(to right, #000 88%, transparent); padding-right: 24px; }
   .dx-wrap { gap: 2.75rem; padding-top: 1.5rem; }
 }
 @media (max-width: 480px) {
@@ -283,8 +292,8 @@
 .dx-table tbody th, .dx-table thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
 .dx-row-total th { background: var(--surface-2); }
 </style>
-<div class="dxroot">
-<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Methodology and validation for Deception+, a composite pitcher index built from 5 residual metrics. The page validates the pitch models, explains how a score is built, shows which components are in the score and why, tests the season-level traits that might explain the gap, and lists the known limits and an audit log.</h2>
+<div class="dxroot" id="top">
+<a class="dx-skip" href="#main">Skip to the content</a>
 <header class="dx-topbar">
   <div class="dx-topbar-inner">
     <a class="dx-brand" href="deception_dashboard.html">Deception<b>+</b></a>
@@ -296,7 +305,7 @@
   </div>
 </header>
 
-<div class="dx-wrap" id="top">
+<main class="dx-wrap" id="main">
 
   <div class="dx-hero dx-hero-single">
     <div>
@@ -501,11 +510,11 @@
     </details>
   </div>
 
-  <div class="dx-footnote">
+  <footer class="dx-footnote">
     Pitch data comes from Baseball Savant (Statcast). Stuff+ figures come from FanGraphs, were entered by hand, and are never used by the model. This project is independent and not affiliated with MLB, Baseball Savant, or FanGraphs. <a href="deception_dashboard.html" class="dx-link">&larr; Dashboard</a> <a href="deception_leaderboard.html" class="dx-link">Sortable leaderboard &rarr;</a>
-  </div>
+  </footer>
 
-</div>
+</main>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous"></script>
 <script>

@@ -409,6 +409,16 @@ tr.detail td { text-align: left; white-space: normal; padding: 4px 14px 10px; co
     render();
   });
 
+  // a link such as leaderboard.html#q=Skubal, Tarik opens the table already searching for that pitcher
+  var fromLink = /^#q=(.+)$/.exec(location.hash);
+  if (fromLink) {
+    var wanted = decodeURIComponent(fromLink[1]);
+    document.getElementById('searchBox').value = wanted;
+    document.getElementById('qualifiedOnly').checked = false;
+    state.search = wanted.trim().toLowerCase();
+    state.qualifiedOnly = false;
+  }
+
   render();
 })();
 </script>

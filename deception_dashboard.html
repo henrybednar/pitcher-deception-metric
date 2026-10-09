@@ -116,6 +116,8 @@
 .dxroot h1, .dxroot h2, .dxroot h3 { font-family: var(--font-display); font-weight: 500; text-wrap: balance; margin: 0; color: var(--text-primary); }
 .dxroot p { margin: 0; line-height: 1.65; text-wrap: pretty; }
 .dxroot a { text-underline-offset: 3px; }
+.dx-skip { position: absolute; left: 12px; top: -48px; z-index: 20; background: var(--accent); color: var(--accent-ink); padding: 8px 14px; border-radius: 8px; font-weight: 600; text-decoration: none; }
+.dx-skip:focus { top: 8px; }
 .dx-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; display: flex; flex-direction: column; gap: 3.25rem; }
 
 /* top bar: one nav across the pages, with the current section highlighted on the dashboard */
@@ -150,8 +152,8 @@
 /* score ruler in the hero */
 .dx-ruler { margin: 0; min-width: 0; }
 .dx-ruler svg { display: block; width: 100%; overflow: visible; }
-.dx-ruler .bar { fill: var(--chart-muted); }
-.dx-ruler .bar-qual { fill: var(--series-1); }
+.dx-ruler .bar { fill: var(--border-strong); }
+.dx-ruler .bar-core { fill: var(--chart-muted); }
 .dx-ruler .axis { stroke: var(--border-strong); stroke-width: 1; }
 .dx-ruler .avg { stroke: var(--text-secondary); stroke-width: 1; stroke-dasharray: 3 3; }
 .dx-ruler .mark { stroke: var(--accent); stroke-width: 1.5; }
@@ -163,6 +165,7 @@
 
 /* sections */
 .dx-section { display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 66px; }
+.dx-section + .dx-section { border-top: 1px solid var(--border); padding-top: 2.5rem; }
 .dx-section-head { display: flex; flex-wrap: wrap; gap: 1rem; align-items: baseline; justify-content: space-between; }
 .dx-section h2 { font-size: 26px; }
 .dx-section h3 { font-size: 16.5px; }
@@ -239,7 +242,7 @@
 .dx-badge-fail { color: var(--fail); background: var(--fail-bg); }
 .dx-badge-yes { color: var(--accent); background: var(--accent-soft); }
 .dx-badge-no { color: var(--text-muted); background: var(--surface-2); }
-.dx-pcell { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.dx-pcell { white-space: nowrap; display: inline-flex; flex-direction: column; align-items: flex-end; gap: 5px; }
 .dx-pbar { width: 96px; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
 .dx-pbar i { display: block; height: 100%; width: calc(var(--p) * 1%); background: var(--accent); border-radius: 3px; }
 
@@ -264,8 +267,14 @@
 .dx-footnote { border-top: 1px solid var(--border); padding-top: 1.25rem; font-size: 13px; color: var(--text-muted); line-height: 1.7; }
 .dx-footnote a { color: var(--accent); }
 
+@media (pointer: coarse) {
+  .dx-toggle button { padding: 9px 14px; }
+  .dx-topnav a { padding: 11px 12px; }
+  .dx-more summary, .dx-tableview summary { padding: 10px 0; }
+}
 @media (max-width: 760px) {
   .dx-hero { grid-template-columns: minmax(0, 1fr); }
+  .dx-topnav { -webkit-mask-image: linear-gradient(to right, #000 88%, transparent); mask-image: linear-gradient(to right, #000 88%, transparent); padding-right: 24px; }
   .dx-wrap { gap: 2.75rem; padding-top: 1.5rem; }
 }
 @media (max-width: 480px) {
@@ -283,8 +292,8 @@
 .dx-table tbody th, .dx-table thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
 .dx-row-total th { background: var(--surface-2); }
 </style>
-<div class="dxroot">
-<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Deception+ is a composite pitcher index built from 5 residual metrics: whiff, chase, weak contact, swing timing, and whiff miss distance. The page explains the score, compares it with Stuff+, shows its reliability and forecast table, its on-field results, and a table of pitchers with a deception reputation. The methodology page has the pitch-model validation and the full method.</h2>
+<div class="dxroot" id="top">
+<a class="dx-skip" href="#main">Skip to the content</a>
 
 <header class="dx-topbar">
   <div class="dx-topbar-inner">
@@ -304,7 +313,8 @@
   </div>
 </header>
 
-<div class="dx-wrap" id="top">
+<main class="dx-wrap" id="main">
+  <noscript><p class="dx-section-note dx-wide">The charts, the score ruler and the fifths table need JavaScript. Everything else on this page works without it.</p></noscript>
 
   <div class="dx-hero">
     <div>
@@ -319,7 +329,7 @@
     </div>
     <figure class="dx-ruler" id="ruler">
       <div id="rulerSvg" role="img" aria-label="Histogram of qualified Deception+ scores, centered on 100"></div>
-      <figcaption>Where <span id="rulerN">1,291</span> qualified pitcher-seasons land. 100 is average and every 10 points is one step. Tarik Skubal's 2025 season, 145.3, is the highest.</figcaption>
+      <figcaption>Where <span id="rulerN">1,291</span> qualified pitcher-seasons land. Every 10 points is one step, and <span id="rulerCore">about two thirds</span> land between 90 and 110. 100 is average. Tarik Skubal's 2025 season, 145.3, is the highest.</figcaption>
     </figure>
   </div>
 
@@ -332,7 +342,7 @@
       </div>
       <div class="dx-read">
         <h3>How to read a number</h3>
-        <p>100 is the average qualified pitcher and every 10 points is one step, so 120 is two steps above average. Each score carries a margin of about &plusmn;13 points, and only 288 of 1,291 qualified scores (22%) are clearly different from 100. Check the interval on the leaderboard before ranking two close pitchers.</p>
+        <p>100 is the average qualified pitcher and every 10 points is one step, so 120 is two steps above average. Every score comes with a 95% interval, shown on the leaderboard. Check it before ranking two close pitchers.</p>
       </div>
       <div class="dx-read">
         <h3>What it does not prove</h3>
@@ -350,12 +360,12 @@
         <div class="dx-tile-label">Carries to next season</div>
         <div class="dx-tile-val">r=0.611</div>
         <div class="dx-meter" style="--v:0.611" aria-hidden="true"><i></i></div>
-        <div class="dx-tile-note">One season's score against the next, for 1,089 pitchers.</div>
+        <div class="dx-tile-note">One season's score against the next, across 1,089 pairs of consecutive seasons.</div>
       </div>
       <div class="dx-tile">
-        <div class="dx-tile-label">Steadiest and noisiest piece</div>
-        <div class="dx-tile-val">0.631 / 0.288</div>
-        <div class="dx-tile-note">Steadiest: timing. Noisiest: weak contact. Out of the 5 gaps in the score.</div>
+        <div class="dx-tile-label">Typical margin of error</div>
+        <div class="dx-tile-val">&plusmn;13</div>
+        <div class="dx-tile-note">Points, 95% interval. Only 288 of 1,291 qualified scores (22%) are clearly different from 100.</div>
       </div>
       <div class="dx-tile">
         <div class="dx-tile-label">Qualified pitcher-seasons</div>
@@ -455,10 +465,10 @@
 
   <div class="dx-section" id="reliable">
     <h2>Does it hold up?</h2>
-    <p class="dx-answer">Mostly. The composite agrees with itself at r=0.741 within a season and at r=0.611 from one season to the next. Steadiness varies by piece: timing is the steadiest (0.631) and weak contact the noisiest (0.288).</p>
+    <p class="dx-answer">Mostly. Each piece below is checked two ways: is it steady, and does it forecast the next season? Steadiness varies: timing is the steadiest (0.631) and weak contact the noisiest (0.288).</p>
     <div class="dx-card dx-table-card">
       <table class="dx-table">
-        <thead><tr><th scope="col">Piece of the score</th><th scope="col">Steady within a season</th><th scope="col">Matches next season</th><th scope="col">Forecast gain (&Delta;R&sup2;)</th><th scope="col">p</th><th scope="col">Pitchers</th><th scope="col">Forecast test</th><th scope="col">Status</th></tr></thead>
+        <thead><tr><th scope="col">Piece of the score</th><th scope="col">Steady within a season</th><th scope="col">Matches next season</th><th scope="col">Forecast gain (&Delta;R&sup2;)</th><th scope="col">p</th><th scope="col">Pairs tested</th><th scope="col">Forecast test</th><th scope="col">Status</th></tr></thead>
         <tbody>
 <tr class=""><th scope="row">Whiff</th><td>0.614</td><td>0.515</td><td>+0.064</td><td>&lt;0.0001</td><td>1093</td><td class="dx-badge-cell"><span class="dx-badge dx-badge-pass">Pass</span></td><td class="dx-badge-cell"><span class="dx-badge dx-badge-yes">In the score</span></td></tr>
 <tr class=""><th scope="row">Chase</th><td>0.533</td><td>0.459</td><td>+0.047</td><td>&lt;0.0001</td><td>1108</td><td class="dx-badge-cell"><span class="dx-badge dx-badge-pass">Pass</span></td><td class="dx-badge-cell"><span class="dx-badge dx-badge-yes">In the score</span></td></tr>
@@ -523,16 +533,25 @@
     <div class="dx-card dx-table-card">
       <table class="dx-table dx-narrow" id="loreTable">
         <thead><tr><th scope="col">Pitcher</th><th scope="col">Season</th><th scope="col">Swings</th><th scope="col">Deception+ (percentile)</th><th scope="col">Whiff (percentile)</th><th scope="col">Ground ball (percentile)</th></tr></thead>
-        <tbody></tbody>
+        <tbody>
+<tr><th scope="row"><a class="dx-link" href="deception_leaderboard.html#q=Skubal%2C%20Tarik">Tarik Skubal</a></th><td>2025</td><td>1552</td><td><span class="dx-pcell">145.3 (100th)<span class="dx-pbar" aria-hidden="true"><i style="--p:100"></i></span></span></td><td><span class="dx-pcell">138.5 (100th)<span class="dx-pbar" aria-hidden="true"><i style="--p:100"></i></span></span></td><td><span class="dx-pcell">82.1 (3rd)<span class="dx-pbar" aria-hidden="true"><i style="--p:3"></i></span></span></td></tr>
+<tr><th scope="row"><a class="dx-link" href="deception_leaderboard.html#q=Ohtani%2C%20Shohei">Shohei Ohtani</a></th><td>2026</td><td>632</td><td><span class="dx-pcell">122.1 (99th)<span class="dx-pbar" aria-hidden="true"><i style="--p:99"></i></span></span></td><td><span class="dx-pcell">123.2 (98th)<span class="dx-pbar" aria-hidden="true"><i style="--p:98"></i></span></span></td><td><span class="dx-pcell">127.2 (99th)<span class="dx-pbar" aria-hidden="true"><i style="--p:99"></i></span></span></td></tr>
+<tr><th scope="row"><a class="dx-link" href="deception_leaderboard.html#q=Chapman%2C%20Aroldis">Aroldis Chapman</a></th><td>2025</td><td>518</td><td><span class="dx-pcell">103.8 (72nd)<span class="dx-pbar" aria-hidden="true"><i style="--p:72"></i></span></span></td><td><span class="dx-pcell">109.5 (82nd)<span class="dx-pbar" aria-hidden="true"><i style="--p:82"></i></span></span></td><td><span class="dx-pcell">96.5 (37th)<span class="dx-pbar" aria-hidden="true"><i style="--p:37"></i></span></span></td></tr>
+<tr><th scope="row"><a class="dx-link" href="deception_leaderboard.html#q=Hader%2C%20Josh">Josh Hader</a></th><td>2025</td><td>463</td><td><span class="dx-pcell">119.3 (98th)<span class="dx-pbar" aria-hidden="true"><i style="--p:98"></i></span></span></td><td><span class="dx-pcell">101.4 (56th)<span class="dx-pbar" aria-hidden="true"><i style="--p:56"></i></span></span></td><td><span class="dx-pcell">81.4 (3rd)<span class="dx-pbar" aria-hidden="true"><i style="--p:3"></i></span></span></td></tr>
+<tr><th scope="row"><a class="dx-link" href="deception_leaderboard.html#q=Duran%2C%20Jhoan">Jhoan Duran</a></th><td>2025</td><td>569</td><td><span class="dx-pcell">112.9 (94th)<span class="dx-pbar" aria-hidden="true"><i style="--p:94"></i></span></span></td><td><span class="dx-pcell">113.2 (89th)<span class="dx-pbar" aria-hidden="true"><i style="--p:89"></i></span></span></td><td><span class="dx-pcell">120.0 (97th)<span class="dx-pbar" aria-hidden="true"><i style="--p:97"></i></span></span></td></tr>
+<tr><th scope="row"><a class="dx-link" href="deception_leaderboard.html#q=Rogers%2C%20Tyler">Tyler Rogers</a></th><td>2025</td><td>530</td><td><span class="dx-pcell">101.7 (64th)<span class="dx-pbar" aria-hidden="true"><i style="--p:64"></i></span></span></td><td><span class="dx-pcell">67.3 (0th)<span class="dx-pbar" aria-hidden="true"><i style="--p:0"></i></span></span></td><td><span class="dx-pcell">129.7 (100th)<span class="dx-pbar" aria-hidden="true"><i style="--p:100"></i></span></span></td></tr>
+<tr><th scope="row"><a class="dx-link" href="deception_leaderboard.html#q=Hill%2C%20Tim">Tim Hill</a></th><td>2025</td><td>481</td><td><span class="dx-pcell">90.0 (14th)<span class="dx-pbar" aria-hidden="true"><i style="--p:14"></i></span></span></td><td><span class="dx-pcell">92.2 (22nd)<span class="dx-pbar" aria-hidden="true"><i style="--p:22"></i></span></span></td><td><span class="dx-pcell">119.3 (96th)<span class="dx-pbar" aria-hidden="true"><i style="--p:96"></i></span></span></td></tr>
+<tr><th scope="row"><a class="dx-link" href="deception_leaderboard.html#q=Sale%2C%20Chris">Chris Sale</a></th><td>2026</td><td>1282</td><td><span class="dx-pcell">120.4 (98th)<span class="dx-pbar" aria-hidden="true"><i style="--p:98"></i></span></span></td><td><span class="dx-pcell">111.7 (86th)<span class="dx-pbar" aria-hidden="true"><i style="--p:86"></i></span></span></td><td><span class="dx-pcell">93.0 (24th)<span class="dx-pbar" aria-hidden="true"><i style="--p:24"></i></span></span></td></tr>
+        </tbody>
       </table>
     </div>
+    <p class="dx-section-note dx-wide">Click a name to see every season of that pitcher on the leaderboard.</p>
   </div>
 
   <div class="dx-section" id="cautions">
     <div class="dx-callout dx-method">
       <h2>Before you quote a score</h2>
       <ul class="dx-limits">
-        <li>The median 95% interval on Deception+ is about &plusmn;13 points, so only 288 of 1,291 qualified scores (22%) are clearly different from 100. Check the interval on the leaderboard before ranking two close pitchers.</li>
         <li>Stability depends on how much a pitcher threw. Among pairs of consecutive seasons in which the pitcher qualified in both, the year-over-year correlation is 0.682. The headline 0.611 includes small samples.</li>
         <li>Qualified relievers average 101.2 against 99.6 for starters, even with in-game fatigue and times through the order in the model, so part of the gap may be role. The leaderboard can filter by starter or reliever.</li>
         <li>Left-handed pitchers average +1.4 points against right-handed ones (361 against 930 qualified pitcher-seasons, p=0.10). Handedness is a model input, so the gap is either real or a leftover miscalibration, and these data cannot tell which.</li>
@@ -542,11 +561,11 @@
     </div>
   </div>
 
-  <div class="dx-footnote">
+  <footer class="dx-footnote">
     Pitch data comes from Baseball Savant (Statcast). Stuff+ figures come from FanGraphs, were entered by hand, and are never used by the model. This project is independent and not affiliated with MLB, Baseball Savant, or FanGraphs. <a href="deception_leaderboard.html">Leaderboard</a> &middot; <a href="deception_methodology.html">Methodology</a>
-  </div>
+  </footer>
 
-</div>
+</main>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous"></script>
 <script>
@@ -564,17 +583,6 @@
     if (text !== undefined) node.textContent = text;
     return node;
   }
-  function ordinal(n) {
-    var rem100 = n % 100;
-    if (rem100 >= 11 && rem100 <= 13) return n + 'th';
-    switch (n % 10) {
-      case 1: return n + 'st';
-      case 2: return n + 'nd';
-      case 3: return n + 'rd';
-      default: return n + 'th';
-    }
-  }
-
   // the score ruler in the hero: where qualified pitcher-seasons land, with a few pitchers marked
   var RULER_NAMES = ['Hill, Tim', 'Rogers, Tyler', 'Duran, Jhoan', 'Ohtani, Shohei', 'Skubal, Tarik'];
   function drawRuler() {
@@ -582,6 +590,8 @@
     var scores = POINTS.filter(function(p) { return p[11] && p[8] !== null; }).map(function(p) { return p[8]; });
     if (!host || scores.length === 0) return;
     document.getElementById('rulerN').textContent = scores.length.toLocaleString('en-US');
+    var inCore = scores.filter(function(v) { return v >= 90 && v < 110; }).length;
+    document.getElementById('rulerCore').textContent = Math.round(100 * inCore / scores.length) + '%';
     var W = Math.max(300, Math.round(host.clientWidth)), H = 196, LO = 60, HI = 150, BIN = 5, PAD = 8, BASE = 140, MAXBAR = 72;
     var span = W - 2 * PAD, nb = (HI - LO) / BIN, counts = [], i;
     for (i = 0; i < nb; i++) counts.push(0);
@@ -592,7 +602,8 @@
     var svg = el('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, 'aria-hidden': 'true' });
     counts.forEach(function(c, j) {
       var h = Math.max(1, c / top * MAXBAR), x0 = x(LO + j * BIN) + 1, x1 = x(LO + (j + 1) * BIN) - 1;
-      svg.appendChild(el('rect', { 'class': 'bar', x: x0, y: BASE - h, width: Math.max(1, x1 - x0), height: h, rx: 2 }));
+      var core = LO + j * BIN >= 90 && LO + (j + 1) * BIN <= 110;   // within one step of average
+      svg.appendChild(el('rect', { 'class': core ? 'bar bar-core' : 'bar', x: x0, y: BASE - h, width: Math.max(1, x1 - x0), height: h, rx: 2 }));
     });
     svg.appendChild(el('line', { 'class': 'axis', x1: PAD, x2: W - PAD, y1: BASE, y2: BASE }));
     svg.appendChild(el('line', { 'class': 'avg', x1: x(100), x2: x(100), y1: BASE, y2: BASE - MAXBAR - 6 }));
@@ -644,36 +655,14 @@
 
   function addRow(body, cells) {
     var tr = document.createElement('tr');
-    cells.forEach(function(cell, j) {
-      var node = document.createElement(j === 0 ? 'th' : 'td');
-      if (j === 0) node.scope = 'row';
-      if (cell !== null && typeof cell === 'object') {
-        var wrap = document.createElement('span'), bar = document.createElement('span'), fill = document.createElement('i');
-        wrap.className = 'dx-pcell';
-        wrap.appendChild(document.createTextNode(cell.text));
-        bar.className = 'dx-pbar';
-        bar.setAttribute('aria-hidden', 'true');
-        fill.style.setProperty('--p', cell.pct);
-        bar.appendChild(fill);
-        wrap.appendChild(bar);
-        node.appendChild(wrap);
-      } else {
-        node.textContent = cell;
-      }
-      tr.appendChild(node);
+    cells.forEach(function(text, j) {
+      var cell = document.createElement(j === 0 ? 'th' : 'td');
+      if (j === 0) cell.scope = 'row';
+      cell.textContent = text;
+      tr.appendChild(cell);
     });
     body.appendChild(tr);
   }
-
-  var loreBody = document.querySelector('#loreTable tbody');
-  function withPctile(value, pct) {
-    return value === null || value === undefined ? 'n/a' : { text: value.toFixed(1) + ' (' + ordinal(pct) + ')', pct: pct };
-  }
-  LORE.forEach(function(p) {
-    addRow(loreBody, [p.name.split(', ').reverse().join(' '), String(p.season), String(p.n),
-                      withPctile(p.deception_plus, p.dp_pctile), withPctile(p.whiff_index, p.pctile),
-                      withPctile(p.gb_index, p.gb_pctile)]);
-  });
 
   if (typeof Chart === 'undefined') {
     // the Chart.js library is blocked, offline, or failed its integrity check: say so instead of leaving empty charts
@@ -711,8 +700,33 @@
       var row = { x: p[2], y: y, name: p[0], season: p[1], n: p[9] };
       (p[10] ? hi : ctx).push(row);
     });
+    // name the highest and lowest of the highlighted pitchers so the chart can be read without hovering
+    var byScore = hi.slice().sort(function(a, b) { return b.y - a.y; });
+    byScore.slice(0, 4).concat(byScore.slice(-2)).forEach(function(r) { r.label = r.name.split(', ')[0] + " '" + String(r.season).slice(2); });
     return { ctx: ctx, hi: hi };
   }
+
+  var pointLabels = {
+    id: 'pointLabels',
+    afterDatasetsDraw: function(chart) {
+      var ctx = chart.ctx, meta = chart.getDatasetMeta(1);
+      ctx.save();
+      ctx.font = '600 11px ' + cssVar('--font-body');
+      ctx.fillStyle = cssVar('--text-primary');
+      ctx.strokeStyle = cssVar('--surface');
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      chart.data.datasets[1].data.forEach(function(row, i) {
+        var point = meta.data[i];
+        if (!row.label || !point) return;
+        var flip = point.x > chart.chartArea.right - 80;
+        ctx.textAlign = flip ? 'right' : 'left';
+        ctx.strokeText(row.label, point.x + (flip ? -9 : 9), point.y + 4);
+        ctx.fillText(row.label, point.x + (flip ? -9 : 9), point.y + 4);
+      });
+      ctx.restore();
+    }
+  };
 
   var scatterChart = new Chart(document.getElementById('scatterChart'), {
     type: 'scatter',
@@ -737,7 +751,8 @@
           return d.name + ' (' + d.season + '): Stuff+ ' + d.x.toFixed(0) + ', index ' + d.y.toFixed(1) + ', n=' + d.n;
         }}}
       }
-    }
+    },
+    plugins: [pointLabels]
   });
 
   function fitLine(rows) {
