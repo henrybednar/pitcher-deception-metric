@@ -254,8 +254,9 @@ def test_the_dashboard_explains_each_statistic_it_shows_and_every_in_page_link_r
     text = open("templates/dashboard.html", encoding="utf-8").read()
     key = text[text.index('<dl class="dx-glossary">'):text.index("</dl>")]
 
-    for term in ("r (correlation)", "Reliability", "AUC", "R&sup2;", "Calibration slope", "Forecast gain", "<dt>p</dt>", "95% interval", "Percentile"):
+    for term in ("r (correlation)", "Reliability", "R&sup2;", "Forecast gain", "95% interval", "Percentile"):
         assert term in key, term
+    assert key.count("<dt>") == 6
     ids = set(re.findall(r'\bid="([^"]+)"', text))
     assert {a for a in re.findall(r'href="#([\w-]+)"', text)} <= ids
 
@@ -342,3 +343,63 @@ def test_the_pipeline_page_step_builds_the_index_copy_and_the_share_image_and_th
 
     assert "build_share_image.py" in step.scripts and {"index.html", "share_image.png"} <= set(step.outputs)
     assert sc.PAGES_BASE in readme and "share_image.png" in readme
+
+
+def _components():
+    base = {"delta": "+0.05", "p": "<0.0001", "n": 1000, "passes": True}
+    rows = [("whiff", "Whiff", "0.614", "0.515", True), ("chase", "Chase", "0.533", "0.459", True), ("weak", "Weak contact", "0.288", "0.270", True),
+            ("timing", "Timing", "0.631", "0.513", True), ("gb", "Ground ball", "0.446", "0.353", False)]
+    comps = [{**base, "key": k, "label": label, "reliability": r, "yoy": y, "in_score": inside} for k, label, r, y, inside in rows]
+    comps.append({**base, "key": "composite", "label": "Deception+ (forecast is for next-season whiff rate)", "reliability": "0.741", "yoy": "0.611", "in_score": True})
+    return comps
+
+
+def test_the_piece_dot_plot_sorts_by_steadiness_leaves_out_excluded_pieces_and_ends_with_the_composite():
+    svg = sc.piece_dots_svg(_components())
+
+    order = [m for m in ("Timing", "Whiff", "Chase", "Weak contact") if m in svg]
+    assert [svg.index(m) for m in order] == sorted(svg.index(m) for m in order)          # 0.631, 0.614, 0.533, 0.288 top to bottom
+    assert "Ground ball" not in svg and svg.rindex("Deception+") > svg.index("Weak contact")
+    assert "0.631 and 0.513" in svg and svg.startswith('<svg class="dx-dots"') and 'role="img"' in svg
+
+
+def test_binned_means_split_into_equal_groups_with_intervals_and_drop_a_thin_remainder():
+    rows = [(float(x), 100.0 + x / 10 + (1 if x % 2 else -1)) for x in range(1, 201)]
+
+    bins = sc.binned_means(rows, groups=10)
+
+    assert len(bins) == 10 and all(b["n"] == 20 for b in bins)
+    assert [b["x"] for b in bins] == sorted(b["x"] for b in bins) and all(b["lo"] < b["y"] < b["hi"] for b in bins)
+    assert len(sc.binned_means(rows + [(float(x), 100.0) for x in range(201, 206)], groups=10)) == 9    # 205 rows: nine slices of 21 and a remainder of 16, which is dropped
+    assert sc.bin_table_rows(bins).count("<tr>") == 10 and "1 (lowest)" in sc.bin_table_rows(bins) and "10 (highest)" in sc.bin_table_rows(bins)
+
+
+def test_scatter_points_keep_only_qualified_seasons_with_both_a_score_and_a_stuff_figure():
+    point = lambda name, stuff, score, qualified: [name, 2025, stuff, 0, 0, 0, 0, 0, score, 500, False, qualified, 0]
+
+    kept = sc.scatter_points([point("A", 100, 105.0, True), point("B", 100, 105.0, False), point("C", None, 105.0, True), point("D", 100, None, True)])
+
+    assert kept == [["A", 2025, 100, 105.0, 500, False]]
+
+
+def test_the_on_field_forest_puts_outcomes_that_clear_zero_first_and_mutes_those_that_clear_in_neither_test():
+    def outcome(label, lo, gain, own_lo):
+        return {"label": label, "deception_over_stuff_location": {"gain": gain, "lo": lo, "hi": gain + 0.02},
+                "deception_over_own_stuff_location": {"gain": gain / 2, "lo": own_lo, "hi": gain}}
+
+    validation = {"outcomes": {"walk": outcome("walk rate", -0.02, -0.01, -0.03), "x": outcome("xwOBA allowed", 0.01, 0.04, 0.003),
+                               "k": outcome("strikeout rate", 0.03, 0.07, -0.005)}}
+
+    rows = sc.outcome_forest_rows(validation).splitlines()
+
+    assert [r.split("</th>")[0].split(">")[-1] for r in rows] == ["Strikeout rate", "xwOBA allowed", "Walk rate"]      # by gain, brand-style names kept
+    assert "dx-muted" in rows[2] and "dx-muted" not in rows[0] and "dx-muted" not in rows[1]
+    assert rows[1].count("dx-forest clear") == 2 and rows[0].count("dx-forest clear") == 1
+
+
+def test_the_dashboard_hero_carries_the_caveat_and_no_figure_or_name_count_is_typed_into_the_text():
+    text = open("templates/dashboard.html", encoding="utf-8").read()
+
+    assert "It does not prove deception" in text[:text.index('id="overview"')]                # visible before the first section
+    for typed in ("Eight pitchers", "Three seasons", "at least 100 swings", "ten equal", "five groups"):
+        assert typed not in text, typed

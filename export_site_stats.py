@@ -21,6 +21,7 @@ import statsmodels.api as sm
 from driver_features import FEATURE_LABELS, MIN_PITCHES_PER_TYPE, weighted_std
 from reliability_and_ci import COMPOSITE_OUTCOMES, QUALIFY_MIN_N
 from season_pairs import cluster_bootstrap_interval, consecutive_pairs, correlation_by_pair, pooled_correlation
+from site_common import BIN_GROUPS
 
 # display order; membership in Deception+ comes from reliability_and_ci.COMPOSITE_OUTCOMES
 COMPONENTS = [
@@ -37,6 +38,15 @@ SP_MIN_PITCHES = 60
 RP_MAX_PITCHES = 30
 GS_SHARE_SP_MIN = 0.8
 GS_SHARE_RP_MAX = 0.1
+
+
+FORECAST_P_GATE = 0.01     # a piece passes the forecast test when its p-value is below this
+LINK_WORDS = ((0.2, "barely linked"), (0.5, "loosely linked"), (0.8, "closely linked"))
+
+
+def link_phrase(r: float) -> str:
+    """The strength of a correlation in words, for a chart title that has to match the number it sits above."""
+    return next((words for ceiling, words in LINK_WORDS if abs(r) < ceiling), "almost the same measure")
 
 
 def fmt_r(x: float) -> str:
@@ -225,6 +235,35 @@ def membership_text(check: dict) -> dict:
     return text
 
 
+LEFT_OUT_VARIANTS = {"gb": "+gb", "align": "+align", "calledstrike": "+calledstrike"}
+
+
+def out_sentence(components: list, check: dict) -> str:
+    """Which pieces that are not in the score still pass the forecast test, and (only if the membership check agrees) why they stay out."""
+    passing = [c for c in components if c["key"] != "composite" and not c["in_score"] and c["passes"]]
+    if not passing:
+        return ""
+    many = len(passing) > 1
+    names = sentence_case(join_words([c["label"].lower() for c in passing]))
+    head = f"{names} also {'pass' if many else 'passes'} the forecast test but {'stay' if many else 'stays'} out"
+    diffs = [check[LEFT_OUT_VARIANTS[c["key"]]]["diff"] for c in passing if c["key"] in LEFT_OUT_VARIANTS]
+    if diffs and all(d <= 0 for d in diffs):
+        return f"{head}, because adding {'any of them' if many else 'it'} does not raise the score's year-over-year r."
+    return head + "."
+
+
+def out_intervals(components: list, check: dict) -> str:
+    """Whether the change in year-over-year r from adding each left-out piece has an interval below zero, said piece by piece."""
+    entries = [(c["label"].lower(), check[LEFT_OUT_VARIANTS[c["key"]]]) for c in components if c["key"] in LEFT_OUT_VARIANTS]
+    below = [name for name, e in entries if e["diff_hi"] < 0]
+    includes = [name for name, e in entries if e["diff_hi"] >= 0]
+    if not entries or not below:
+        return "None of the intervals is below zero."
+    if not includes:
+        return "Each interval is below zero."
+    return f"The interval is below zero for {join_words(below)} and includes zero for {join_words(includes)}."
+
+
 def projection_text(projection: dict) -> dict:
     """Page-text figures from projection.json: the fitted coefficients, the out-of-sample errors of the projection against
     the raw score and against guessing 100, and what the second season adds."""
@@ -251,6 +290,58 @@ def projection_text(projection: dict) -> dict:
 
 def join_labels(labels: list[str], none: str = "no outcome") -> str:
     return join_words(labels) if labels else none
+
+
+def sentence_case(text: str) -> str:
+    """Capitalize the first letter, except a stat name that starts lower on purpose (xwOBA, wOBA)."""
+    first = text.split(" ")[0]
+    if first[:1].islower() and any(ch.isupper() for ch in first[1:]):
+        return text
+    return text[:1].upper() + text[1:]
+
+
+def gain_text(g: dict) -> str:
+    return f"{g['gain']:+.3f} [{g['lo']:+.3f}, {g['hi']:+.3f}]"
+
+
+def ov_title(outcomes: dict) -> str:
+    """The on-field chart's title: which outcomes still clear zero once last season's own result is in the model."""
+    kept = [o["label"] for o in outcomes.values() if o["deception_over_own_stuff_location"]["lo"] > 0]
+    tail = "once last season's own result is in the model"
+    if not kept:
+        return f"Nothing clears zero {tail}"
+    if len(kept) == 1:
+        return f"Only {kept[0]} still clears zero {tail}"
+    return f"{sentence_case(join_words(kept))} still clear zero {tail}"
+
+
+def ov_reality(outcomes: dict) -> str:
+    """Of the outcomes that clear zero beyond Stuff+ and Location+, which still do after last season's own result, with the gains."""
+    cleared = [o for o in outcomes.values() if o["deception_over_stuff_location"]["lo"] > 0]
+    if not cleared:
+        return "Nothing clears zero beyond Stuff+ and Location+, so there is no gain to test against last season's own result."
+    own = "deception_over_own_stuff_location"
+    lost = [o for o in cleared if o[own]["lo"] <= 0]
+    kept = [o for o in cleared if o[own]["lo"] > 0]
+    detail = lambda group: join_words([f"{o['label']} ({gain_text(o[own])})" for o in group])
+    verb = lambda group: "clears" if len(group) == 1 else "clear"
+    parts = []
+    if lost:
+        parts.append(f"Once last season's own result is in the model, {detail(lost)} no longer {verb(lost)} zero.")
+    if kept:
+        parts.append(f"Still {verb(kept)} zero: {detail(kept)}." if lost else
+                     "Every outcome that clears zero beyond Stuff+ and Location+ still does once last season's own result is in the model: "
+                     f"{detail(kept)}.")
+    return " ".join(parts)
+
+
+def ov_null(outcomes: dict) -> str:
+    """The outcomes that clear zero in neither test, as one sentence."""
+    none = [o["label"] for o in outcomes.values()
+            if o["deception_over_stuff_location"]["lo"] <= 0 and o["deception_over_own_stuff_location"]["lo"] <= 0]
+    if not none:
+        return "Every outcome clears zero in at least one of the two tests."
+    return f"{sentence_case(join_words(none))} {'does' if len(none) == 1 else 'do'} not clear zero in either test."
 
 
 def ov_example(first: dict) -> str:
@@ -295,6 +386,10 @@ def outcome_text(validation: dict) -> dict:
                   f"(ratios {rule['outcomes']['k_pct']['ratio']:+.2f} for strikeout rate and {rule['outcomes']['xwoba']['ratio']:+.2f} for xwOBA), so it stays in.")
     return {
         "OV_EXAMPLE": ov_example(first),
+        "OV_CLEAR": join_labels(clear("deception_over_stuff_location")),
+        "OV_TITLE": ov_title(outcomes),
+        "OV_REALITY": ov_reality(outcomes),
+        "OV_NULL": ov_null(outcomes),
         "OV_PAIRS": f"{first['n']:,}", "OV_PITCHERS": f"{first['pitchers']:,}", "OV_MIN_PA": str(validation["min_next_pa"]),
         "OV_SUMMARY": (f"Beyond Stuff+ and Location+, Deception+ adds clearly (95% interval above zero) for {join_labels(clear('deception_over_stuff_location'))}. "
                        f"Beyond last season's own result as well, it adds clearly for {join_labels(clear('deception_over_own_stuff_location'))}."),
@@ -512,7 +607,7 @@ def main() -> None:
             "delta": fmt_delta(float(pv.loc[key, "cv_delta_r2"])),
             "p": fmt_p(float(pv.loc[key, "p_value"])),
             "n": int(pv.loc[key, "n"]),
-            "passes": bool(pv.loc[key, "p_value"] < 0.01),
+            "passes": bool(pv.loc[key, "p_value"] < FORECAST_P_GATE),
             "in_score": key in COMPOSITE_OUTCOMES,
         })
     components.append({
@@ -524,7 +619,7 @@ def main() -> None:
         "delta": fmt_delta(float(pv.loc["composite_to_whiff", "cv_delta_r2"])),
         "p": fmt_p(float(pv.loc["composite_to_whiff", "p_value"])),
         "n": int(pv.loc["composite_to_whiff", "n"]),
-        "passes": bool(pv.loc["composite_to_whiff", "p_value"] < 0.01),
+        "passes": bool(pv.loc["composite_to_whiff", "p_value"] < FORECAST_P_GATE),
     })
 
     with open("output/artifact_data.json", encoding="utf-8") as f:
@@ -607,6 +702,13 @@ def main() -> None:
         "DRIVER_R2_RANGE": f"{min(driver_r2):.2f} to {max(driver_r2):.2f}",
         "SEQ_R2_RANGE": f"{min(seq_r2):.4f} to {max(seq_r2):.4f}",
         "STUFF_R": fmt_r(stuff["composite"]),
+        "STUFF_R_PHRASE": link_phrase(stuff["composite"]),
+        "STUFF_BIN_GROUPS": str(BIN_GROUPS),
+        "N_SEASONS": str(int(ps["season"].nunique())),
+        "SEASON_SPAN": f"{int(ps['season'].min())} to {int(ps['season'].max())}",
+        "N_SEASON_PAIRS": str(max(0, int(ps["season"].nunique()) - 1)),
+        "P_GATE": f"{FORECAST_P_GATE:g}",
+        "N_PASS": str(sum(1 for c in components if c["key"] != "composite" and c["in_score"] and c["passes"])),
         "STUFF_R2_PCT": f"{stuff['composite'] ** 2:.0%}",
         "DRIVER_R2_MAX_PCT": f"{max(driver_r2):.0%}",
         "STUFF_R_BY_SEASON": join_words([f"{fmt_r(r)} in {season}" for season, r in sorted(stuff["by_season"].items())]),
@@ -639,6 +741,8 @@ def main() -> None:
         **sequencing_survivors(driver_analysis),
         **validation_text(validation),
         **membership_text(membership),
+        "OUT_SENTENCE": out_sentence(components, membership),
+        "OUT_INTERVALS": out_intervals(components, membership),
         **projection_text(projection),
         **outcome_text(outcome_validation),
         **location_text(ps, outcome_validation),

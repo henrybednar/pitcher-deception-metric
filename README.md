@@ -14,8 +14,8 @@ The gap between result and expectation is not proven to be deception. It is what
 
 ## Outputs
 
-- `deception_dashboard.html` is the short version: how to read the score, the comparison with Stuff+, reliability and forecast, on-field results, a table of pitchers with a deception reputation, and the main cautions.
-- `deception_methodology.html` has everything behind those checks: the pitch-model validation (AUC, log loss, calibration), how a score is built, which components are in it and why, the interval check, the trait regression, the known limits, and an audit log of the leaks and bugs found along the way.
+- `deception_dashboard.html` is the short version, in the order a reader asks: what the score is and what it does not claim, whether to trust it, whether it is just Stuff+, whether it predicts anything on the field, and who scores well.
+- `deception_methodology.html` has everything behind those answers: the pitch-model validation (AUC, log loss, calibration), how a score is built, the full component table and interval check, Stuff+ in detail, the on-field R2 and effect-size tables, the trait regression, the known limits, and an audit log of the leaks and bugs found along the way.
 - `deception_leaderboard.html` is a sortable table of every scored pitcher-season with 95% intervals and a starter or reliever filter.
 
 `index.html` is a copy of the dashboard, so the bare GitHub Pages address opens it, and `share_image.png` is the preview image link shares show (`build_share_image.py`).

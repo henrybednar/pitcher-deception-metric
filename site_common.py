@@ -13,6 +13,7 @@ Two output modes:
 
 import html
 import json
+import math
 import re
 from pathlib import Path
 from urllib.parse import quote
@@ -203,6 +204,113 @@ def outcome_table_rows(validation: dict) -> str:
         rows.append(f'<tr><th scope="row">{esc(o["label"])}</th>'
                     + cell(r2["stuff_location"], r2["stuff_location_deception"], o["deception_over_stuff_location"])
                     + cell(r2["own_stuff_location"], r2["own_stuff_location_deception"], o["deception_over_own_stuff_location"]) + "</tr>")
+    return "\n".join(rows)
+
+
+BIN_GROUPS = 10          # equal-sized Stuff+ groups the scatter averages over
+
+
+def scatter_points(points: list) -> list:
+    """The qualified pitcher-seasons that have a score and a Stuff+ figure, slimmed to what the dashboard draws:
+    [name, season, Stuff+, Deception+, swings, has a reputation for an unusual delivery]."""
+    return [[p[0], p[1], p[2], p[8], p[9], p[10]] for p in points if p[11] and p[8] is not None and p[2] is not None]
+
+
+def binned_means(rows: list, groups: int = BIN_GROUPS) -> list:
+    """Mean of y, with its 95% interval, for each of `groups` equal-sized slices of the (x, y) pairs ordered by x. Slices under 20 are dropped."""
+    ordered = sorted(rows)
+    size = -(-len(ordered) // groups)
+    bins = []
+    for start in range(0, len(ordered), size):
+        chunk = ordered[start:start + size]
+        n = len(chunk)
+        if n < 20:
+            continue
+        mx, my = sum(x for x, _ in chunk) / n, sum(y for _, y in chunk) / n
+        half = 1.96 * math.sqrt(sum((y - my) ** 2 for _, y in chunk) / (n - 1) / n)
+        bins.append({"x": round(mx, 2), "y": round(my, 2), "lo": round(my - half, 2), "hi": round(my + half, 2), "n": n})
+    return bins
+
+
+def bin_table_rows(bins: list) -> str:
+    """The binned means as table rows, for readers without JavaScript."""
+    rows = []
+    for i, b in enumerate(bins, 1):
+        name = f"{i} (lowest)" if i == 1 else (f"{i} (highest)" if i == len(bins) else str(i))
+        rows.append(f'<tr><th scope="row">{name}</th><td>{b["x"]:.0f}</td><td>{b["y"]:.1f}</td><td>{b["lo"]:.1f} to {b["hi"]:.1f}</td><td>{b["n"]}</td></tr>')
+    return "\n".join(rows)
+
+
+DOTS_W = 352
+
+
+def piece_dots_svg(components: list) -> str:
+    """A dot plot of the pieces in the score, sorted by split-half reliability: a filled dot for the correlation within a season, an
+    open dot for the correlation with the next season, the two values at the right, and the composite on its own row at the bottom."""
+    esc = lambda value: html.escape(str(value), quote=True)
+    pieces = sorted((c for c in components if c["in_score"] and c["key"] != "composite"), key=lambda c: -float(c["reliability"]))
+    total = next((c for c in components if c["key"] == "composite"), None)
+    rows = [(c["label"], float(c["reliability"]), float(c["yoy"]), False) for c in pieces]
+    if total:
+        rows.append(("Deception+", float(total["reliability"]), float(total["yoy"]), True))
+    x0, x1, col_a, col_b, top, step = 128, 236, 288, 342, 34, 28
+    height = top + step * len(rows) + 30
+
+    def x(v: float) -> float:
+        return x0 + max(0.0, min(1.0, v)) * (x1 - x0)
+
+    aria = "Correlation within a season and with the next season, by piece: " + "; ".join(f"{n} {a:.3f} and {b:.3f}" for n, a, b, _ in rows)
+    out = [f'<svg class="dx-dots" viewBox="0 0 {DOTS_W} {height}" role="img" aria-label="{esc(aria)}">',
+           '<circle class="a" cx="6" cy="10" r="5"/><text class="hdr" x="16" y="14">within season</text>',
+           '<circle class="b" cx="106" cy="10" r="5"/><text class="hdr" x="116" y="14">next season</text>',
+           f'<text class="hdr" x="{col_a}" y="14" text-anchor="end">within</text><text class="hdr" x="{col_b}" y="14" text-anchor="end">next</text>']
+    bottom = top + step * len(rows)
+    for tick in (0.0, 0.5, 1.0):
+        out.append(f'<line class="grid" x1="{x(tick):.1f}" x2="{x(tick):.1f}" y1="{top - 2}" y2="{bottom - 2}"/>'
+                   f'<text class="tick" x="{x(tick):.1f}" y="{bottom + 14}" text-anchor="middle">{tick:g}</text>')
+    for i, (name, a, b, is_total) in enumerate(rows):
+        y = top + i * step + 12
+        if is_total:
+            out.append(f'<line class="sep" x1="0" x2="{DOTS_W}" y1="{y - 14}" y2="{y - 14}"/>')
+        cls = "lbl tot" if is_total else "lbl"
+        out.append(f'<text class="{cls}" x="0" y="{y + 4}">{esc(name[:1].upper() + name[1:])}</text>'
+                   f'<line class="gap" x1="{x(min(a, b)):.1f}" x2="{x(max(a, b)):.1f}" y1="{y}" y2="{y}"/>'
+                   f'<circle class="a" cx="{x(a):.1f}" cy="{y}" r="5.5"/><circle class="b" cx="{x(b):.1f}" cy="{y}" r="5"/>'
+                   f'<text class="val{" tot" if is_total else ""}" x="{col_a}" y="{y + 4}" text-anchor="end">{a:.3f}</text>'
+                   f'<text class="val{" tot" if is_total else ""}" x="{col_b}" y="{y + 4}" text-anchor="end">{b:.3f}</text>')
+    out.append("</svg>")
+    return "".join(out)
+
+
+def row_label(label: str) -> str:
+    """A label starting a table row: capitalized, except a stat name that starts lower on purpose (xwOBA, wOBA)."""
+    first = label.split(" ")[0]
+    if first[:1].islower() and any(ch.isupper() for ch in first[1:]):
+        return label
+    return label[:1].upper() + label[1:]
+
+
+def outcome_forest_rows(validation: dict) -> str:
+    """Rows of the dashboard's on-field chart: one forest plot per test (beyond Stuff+ and Location+, then also beyond last season's
+    own result), outcomes that clear zero first, outcomes that clear in neither test muted."""
+    esc = lambda value: html.escape(str(value), quote=True)
+    first, own = "deception_over_stuff_location", "deception_over_own_stuff_location"
+    outcomes = list(validation["outcomes"].values())
+    gains = [o[k] for o in outcomes for k in (first, own)]
+    lo_dom, hi_dom = min(0.0, min(g["lo"] for g in gains)), max(g["hi"] for g in gains)
+    pad = (hi_dom - lo_dom) * 0.06
+    lo_dom, hi_dom = lo_dom - pad, hi_dom + pad
+
+    def cell(g: dict) -> str:
+        return (f'<td class="dx-forest-cell"><span class="dx-forest-row">{forest_svg(g, lo_dom, hi_dom)}'
+                f'<span class="dx-gain-stack"><span class="dx-gain">{g["gain"]:+.3f}</span>'
+                f'<span class="dx-ci">[{g["lo"]:+.3f}, {g["hi"]:+.3f}]</span></span></span></td>')
+
+    rows = []
+    for o in sorted(outcomes, key=lambda o: (o[first]["lo"] <= 0, -o[first]["gain"])):
+        muted = o[first]["lo"] <= 0 and o[own]["lo"] <= 0
+        label = row_label(o["label"])
+        rows.append(f'<tr class="{"dx-muted" if muted else ""}"><th scope="row">{esc(label)}</th>{cell(o[first])}{cell(o[own])}</tr>')
     return "\n".join(rows)
 
 

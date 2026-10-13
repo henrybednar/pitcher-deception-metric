@@ -323,3 +323,55 @@ def test_coverage_verdict_says_held_only_when_every_third_and_the_coverage_are_w
     assert coverage_text(good)["COV_VERDICT"] == "They held"
     assert coverage_text(wide_third)["COV_VERDICT"] == "They did not all hold"
     assert coverage_text(thin_coverage)["COV_VERDICT"] == "They did not all hold"
+
+
+def _outcomes(k_own_lo=-0.005, x_own_lo=0.003):
+    def outcome(label, lo, gain, own_lo, own_gain):
+        return {"label": label, "deception_over_stuff_location": {"gain": gain, "lo": lo, "hi": gain + 0.04},
+                "deception_over_own_stuff_location": {"gain": own_gain, "lo": own_lo, "hi": own_gain + 0.04}}
+
+    return {"k_pct": outcome("strikeout rate", 0.032, 0.071, k_own_lo, 0.003), "bb_pct": outcome("walk rate", -0.01, -0.002, -0.007, -0.001),
+            "xwoba": outcome("xwOBA allowed", 0.015, 0.039, x_own_lo, 0.020)}
+
+
+def test_the_on_field_sentences_name_what_survives_last_seasons_result_and_what_never_clears():
+    from export_site_stats import ov_null, ov_reality, ov_title
+
+    outcomes = _outcomes()
+
+    assert ov_title(outcomes) == "Only xwOBA allowed still clears zero once last season's own result is in the model"
+    assert ov_reality(outcomes).startswith("Once last season's own result is in the model, strikeout rate (+0.003 ")
+    assert "no longer clears zero" in ov_reality(outcomes) and "Still clears zero: xwOBA allowed (+0.020 " in ov_reality(outcomes)
+    assert ov_null(outcomes) == "Walk rate does not clear zero in either test."
+
+
+def test_the_on_field_sentences_cover_nothing_clearing_and_everything_surviving():
+    from export_site_stats import ov_reality, ov_title
+
+    survive = _outcomes(k_own_lo=0.002)
+    assert ov_title(survive) == "Strikeout rate and xwOBA allowed still clear zero once last season's own result is in the model"
+    assert ov_reality(survive).startswith("Every outcome that clears zero beyond Stuff+ and Location+ still does")
+    nothing = {"k_pct": _outcomes()["bb_pct"]}
+    assert ov_reality(nothing).startswith("Nothing clears zero beyond Stuff+ and Location+")
+    assert ov_title({"k_pct": _outcomes(k_own_lo=-0.01)["bb_pct"]}) == "Nothing clears zero once last season's own result is in the model"
+
+
+def test_the_left_out_pieces_sentence_only_claims_a_reason_the_membership_check_supports():
+    from export_site_stats import out_intervals, out_sentence
+
+    comps = [{"key": "gb", "label": "Ground ball", "in_score": False, "passes": True}, {"key": "calledstrike", "label": "Called strike", "in_score": False, "passes": True},
+             {"key": "whiff", "label": "Whiff", "in_score": True, "passes": True}]
+    check = {"+gb": {"diff": -0.014, "diff_hi": 0.005}, "+calledstrike": {"diff": -0.039, "diff_hi": -0.014}}
+
+    assert out_sentence(comps, check) == ("Ground ball and called strike also pass the forecast test but stay out, "
+                                          "because adding any of them does not raise the score's year-over-year r.")
+    assert out_intervals(comps, check) == "The interval is below zero for called strike and includes zero for ground ball."
+    check["+gb"]["diff"] = 0.01
+    assert "because" not in out_sentence(comps, check)                                        # one of them would raise it: no reason is given
+    assert out_sentence([comps[2]], check) == ""
+
+
+def test_the_stuff_link_is_described_in_words_that_match_its_strength():
+    from export_site_stats import link_phrase
+
+    assert [link_phrase(r) for r in (0.1, 0.386, -0.6, 0.9)] == ["barely linked", "loosely linked", "closely linked", "almost the same measure"]

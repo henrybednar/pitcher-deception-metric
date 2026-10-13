@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Deception+ Leaderboard</title>
-<meta name="description" content="Sortable Deception+ scores and six component indexes for every scored pitcher-season, with 95% intervals and a starter or reliever filter. Statcast 2024-26.">
+<meta name="description" content="Sortable Deception+ scores and six component indexes for every scored pitcher-season, with 95% intervals and a starter or reliever filter. Statcast 2024-2026.">
 <meta property="og:title" content="Deception+ Leaderboard">
-<meta property="og:description" content="Sortable Deception+ scores and six component indexes for every scored pitcher-season, with 95% intervals and a starter or reliever filter. Statcast 2024-26.">
+<meta property="og:description" content="Sortable Deception+ scores and six component indexes for every scored pitcher-season, with 95% intervals and a starter or reliever filter. Statcast 2024-2026.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Deception+">
 <meta property="og:url" content="https://henrybednar.github.io/pitcher-deception-metric/deception_leaderboard.html">
@@ -17,7 +17,7 @@
 <meta property="og:image:alt" content="Histogram of qualified pitcher-season Deception+ scores centered on 100, with five pitchers marked">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Deception+ Leaderboard">
-<meta name="twitter:description" content="Sortable Deception+ scores and six component indexes for every scored pitcher-season, with 95% intervals and a starter or reliever filter. Statcast 2024-26.">
+<meta name="twitter:description" content="Sortable Deception+ scores and six component indexes for every scored pitcher-season, with 95% intervals and a starter or reliever filter. Statcast 2024-2026.">
 <meta name="twitter:image" content="https://henrybednar.github.io/pitcher-deception-metric/share_image.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23141b22'/%3E%3Ctext x='16' y='23' font-family='Arial,sans-serif' font-size='20' font-weight='700' text-anchor='middle' fill='%23e8a33d'%3ED%2B%3C/text%3E%3C/svg%3E">
 </head>
@@ -129,7 +129,7 @@
 .dxroot a { text-underline-offset: 3px; }
 .dx-skip { position: absolute; left: 12px; top: -48px; z-index: 20; background: var(--accent); color: var(--accent-ink); padding: 8px 14px; border-radius: 8px; font-weight: 600; text-decoration: none; }
 .dx-skip:focus { top: 8px; }
-.dx-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; display: flex; flex-direction: column; gap: 3.25rem; }
+.dx-wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 3rem; display: flex; flex-direction: column; gap: 2.5rem; }
 
 /* top bar: one nav across the pages, with the current section highlighted on the dashboard */
 .dx-topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); }
@@ -176,7 +176,7 @@
 
 /* sections */
 .dx-section { display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 66px; }
-.dx-section + .dx-section { border-top: 1px solid var(--border); padding-top: 2.5rem; }
+.dx-section + .dx-section { border-top: 1px solid var(--border); padding-top: 2rem; }
 .dx-section-head { display: flex; flex-wrap: wrap; gap: 1rem; align-items: baseline; justify-content: space-between; }
 .dx-section h2 { font-size: 26px; }
 .dx-section h3 { font-size: 16.5px; }
@@ -354,6 +354,45 @@
 .dx-table td.dx-sig { color: var(--pass); }
 .dx-table td.dx-sig .dx-gain { font-weight: 700; }
 .dx-table td.dx-sig .dx-ci { color: var(--pass); opacity: 0.8; }
+
+/* hero caveat, reality check, sorted dot plot, stricter forest test */
+.dx-caveat { display: inline-block; margin-top: 14px; padding: 9px 14px; border-radius: 10px; background: var(--accent-soft); color: var(--text-primary); font-size: 15px; font-weight: 600; line-height: 1.45; max-width: 52ch; }
+.dx-reality strong { color: var(--accent); }
+.dx-dots { display: block; width: 100%; max-width: 420px; height: auto; }
+.dx-dots .grid { stroke: var(--border); stroke-width: 1; }
+.dx-dots .sep { stroke: var(--border-strong); stroke-width: 1; }
+.dx-dots .gap { stroke: var(--border-strong); stroke-width: 2; stroke-linecap: round; }
+.dx-dots .a { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
+.dx-dots .b { fill: var(--surface); stroke: var(--text-secondary); stroke-width: 2; }
+.dx-dots .lbl { fill: var(--text-primary); font: 600 12.5px var(--font-body); }
+.dx-dots .val { fill: var(--text-secondary); font: 12.5px var(--font-mono); }
+.dx-dots .tot { font-weight: 700; }
+.dx-dots .hdr { fill: var(--text-muted); font: 600 11px var(--font-body); }
+.dx-dots .tick { fill: var(--text-muted); font: 11px var(--font-body); }
+.dx-gain-stack { display: flex; flex-direction: column; line-height: 1.25; }
+.dx-forest:not(.clear) .pt { fill: var(--surface); stroke: var(--text-muted); stroke-width: 2; }
+tr.dx-muted th, tr.dx-muted td, tr.dx-muted .dx-gain, tr.dx-muted .dx-ci { color: var(--text-muted); }
+.dx-table th.dx-stress { color: var(--accent); }
+.dx-table thead th small { display: block; font-weight: 400; color: var(--text-muted); }
+details.dx-keybox { border-top: 1px solid var(--border); padding-top: 0.9rem; }
+details.dx-keybox > summary { cursor: pointer; font-family: var(--font-display); font-size: 22px; font-weight: 500; color: var(--text-primary); }
+details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
+@media (max-width: 480px) { details.dx-keybox > summary { font-size: 20px; } }
+
+/* denser layouts on a wide screen: tiles beside the dot plot, text beside the chart, one-line gains and percentiles */
+.dx-trust-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr); gap: 12px; align-items: start; }
+.dx-tiles-stack { grid-template-columns: minmax(0, 1fr); }
+.dx-split { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.5fr); gap: 20px; align-items: start; }
+.dx-split-text { display: flex; flex-direction: column; gap: 0.9rem; }
+.dx-gain-stack { flex-direction: row; align-items: baseline; gap: 8px; }
+.dx-gain-stack .dx-ci { white-space: nowrap; }
+.dx-pcell { flex-direction: row; align-items: center; gap: 10px; }
+.dx-pbar { width: 64px; }
+@media (max-width: 860px) {
+  .dx-trust-grid, .dx-split { grid-template-columns: minmax(0, 1fr); }
+  .dx-tiles-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) { .dx-gain-stack { flex-direction: column; gap: 0; } }
 </style>
 <style>
 /* the leaderboard table only; tokens, type, buttons, pills and notes come from the shared stylesheet */

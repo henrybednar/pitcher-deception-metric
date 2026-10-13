@@ -27,6 +27,7 @@ __SHARED_HEAD__
     <a href="#pitch-models">Pitch models</a>
     <a href="#score">How a score is built</a>
     <a href="#membership">Membership and intervals</a>
+    <a href="#stuff-detail">Stuff+ in detail</a>
     <a href="#field">On the field</a>
     <a href="#pitch-types">By pitch type</a>
     <a href="#drivers">What explains the gap</a>
@@ -40,6 +41,30 @@ __SHARED_HEAD__
       <h2>How good are the pitch models?</h2>
       <p class="dx-section-note dx-wide">Deception+ is actual minus expected, so the expectation models are the product. Each outcome has gradient-boosted models by pitch type, and where pooling similar pitch types helped on held-out pitchers they share a model with pitch type as a feature (breaking pitches together, changeups with splitters). Every prediction here is out of fold: folds are grouped by pitcher, so a pitcher's own pitches never help predict their own results, and the batter and catcher tendencies are rebuilt inside each fold from the training pitchers only. A last out-of-fold step removes the league-wide level of each pitch type in each season and then of each month (see How a score is built).</p>
     </div>
+    <div class="dx-tiles">
+      <div class="dx-tile">
+        <div class="dx-tile-label">Whiff model (AUC)</div>
+        <div class="dx-tile-val">{{VAL_AUC_WHIFF}}</div>
+        <div class="dx-tile-note">Ranks a whiff above a non-whiff {{VAL_AUC_WHIFF_PCT}} of the time.</div>
+      </div>
+      <div class="dx-tile">
+        <div class="dx-tile-label">Chase model (AUC)</div>
+        <div class="dx-tile-val">{{VAL_AUC_CHASE}}</div>
+        <div class="dx-tile-note">The same test for chases: {{VAL_AUC_CHASE_PCT}}. A coin flip is 50%.</div>
+      </div>
+      <div class="dx-tile">
+        <div class="dx-tile-label">Calibration (slope)</div>
+        <div class="dx-tile-val">{{VAL_SLOPE_MEMBERS}}</div>
+        <div class="dx-tile-note">1.0 means predicted rates match real ones.</div>
+      </div>
+      <div class="dx-tile">
+        <div class="dx-tile-label">Timing model (R&sup2;)</div>
+        <div class="dx-tile-val">{{VAL_R2_TIMING}}</div>
+        <div class="dx-tile-note">Explains {{VAL_R2_TIMING_PCT}} of swing differences (whiff miss distance: {{VAL_R2_WHIFFMISS_PCT}}).</div>
+      </div>
+    </div>
+    <div class="dx-folds" role="img" aria-label="Pitchers are split into five groups. The model trains on four and predicts the fifth."><span>Train</span><span>Train</span><span>Train</span><span>Train</span><span class="score">Predict</span></div>
+    <p class="dx-section-note dx-wide">Out of fold: the model trains on four groups of pitchers and predicts the fifth, then rotates, so a pitcher's own pitches never help predict their results.</p>
     <div class="dx-read-grid">
       <div class="dx-read">
         <h3>What the models see</h3>
@@ -107,14 +132,78 @@ __SHARED_HEAD__
 
   <div class="dx-section" id="membership">
     <h2>Which components are in the score, and are the intervals right?</h2>
-    <p class="dx-section-note dx-wide">Among the members, {{MOST_LABEL}} is the most reliable (r={{MOST_R}}) and {{LEAST_LABEL}} the least (r={{LEAST_R}}). Timing has the strongest forecast (&Delta;R&sup2; {{DELTA_TIMING}}). Ground ball passes the forecast test but is kept out of Deception+ and shown on its own: its index correlates at most {{GB_CORR_MAX}} with the members, so it is a different skill, and adding it changes the composite's year-over-year correlation among qualified pairs by {{MEM_GB_DIFF}} (95% interval {{MEM_GB_CI}}). Called strike was removed too. It is stable within a season (r={{REL_CALLEDSTRIKE}}) and carries over only partly (year-over-year r={{YOY_CALLEDSTRIKE}}). It passes the forecast gate, but with a gain ({{DELTA_CALLEDSTRIKE}} of R&sup2;) a small fraction of a member's, and adding it changes the composite's year-over-year by {{MEM_CS_DIFF}} ({{MEM_CS_CI}}). That pattern points to effects other than pitcher skill, such as catcher or park, and umpire identity, tested separately, did not explain it. Horizontal alignment passes the forecast gate only barely (p={{P_ALIGN}}, {{DELTA_ALIGN}} of R&sup2;), its year-over-year correlation is {{YOY_ALIGN}}, and adding it changes the composite's year-over-year by {{MEM_ALIGN_DIFF}} ({{MEM_ALIGN_CI}}), so it stays out and appears only in the component table on the <a href="__DASHBOARD_URL__" class="dx-link">dashboard</a>.</p>
-    <p class="dx-section-note dx-wide">The membership decisions were first made on 2025 and 2026 alone, before 2024 was added. On all three seasons, with every pair of consecutive seasons pooled, year-over-year correlation is {{YOY_R}} ({{YOY_BY_PAIR}}), and among pairs where the pitcher qualified in both seasons it is {{YOY_QUAL_R}} ({{YOY_QUAL_BY_PAIR}}). Dropping whiff miss distance lowers it to {{MEM_NO_WHIFFMISS_YOY}} and reliability to {{MEM_NO_WHIFFMISS_REL}}; adding ground ball, called strike or alignment changes it among qualified pairs by {{MEM_GB_DIFF}}, {{MEM_CS_DIFF}} and {{MEM_ALIGN_DIFF}}, each with an interval below zero. Dropping weak contact changes it by {{MEM_NO_WEAK_DIFF}} ({{MEM_NO_WEAK_CI}}) and dropping timing by {{MEM_NO_TIMING_DIFF}} ({{MEM_NO_TIMING_CI}}), so those two stay on their forecast gains and reliability. Called strike and alignment now pass the p&lt;0.01 gate, which they did not on two seasons, so their exclusion rests on stability and effect size, not on the p-value.</p>
+    <div class="dx-card dx-table-card">
+      <table class="dx-table">
+        <thead><tr><th scope="col">Piece of the score</th><th scope="col">Steady within a season (r)</th><th scope="col">Matches next season (r)</th><th scope="col">Forecast gain (&Delta;R&sup2;)</th><th scope="col">Forecast test</th><th scope="col">Status</th></tr></thead>
+        <tbody>
+__COMPONENT_ROWS__
+        </tbody>
+      </table>
+    </div>
+    <p class="dx-section-note dx-wide">Among the members, {{MOST_LABEL}} is the most reliable (r={{MOST_R}}) and {{LEAST_LABEL}} the least (r={{LEAST_R}}). Timing has the strongest forecast (&Delta;R&sup2; {{DELTA_TIMING}}). Ground ball passes the forecast test but is kept out of Deception+ and shown on its own: its index correlates at most {{GB_CORR_MAX}} with the members, so it is a different skill, and adding it changes the composite's year-over-year correlation among qualified pairs by {{MEM_GB_DIFF}} (95% interval {{MEM_GB_CI}}). Called strike was removed too. It is stable within a season (r={{REL_CALLEDSTRIKE}}) and carries over only partly (year-over-year r={{YOY_CALLEDSTRIKE}}). It passes the forecast gate, but with a gain ({{DELTA_CALLEDSTRIKE}} of R&sup2;) a small fraction of a member's, and adding it changes the composite's year-over-year by {{MEM_CS_DIFF}} ({{MEM_CS_CI}}). That pattern points to effects other than pitcher skill, such as catcher or park, and umpire identity, tested separately, did not explain it. Horizontal alignment passes the forecast gate only barely (p={{P_ALIGN}}, {{DELTA_ALIGN}} of R&sup2;), its year-over-year correlation is {{YOY_ALIGN}}, and adding it changes the composite's year-over-year by {{MEM_ALIGN_DIFF}} ({{MEM_ALIGN_CI}}), so it stays out and appears only in the table above.</p>
+    <p class="dx-section-note dx-wide">The membership decisions were first made on 2025 and 2026 alone, before 2024 was added. On all three seasons, with every pair of consecutive seasons pooled, year-over-year correlation is {{YOY_R}} ({{YOY_BY_PAIR}}), and among pairs where the pitcher qualified in both seasons it is {{YOY_QUAL_R}} ({{YOY_QUAL_BY_PAIR}}). Dropping whiff miss distance lowers it to {{MEM_NO_WHIFFMISS_YOY}} and reliability to {{MEM_NO_WHIFFMISS_REL}}; adding ground ball, called strike or alignment changes it among qualified pairs by {{MEM_GB_DIFF}}, {{MEM_CS_DIFF}} and {{MEM_ALIGN_DIFF}}. {{OUT_INTERVALS}} Dropping weak contact changes it by {{MEM_NO_WEAK_DIFF}} ({{MEM_NO_WEAK_CI}}) and dropping timing by {{MEM_NO_TIMING_DIFF}} ({{MEM_NO_TIMING_CI}}), so those two stay on their forecast gains and reliability. Called strike and alignment now pass the p&lt;0.01 gate, which they did not on two seasons, so their exclusion rests on stability and effect size, not on the p-value.</p>
     <p class="dx-section-note dx-wide">The intervals were checked out of sample. Each pitcher-season's games were split into two halves, the score and 95% interval built from one half were used to predict the other half's raw result, and the standardized errors were collected for whiff, chase and weak contact ({{COV_N}} qualified pitcher-seasons or more each). If the intervals are right the errors have a standard deviation of 1 and about 95% fall inside 1.96. {{COV_VERDICT}}: standard deviation {{COV_SD_RANGE}} overall and at most {{COV_SD_THIRD_MAX}} in any third of the sample sizes or of the pitches thrown per game, with {{COV_95_RANGE}} inside 1.96. Starters throw more scored pitches per game than relievers and so carry more game-level noise, and the sampling variance is scaled by that cluster size. This tests the measurement noise within a season, not uncertainty about a pitcher's true skill, and the cluster-size scaling was set after an earlier version of this check showed starters' intervals too narrow, so it is a calibration check and not independent proof. A simulation with known talent covered 93% at a nominal 95%.</p>
+  </div>
+
+  <div class="dx-section" id="stuff-detail">
+    <h2>Stuff+ in detail</h2>
+    <p class="dx-answer">The link is loose overall and uneven by outcome and pitch type.</p>
+    <p class="dx-section-note dx-wide">By season, r is {{STUFF_R_BY_SEASON}}. By piece of the score: {{STUFF_R_MEMBERS}}. The sample is {{STUFF_N}} qualified pitcher-seasons with a Stuff+ figure from FanGraphs (entered by hand, never used by the model).</p>
+    <div class="dx-card">
+      <h3 class="dx-chart-h">Results by Stuff+ fifth</h3>
+      <div class="dx-toggle" id="fifthsToggle" aria-label="Outcome to chart by Stuff+ fifth">
+        <button data-metric="whiff" class="active">Whiff</button>
+        <button data-metric="chase">Chase</button>
+        <button data-metric="weak">Weak contact</button>
+        <button data-metric="timing">Timing</button>
+        <button data-metric="whiffmiss">Whiff miss</button>
+      </div>
+      <div style="position:relative; height:300px; margin-top:10px;">
+        <canvas id="fifthsChart" role="img" aria-label="Average actual minus expected result in each fifth of pitch-type Stuff+, with 95% intervals, fastballs against other pitches"></canvas>
+      </div>
+      <p class="dx-chart-title">Dots: average actual minus expected. Lines: 95% intervals. Above zero means pitchers in that group beat the model. <span id="fifthsUnitNote"></span></p>
+      <div class="dx-legend">
+        <span><i style="background:var(--series-1)"></i>Fastballs (four-seam, sinker)</span>
+        <span><i style="background:var(--series-2)"></i>Other pitches</span>
+      </div>
+    </div>
+    <details class="dx-tableview">
+      <summary>Table view of the fifths</summary>
+      <div class="dx-card dx-table-card">
+        <table class="dx-table" id="fifthsTable">
+          <thead><tr><th scope="col">Stuff+ fifth</th><th scope="col">Fastballs: mean Stuff+</th><th scope="col">Fastballs: result</th><th scope="col">Other pitches: mean Stuff+</th><th scope="col">Other pitches: result</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+    <p class="dx-section-note dx-wide">Pitches are ranked into fifths against the same pitch type (sliders against sliders; no sweeper Stuff+ exists at FanGraphs). For whiff, fastballs barely change across the fifths and the other pitches climb. For chase, both climb. FanGraphs also rates secondary pitches by their gaps to the fastball, which this model does not see. The <a href="#audit" class="dx-link">audit log</a> has what was tested.</p>
   </div>
 
   <div class="dx-section" id="field">
     <h2>More on the field results</h2>
-    <p class="dx-section-note dx-wide">The <a href="__DASHBOARD_URL__" class="dx-link">dashboard</a> has the on-field tables. Two further results:</p>
+    <p class="dx-section-note dx-wide">R&sup2; is the share of next season's differences between pitchers that a model explains. In the first row, {{OV_EXAMPLE}}. The sample is {{OV_PAIRS}} season pairs ({{OV_PITCHERS}} pitchers, at least {{OV_MIN_PA}} batters faced in the second season). The <a href="__DASHBOARD_URL__" class="dx-link">dashboard</a> shows the gains as a chart.</p>
+    <div class="dx-card dx-table-card">
+      <table class="dx-table">
+        <thead><tr><th scope="col">Next season's result</th><th scope="col" class="txt">With Stuff+ and Location+: R&sup2; without and with Deception+, then the gain</th><th scope="col" class="txt">Also with last season's own result</th></tr></thead>
+        <tbody>
+__OUTCOME_ROWS__
+        </tbody>
+      </table>
+    </div>
+    <details class="dx-more">
+      <summary>How stable is each stat year to year?</summary>
+      <p>{{OV_STABILITY}}</p>
+    </details>
+    <h3>What one step of each score is worth next season</h3>
+    <div class="dx-card dx-table-card">
+      <table class="dx-table">
+        <thead><tr><th scope="col">One step up in</th><th scope="col">Strikeout rate changes by (points)</th><th scope="col">xwOBA allowed changes by (points, lower is better)</th></tr></thead>
+        <tbody>
+__OUTCOME_COEF_ROWS__
+        </tbody>
+      </table>
+    </div>
+    <p class="dx-section-note dx-wide">Green where p is below 0.05, with the other scores held fixed. Two further results:</p>
     <p class="dx-section-note dx-wide">{{OV_TIMING}}</p>
     <p class="dx-section-note dx-wide">Location+ runs the opposite way from the rest. Among qualified pitcher-seasons it correlates {{LOC_DECEPTION_R}} with Deception+ and {{LOC_STUFF_R}} with Stuff+, and the members it is most tied to are whiff miss distance ({{LOC_WHIFFMISS_R}}), whiff ({{LOC_WHIFF_R}}) and chase ({{LOC_CHASE_R}}). Pitchers rated as better locators get somewhat fewer whiffs and chases than their pitches' measured traits predict. The model holds each pitch's own plate location fixed, so this is not about where a given pitch crossed the plate, and why locators lose some of that credit has not been tested. On the field it still helps with run prevention: per standard deviation, Location+ goes with {{LOC_XWOBA}} next season, and with no clear change in strikeout rate (p {{LOC_K_P}}).</p>
   </div>
@@ -221,6 +310,7 @@ __PITCHTYPE_ROWS__
 (function() {
   var DRIVERS = __DRIVERS_JSON__;
   var VALIDATION = __VALIDATION_JSON__;
+  var STUFFPLUS = __STUFFPLUS_JSON__;
 
   if (typeof Chart === 'undefined') {
     // the Chart.js library is blocked, offline, or failed its integrity check: say so instead of leaving empty charts
@@ -438,5 +528,98 @@ __PITCHTYPE_ROWS__
 
   setValMetric('whiff');
   bindToggle('valToggle', setValMetric);
+
+  // Stuff+ in detail: average actual minus expected by Stuff+ fifth within pitch type, with 95% intervals
+  var FIFTH_LABELS = ['Lowest', '2nd', '3rd', '4th', 'Highest'];
+  var UNIT_WORDS = { pp: 'percentage points', 'in': 'inches', log: 'log units' };
+  var UNIT_DIGITS = { pp: 1, 'in': 2, log: 3 };
+  var fifthsMetric = 'whiff';
+  function signed(v, digits) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(digits); }
+  function gridColor(center) {
+    return function(c) { return c.tick.value === center ? cssVar('--border-strong') : cssVar('--border'); };
+  }
+  var whiskers = {
+    id: 'whiskers',
+    afterDatasetsDraw: function(chart) {
+      var ctx = chart.ctx, yScale = chart.scales.y;
+      ctx.save();
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      chart.data.datasets.forEach(function(ds, i) {
+        var meta = chart.getDatasetMeta(i);
+        ctx.strokeStyle = ds.borderColor;
+        ds.data.forEach(function(p, j) {
+          var pt = meta.data[j];
+          if (!pt || p.lo === undefined) return;
+          var y0 = yScale.getPixelForValue(p.lo), y1 = yScale.getPixelForValue(p.hi);
+          ctx.beginPath();
+          ctx.moveTo(pt.x, y0); ctx.lineTo(pt.x, y1);
+          ctx.moveTo(pt.x - 3, y0); ctx.lineTo(pt.x + 3, y0);
+          ctx.moveTo(pt.x - 3, y1); ctx.lineTo(pt.x + 3, y1);
+          ctx.stroke();
+        });
+      });
+      ctx.restore();
+    }
+  };
+  var fifthsChart = new Chart(document.getElementById('fifthsChart'), {
+    type: 'scatter',
+    data: { datasets: [
+      { label: 'Fastballs', data: [], showLine: true, tension: 0, borderColor: cssVar('--series-1'), backgroundColor: cssVar('--series-1'),
+        borderWidth: 1.5, pointRadius: 4.5, pointHoverRadius: 6, pointBorderColor: cssVar('--surface'), pointBorderWidth: 1.5 },
+      { label: 'Other pitches', data: [], showLine: true, tension: 0, borderColor: cssVar('--series-2'), backgroundColor: cssVar('--series-2'),
+        borderWidth: 1.5, pointRadius: 4.5, pointHoverRadius: 6, pointBorderColor: cssVar('--surface'), pointBorderWidth: 1.5 }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 6, right: 10 } },
+      scales: {
+        x: { type: 'linear', min: 0.5, max: 5.5, title: { display: true, text: 'Stuff+ fifth within pitch type', color: cssVar('--text-secondary') },
+             afterBuildTicks: function(scale) { scale.ticks = [1, 2, 3, 4, 5].map(function(v) { return { value: v }; }); },
+             ticks: { color: cssVar('--text-muted'), callback: function(v) { return FIFTH_LABELS[v - 1] || ''; } }, grid: { display: false } },
+        y: { title: { display: true, text: '', color: cssVar('--text-secondary') },
+             ticks: { color: cssVar('--text-muted') }, grid: { color: gridColor(0) } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          title: function(items) { return 'Stuff+ fifth: ' + FIFTH_LABELS[Math.round(items[0].raw.x) - 1].toLowerCase(); },
+          label: function(c) {
+            var p = c.raw, d = UNIT_DIGITS[STUFFPLUS[fifthsMetric].unit] + 1;
+            return c.dataset.label + ': ' + signed(p.y, d) + ' (95% interval ' + signed(p.lo, d) + ' to ' + signed(p.hi, d) + '), mean Stuff+ ' + p.mean.toFixed(0) + ', ' + p.cells + ' samples';
+          }
+        }}
+      }
+    },
+    plugins: [whiskers]
+  });
+  var fifthsBody = document.querySelector('#fifthsTable tbody');
+  function fifthPoints(rows, dx) {
+    return rows.map(function(r, i) {
+      return { x: i + 1 + dx, y: r.resid, lo: r.resid - 1.96 * r.se, hi: r.resid + 1.96 * r.se, mean: r.mean_stuff, cells: r.cells };
+    });
+  }
+  function setFifthsMetric(metric) {
+    fifthsMetric = metric;
+    var o = STUFFPLUS[metric], digits = UNIT_DIGITS[o.unit];
+    var fast = fifthPoints(o.fastball, -0.1), other = fifthPoints(o.nonfastball, 0.1), all = fast.concat(other);
+    var lo = Math.min.apply(null, all.map(function(p) { return Math.min(p.lo, 0); })), hi = Math.max.apply(null, all.map(function(p) { return Math.max(p.hi, 0); }));
+    var pad = (hi - lo) * 0.08;
+    fifthsChart.data.datasets[0].data = fast;
+    fifthsChart.data.datasets[1].data = other;
+    fifthsChart.options.scales.y.min = lo - pad;
+    fifthsChart.options.scales.y.max = hi + pad;
+    fifthsChart.options.scales.y.title.text = METRIC_LABEL[metric] + ': actual minus expected (' + UNIT_WORDS[o.unit] + ')';
+    fifthsChart.update();
+    document.getElementById('fifthsUnitNote').textContent = 'The unit is ' + UNIT_WORDS[o.unit] + '.';
+    fifthsBody.textContent = '';
+    FIFTH_LABELS.forEach(function(label, i) {
+      var f = o.fastball[i], n = o.nonfastball[i];
+      addRow(fifthsBody, [label, f.mean_stuff.toFixed(0), signed(f.resid, digits + 1) + ' (se ' + f.se.toFixed(digits + 1) + ')',
+                          n.mean_stuff.toFixed(0), signed(n.resid, digits + 1) + ' (se ' + n.se.toFixed(digits + 1) + ')']);
+    });
+  }
+  setFifthsMetric('whiff');
+  bindToggle('fifthsToggle', setFifthsMetric);
 })();
 </script>

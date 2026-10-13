@@ -12,12 +12,23 @@ limits and the audit log; the dashboard keeps the headline checks.
 import argparse
 import json
 
-from site_common import METHODOLOGY_FILE, json_for_script, load_stats, page_links, pitch_type_rows, render_page, shared_head
+from site_common import (
+    METHODOLOGY_FILE,
+    component_table_rows,
+    json_for_script,
+    load_stats,
+    outcome_coefficient_rows,
+    outcome_table_rows,
+    page_links,
+    pitch_type_rows,
+    render_page,
+    shared_head,
+)
 
 TITLE = "Deception+ methodology"
 DESCRIPTION = (
     "How Deception+ is built and checked: out-of-fold validation of the pitch models, the score's shrinkage and "
-    "intervals, which components are in it and why, the known limits, and an audit log. Statcast 2024-26."
+    "intervals, which components are in it and why, the known limits, and an audit log. Statcast {span}."
 )
 
 
@@ -33,13 +44,17 @@ def main() -> None:
         validation_data = json.load(f)
     with open("output/pitch_type_scores.json", encoding="utf-8") as f:
         pitch_type_summary = json.load(f)
+    with open("output/stuffplus_relationship.json", encoding="utf-8") as f:
+        stuff_data = json.load(f)
+    with open("output/outcome_validation.json", encoding="utf-8") as f:
+        outcome_validation = json.load(f)
     stats = load_stats()
     links = page_links(args.artifact)
 
     page = render_page(
         "templates/methodology.html",
         title=TITLE,
-        description=DESCRIPTION,
+        description=DESCRIPTION.format(span=stats["text"]["SEASON_SPAN"].replace(" to ", "-")),
         artifact_mode=args.artifact,
         text=stats["text"],
         page_file=METHODOLOGY_FILE,
@@ -47,6 +62,10 @@ def main() -> None:
             "__SHARED_HEAD__": shared_head(),
             "__DRIVERS_JSON__": json_for_script(driver_data),
             "__VALIDATION_JSON__": json_for_script(validation_data["outcomes"]),
+            "__STUFFPLUS_JSON__": json_for_script(stuff_data["outcomes"]),
+            "__COMPONENT_ROWS__": component_table_rows(stats["components"]),
+            "__OUTCOME_ROWS__": outcome_table_rows(outcome_validation),
+            "__OUTCOME_COEF_ROWS__": outcome_coefficient_rows(outcome_validation),
             "__PITCHTYPE_ROWS__": pitch_type_rows(pitch_type_summary),
             "__DASHBOARD_URL__": links["dashboard"],
             "__LEADERBOARD_URL__": links["leaderboard"],

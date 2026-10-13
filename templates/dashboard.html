@@ -8,9 +8,8 @@ __SHARED_HEAD__
     <a class="dx-brand" href="#top">Deception<b>+</b></a>
     <nav class="dx-topnav" aria-label="Sections and pages">
       <a href="#overview">Overview</a>
-      <a href="#models">Models</a>
+      <a href="#trust">Trust</a>
       <a href="#stuff">Stuff+</a>
-      <a href="#reliable">Reliability</a>
       <a href="#field">On the field</a>
       <a href="#pitchers">Pitchers</a>
       <a href="#stats-key">Stats key</a>
@@ -29,20 +28,22 @@ __SHARED_HEAD__
     <div>
       <h1>Deception+</h1>
       <p class="dx-lede">Deception+ measures how far a pitcher's results land above or below what a model predicts from each pitch's speed, spin, movement and location, plus the batter, catcher, count and park.</p>
+      <p class="dx-caveat">It does not prove deception. It is the part of results the model cannot explain.</p>
       <div class="dx-actions">
         <a class="dx-btn dx-btn-primary" href="__LEADERBOARD_URL__">Browse every pitcher</a>
         <a class="dx-btn" href="__METHODOLOGY_URL__">How it works</a>
       </div>
-      <p class="dx-meta">Statcast pitches, 2024 to 2026, through {{DATA_THROUGH}}.</p>
+      <p class="dx-meta">Statcast pitches, {{SEASON_SPAN}}, through {{DATA_THROUGH}}.</p>
     </div>
     <figure class="dx-ruler" id="ruler">
       <div id="rulerSvg" role="img" aria-label="Histogram of qualified Deception+ scores, centered on 100"></div>
-      <figcaption>Where <span id="rulerN">{{N_QUALIFIED}}</span> qualified pitcher-seasons land. 100 is average and each 10 points is one step. <span id="rulerCore">About two thirds</span> land between 90 and 110. Highest: {{TOP1_NAME}}, {{TOP1_SEASON}} ({{TOP1_SCORE}}).</figcaption>
+      <figcaption><span id="rulerCore">__RULER_CORE_PCT__</span> of <span id="rulerN">{{N_QUALIFIED}}</span> qualified pitcher-seasons land within one step of average (90 to 110). Highest: {{TOP1_NAME}}, {{TOP1_SEASON}} ({{TOP1_SCORE}}).</figcaption>
     </figure>
   </div>
 
   <div class="dx-section" id="overview">
     <h2>How a score is built</h2>
+    <p class="dx-answer">A score is a pitcher's results minus what a model predicted, set so 100 is average and 10 points is one step.</p>
     <ol class="dx-steps">
       <li class="dx-step"><h3>Predict</h3><p>A model rates every pitch from its speed, spin, movement, location, the batter, catcher, count and park.</p><div class="dx-step-val">{{EX_N}} swings</div></li>
       <li class="dx-step"><h3>Compare</h3><p>Actual results minus the prediction, averaged over the pitcher's pitches.</p><div class="dx-step-val">+{{EX_RAW}} points</div></li>
@@ -61,7 +62,13 @@ __SHARED_HEAD__
         <p>It is whatever the model cannot explain, so calling it deception is a hypothesis. It tracks Stuff+ (r={{STUFF_R}}), and sequencing, tunneling, spin mirroring, tempo and arm slot each explain at most {{DRIVER_R2_MAX_PCT}} of it.</p>
       </div>
     </div>
-    <div class="dx-tiles">
+  </div>
+
+  <div class="dx-section" id="trust">
+    <h2>Can you trust a score?</h2>
+    <p class="dx-answer">Partly. Scores carry over from one season to the next, but each has a wide margin of error.</p>
+    <div class="dx-trust-grid">
+    <div class="dx-tiles dx-tiles-stack">
       <div class="dx-tile">
         <div class="dx-tile-label">Steady within a season</div>
         <div class="dx-tile-val">r={{COMPOSITE_R}}</div>
@@ -80,145 +87,64 @@ __SHARED_HEAD__
         <div class="dx-tile-note">Points, 95% interval. Only {{DP_CLEAR}} of {{N_QUALIFIED}} qualified scores ({{DP_CLEAR_PCT}}) clearly differ from 100.</div>
       </div>
     </div>
-  </div>
-
-  <div class="dx-section" id="models">
-    <h2>How good are the pitch models?</h2>
-    <p class="dx-answer">Good at ranking whiffs and chases, weak at explaining swing timing and miss distance.</p>
-    <div class="dx-tiles">
-      <div class="dx-tile">
-        <div class="dx-tile-label">Whiff model (AUC)</div>
-        <div class="dx-tile-val">{{VAL_AUC_WHIFF}}</div>
-        <div class="dx-tile-note">Ranks a whiff above a non-whiff {{VAL_AUC_WHIFF_PCT}} of the time.</div>
-      </div>
-      <div class="dx-tile">
-        <div class="dx-tile-label">Chase model (AUC)</div>
-        <div class="dx-tile-val">{{VAL_AUC_CHASE}}</div>
-        <div class="dx-tile-note">The same test for chases: {{VAL_AUC_CHASE_PCT}}. A coin flip is 50%.</div>
-      </div>
-      <div class="dx-tile">
-        <div class="dx-tile-label">Calibration (slope)</div>
-        <div class="dx-tile-val">{{VAL_SLOPE_MEMBERS}}</div>
-        <div class="dx-tile-note">1.0 means predicted rates match real ones.</div>
-      </div>
-      <div class="dx-tile">
-        <div class="dx-tile-label">Timing model (R&sup2;)</div>
-        <div class="dx-tile-val">{{VAL_R2_TIMING}}</div>
-        <div class="dx-tile-note">Explains {{VAL_R2_TIMING_PCT}} of swing differences (whiff miss distance: {{VAL_R2_WHIFFMISS_PCT}}).</div>
-      </div>
+    <div class="dx-card">
+      <h3 class="dx-chart-h">Steadiest piece is {{MOST_LABEL}} ({{MOST_R}}), noisiest is {{LEAST_LABEL}} ({{LEAST_R}})</h3>
+      __PIECE_DOTS__
+      <p class="dx-chart-title">Correlation (r) of each piece with itself within a season (filled) and with the next season (open), sorted by steadiness. {{N_PASS}} of {{N_COMPOSITE}} pieces also pass the forecast test (p below {{P_GATE}}).</p>
     </div>
-    <div class="dx-folds" role="img" aria-label="Pitchers are split into five groups. The model trains on four and predicts the fifth."><span>Train</span><span>Train</span><span>Train</span><span>Train</span><span class="score">Predict</span></div>
-    <p class="dx-section-note dx-wide">Gradient-boosted models, scored out of fold: the model trains on four groups of pitchers and predicts the fifth, so a pitcher's own pitches never help predict their results. <a href="__METHODOLOGY_URL__#pitch-models" class="dx-link">Charts</a>.</p>
+    </div>
+    <p class="dx-section-note dx-wide">{{OUT_SENTENCE}} <a href="__METHODOLOGY_URL__#membership" class="dx-link">Full table</a>. The pitch models are scored on pitchers they never trained on (whiff AUC {{VAL_AUC_WHIFF}}, chase {{VAL_AUC_CHASE}}). <a href="__METHODOLOGY_URL__#pitch-models" class="dx-link">Validation</a>.</p>
   </div>
 
   <div class="dx-section" id="stuff">
-    <h2>Does it just track Stuff+?</h2>
-    <p class="dx-answer">Partly. They correlate at r={{STUFF_R}} (95% interval {{STUFF_R_CI}}): better stuff tends to score higher, but Stuff+ explains only about {{STUFF_R2_PCT}} of the differences in Deception+.</p>
-    <p class="dx-section-note dx-wide">The model accounts for each pitch's measured traits, but Stuff+ knows more than those measurements.</p>
-    <div class="dx-chart-grid">
-      <div class="dx-card">
-        <h3 class="dx-chart-h">Stuff+ against the score</h3>
-        <div class="dx-toggle" id="scatterToggle" aria-label="Score to plot against Stuff+">
-          <button data-metric="composite" class="active">Deception+</button>
-          <button data-metric="whiff">Whiff</button>
-          <button data-metric="chase">Chase</button>
-          <button data-metric="weak">Weak contact</button>
-          <button data-metric="timing">Timing</button>
-          <button data-metric="whiffmiss">Whiff miss</button>
-          <button data-metric="gb">Ground ball</button>
-        </div>
-        <div style="position:relative; height:300px; margin-top:10px;">
-          <canvas id="scatterChart" role="img" aria-label="Scatter plot of FanGraphs Stuff+ against the deception index for {{N_POINTS}} pitcher-seasons, with the average for ten equal Stuff+ groups"></canvas>
-        </div>
-        <p class="dx-chart-title"><span id="scatterTrendNote"></span> Dark line: averages of ten equal Stuff+ groups, with 95% intervals.</p>
-        <div class="dx-legend">
-          <span><i style="background:var(--chart-muted)"></i>Pitcher-season</span>
-          <span><i style="background:var(--chart-highlight)"></i>Reputation for an unusual delivery</span>
-        </div>
-      </div>
-      <div class="dx-card">
-        <h3 class="dx-chart-h">Results by Stuff+ fifth</h3>
-        <div class="dx-toggle" id="fifthsToggle" aria-label="Outcome to chart by Stuff+ fifth">
-          <button data-metric="whiff" class="active">Whiff</button>
-          <button data-metric="chase">Chase</button>
-          <button data-metric="weak">Weak contact</button>
-          <button data-metric="timing">Timing</button>
-          <button data-metric="whiffmiss">Whiff miss</button>
-        </div>
-        <div style="position:relative; height:300px; margin-top:10px;">
-          <canvas id="fifthsChart" role="img" aria-label="Average actual minus expected result in each fifth of pitch-type Stuff+, with 95% intervals, fastballs against other pitches"></canvas>
-        </div>
-        <p class="dx-chart-title">Dots: average actual minus expected. Lines: 95% intervals. Above zero means pitchers beat the model.</p>
-        <div class="dx-legend">
-          <span><i style="background:var(--series-1)"></i>Fastballs (four-seam, sinker)</span>
-          <span><i style="background:var(--series-2)"></i>Other pitches</span>
-        </div>
-      </div>
+    <h2>Is it just Stuff+?</h2>
+    <div class="dx-split">
+    <div class="dx-split-text">
+      <p class="dx-answer">Partly. Better stuff tends to score higher, but Stuff+ explains only about {{STUFF_R2_PCT}} of the differences in Deception+.</p>
+      <p class="dx-section-note">The model already controls for each pitch's measured traits. The overlap may be information Stuff+ has that the model lacks. Adding fastball gaps to the model lowered it but also lowered the score's stability, so they were not adopted.</p>
     </div>
-    <details class="dx-more">
-      <summary>About these charts</summary>
-      <p>By season, r is {{STUFF_R_BY_SEASON}}. By piece of the score: {{STUFF_R_MEMBERS}}. The sample is {{STUFF_N}} qualified pitcher-seasons with a Stuff+ figure from FanGraphs (entered by hand, never used by the model).</p>
-      <p>Left: {{N_POINTS}} dots with at least 100 swings, so r differs slightly from the figure above. Right: pitches ranked into fifths against the same type (sliders against sliders; no sweeper Stuff+ exists at FanGraphs). <span id="fifthsUnitNote"></span></p>
-      <p>For whiff, fastballs barely change across the fifths and the other pitches climb. For chase, both climb. FanGraphs also rates secondary pitches by their gaps to the fastball, which this model does not see. The <a href="__METHODOLOGY_URL__#audit" class="dx-link">audit log</a> has what was tested.</p>
-    </details>
+    <div class="dx-card">
+      <h3 class="dx-chart-h">Stuff+ and Deception+ are {{STUFF_R_PHRASE}} (r = {{STUFF_R}})</h3>
+      <div style="position:relative; height:320px;">
+        <canvas id="scatterChart" data-r="{{STUFF_R}}" role="img" aria-label="Scatter plot of FanGraphs Stuff+ against Deception+ for {{STUFF_N}} qualified pitcher-seasons, with the average Deception+ for each of {{STUFF_BIN_GROUPS}} equal Stuff+ groups"></canvas>
+      </div>
+      <p class="dx-chart-title">Each dot is one of {{STUFF_N}} qualified pitcher-seasons. The dark line averages {{STUFF_BIN_GROUPS}} equal Stuff+ groups, with 95% intervals. Orange dots are pitchers with a reputation for an unusual delivery.</p>
+    </div>
+    </div>
     <details class="dx-tableview">
-      <summary>Table view of the fifths</summary>
+      <summary>Table view of the groups</summary>
       <div class="dx-card dx-table-card">
-        <table class="dx-table" id="fifthsTable">
-          <thead><tr><th scope="col">Stuff+ fifth</th><th scope="col">Fastballs: mean Stuff+</th><th scope="col">Fastballs: result</th><th scope="col">Other pitches: mean Stuff+</th><th scope="col">Other pitches: result</th></tr></thead>
-          <tbody></tbody>
+        <table class="dx-table dx-narrow">
+          <thead><tr><th scope="col">Stuff+ group</th><th scope="col">Mean Stuff+</th><th scope="col">Average Deception+</th><th scope="col">95% interval</th><th scope="col">Pitcher-seasons</th></tr></thead>
+          <tbody>
+__BIN_ROWS__
+          </tbody>
         </table>
       </div>
     </details>
-  </div>
-
-  <div class="dx-section" id="reliable">
-    <h2>Does it hold up?</h2>
-    <p class="dx-answer">Mostly. Each piece is checked for steadiness and for forecasting next season. Steadiest: {{MOST_LABEL}} ({{MOST_R}}). Noisiest: {{LEAST_LABEL}} ({{LEAST_R}}).</p>
-    <div class="dx-card dx-table-card">
-      <table class="dx-table">
-        <thead><tr><th scope="col">Piece of the score</th><th scope="col">Steady within a season (r)</th><th scope="col">Matches next season (r)</th><th scope="col">Forecast gain (&Delta;R&sup2;)</th><th scope="col">Forecast test</th><th scope="col">Status</th></tr></thead>
-        <tbody>
-__COMPONENT_ROWS__
-        </tbody>
-      </table>
-    </div>
-    <p class="dx-section-note dx-wide">Forecast gain is the extra share of next season a piece explains once added (timing: {{DELTA_TIMING_PCT}} points). Pass means p below 0.01.</p>
-    <p class="dx-section-note dx-wide">Ground ball, called strike and horizontal alignment pass but stay out: adding any of them lowers the score's year-over-year r ({{MEM_GB_DIFF}}, {{MEM_CS_DIFF}}, {{MEM_ALIGN_DIFF}}). Ground ball is a different skill (r at most {{GB_CORR_MAX}} with the rest). <a href="__METHODOLOGY_URL__#membership" class="dx-link">Tests</a>.</p>
+    <p class="dx-section-note dx-wide">By season, by piece and by pitch type: <a href="__METHODOLOGY_URL__#stuff-detail" class="dx-link">Stuff+ in detail</a>.</p>
   </div>
 
   <div class="dx-section" id="field">
-    <h2>Does it matter on the field?</h2>
-    <p class="dx-answer">{{OV_SUMMARY}}</p>
-    <p class="dx-section-note dx-wide">R&sup2; is the share of next season's differences between pitchers that a model explains. In the first row, {{OV_EXAMPLE}}.</p>
+    <h2>Does it predict anything on the field?</h2>
+    <p class="dx-answer">Partly. Beyond Stuff+ and Location+, it adds clearly for {{OV_CLEAR}}.</p>
+    <p class="dx-note dx-reality"><strong>Reality check.</strong> {{OV_REALITY}}</p>
+    <h3 class="dx-chart-h">{{OV_TITLE}}</h3>
     <div class="dx-card dx-table-card">
       <table class="dx-table">
-        <thead><tr><th scope="col">Next season's result</th><th scope="col" class="txt">With Stuff+ and Location+</th><th scope="col" class="txt">Also with last season's own result</th></tr></thead>
+        <thead><tr><th scope="col">Next season's result</th><th scope="col" class="txt">Beyond Stuff+ and Location+</th><th scope="col" class="txt dx-stress">Also beyond last season's own result<small>the stricter test</small></th></tr></thead>
         <tbody>
-__OUTCOME_ROWS__
+__OUTCOME_FOREST_ROWS__
         </tbody>
       </table>
     </div>
-    <p class="dx-section-note dx-wide">Each cell: R&sup2; without and with Deception+, then the gain (dot) and its 95% interval (line). Green clears zero. {{OV_PAIRS}} season pairs, {{OV_PITCHERS}} pitchers, at least {{OV_MIN_PA}} batters faced.</p>
-    <details class="dx-more">
-      <summary>How stable is each stat year to year?</summary>
-      <p>{{OV_STABILITY}}</p>
-    </details>
-    <h3>What one step of each score is worth next season</h3>
-    <div class="dx-card dx-table-card">
-      <table class="dx-table">
-        <thead><tr><th scope="col">One step up in</th><th scope="col">Strikeout rate changes by (points)</th><th scope="col">xwOBA allowed changes by (points, lower is better)</th></tr></thead>
-        <tbody>
-__OUTCOME_COEF_ROWS__
-        </tbody>
-      </table>
-    </div>
-    <p class="dx-section-note dx-wide">Green where p is below 0.05, with the other scores held fixed.</p>
+    <p class="dx-section-note dx-wide">Dot: gain in R&sup2; from adding Deception+ (R&sup2; is the share of next season's differences between pitchers that a model explains). Line: 95% interval. A solid green dot clears zero. {{OV_NULL}} The sample is {{OV_PAIRS}} season pairs. <a href="__METHODOLOGY_URL__#field" class="dx-link">R&sup2; values and effect sizes</a>.</p>
   </div>
 
   <div class="dx-section" id="pitchers">
-    <h2>Pitchers with a reputation for deception</h2>
-    <p class="dx-section-note dx-wide">Eight pitchers scouts call deceptive. Tarik Skubal's score comes from whiffs (whiff {{SKUBAL_WHIFF}}, ground ball {{SKUBAL_GB}}, Deception+ {{SKUBAL_DP}}). Tyler Rogers's comes from ground balls (whiff {{ROGERS_WHIFF}}, ground ball {{ROGERS_GB}}), which Deception+ leaves out, so his score is {{ROGERS_DP}}.</p>
+    <h2>Who scores well, and why?</h2>
+    <p class="dx-answer">Tarik Skubal's {{SKUBAL_DP}} comes from whiffs (whiff {{SKUBAL_WHIFF}}, ground ball {{SKUBAL_GB}}).</p>
+    <p class="dx-section-note dx-wide">Tyler Rogers's value is ground balls (whiff {{ROGERS_WHIFF}}, ground ball {{ROGERS_GB}}), which Deception+ leaves out, so his score is {{ROGERS_DP}}.</p>
     <div class="dx-card dx-table-card">
       <table class="dx-table dx-narrow" id="loreTable">
         <thead><tr><th scope="col">Pitcher</th><th scope="col">Season</th><th scope="col">Swings</th><th scope="col">Deception+ (percentile)</th><th scope="col">Whiff (percentile)</th><th scope="col">Ground ball (percentile)</th></tr></thead>
@@ -230,20 +156,17 @@ __REPUTATION_ROWS__
     <p class="dx-section-note dx-wide">Percentile is the share of pitchers a score beats. Names link to the leaderboard.</p>
   </div>
 
-  <div class="dx-section" id="stats-key">
-    <h2>Stats key</h2>
+  <details class="dx-keybox" id="stats-key">
+    <summary>Stats key</summary>
     <dl class="dx-glossary">
       <div><dt>r (correlation)</dt><dd>How closely two numbers move together: 0 is no link, 1 is a perfect match.<small>Pearson r.</small></dd></div>
       <div><dt>Reliability</dt><dd>Odd and even games scored separately, then compared. High means skill, low means luck.<small>Split-half r, Spearman-Brown corrected.</small></dd></div>
-      <div><dt>AUC</dt><dd>How often the model rates a pitch that drew a whiff above one that did not. 50% is a coin flip.<small>Area under the ROC curve, out of fold.</small></dd></div>
-      <div><dt>Calibration slope</dt><dd>Do predicted rates match real ones? At 1.0, a predicted 30% happens about 30% of the time.<small>Actual on predicted rate, by decile.</small></dd></div>
       <div><dt>R&sup2;</dt><dd>The share of differences a model explains. 0.23 means 23%.<small>Cross-validated, grouped by pitcher.</small></dd></div>
-      <div><dt>Forecast gain (&Delta;R&sup2;)</dt><dd>Extra share of next season a piece explains once added. Timing's {{DELTA_TIMING}} is {{DELTA_TIMING_PCT}} points.<small>Change in cross-validated R&sup2;.</small></dd></div>
-      <div><dt>p</dt><dd>How often a gain this big would appear by luck if the piece added nothing. Under 0.01 passes here.<small>Errors clustered on pitcher.</small></dd></div>
+      <div><dt>Forecast gain (&Delta;R&sup2;)</dt><dd>Extra share of next season a piece explains once added. It passes when p, the chance of a gain this big if the piece added nothing, is below {{P_GATE}}.<small>Change in cross-validated R&sup2;, errors clustered on pitcher.</small></dd></div>
       <div><dt>95% interval</dt><dd>The range likely to hold the true value. If it clears zero (a gain) or 100 (a score), the result is clear.<small>Scores: wider of bootstrap and analytic.</small></dd></div>
       <div><dt>Percentile</dt><dd>The share of pitchers a score beats.<small>Among scored pitcher-seasons.</small></dd></div>
     </dl>
-  </div>
+  </details>
 
   <div class="dx-section" id="cautions">
     <div class="dx-callout dx-method">
@@ -252,7 +175,7 @@ __REPUTATION_ROWS__
         <li>Volume matters: year-to-year r is {{YOY_QUAL_R}} when the pitcher qualified both seasons, {{YOY_R}} overall.</li>
         <li>Relievers average {{RP_MEAN}} against {{SP_MEAN}} for starters even after adjusting for fatigue, so part of the gap may be role.</li>
         <li>Left-handers average {{LHP_GAP}} points against right-handers (p={{LHP_P}}). The gap is real or leftover model error, and these data cannot say which.</li>
-        <li>Three seasons means no aging curves and only two season-to-season pairs.</li>
+        <li>{{N_SEASONS}} seasons means no aging curves and only {{N_SEASON_PAIRS}} season-to-season pairs.</li>
       </ul>
       <p class="dx-section-note dx-wide" style="margin-top:0.9rem">More limits and the audit log: <a href="__METHODOLOGY_URL__#limits" class="dx-link">methodology page</a>.</p>
     </div>
@@ -267,9 +190,9 @@ __REPUTATION_ROWS__
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous"></script>
 <script>
 (function() {
-  var POINTS = __POINTS_JSON__;
+  var POINTS = __POINTS_JSON__;   // qualified pitcher-seasons: [name, season, Stuff+, Deception+, swings, reputation for an unusual delivery]
   var LORE = __LORE_JSON__;
-  var STUFFPLUS = __STUFFPLUS_JSON__;
+  var BINS = __BINS_JSON__;       // average Deception+ for equal Stuff+ groups, with 95% intervals, computed when the page is built
 
   function cssVar(name) {
     return getComputedStyle(document.querySelector('.dxroot')).getPropertyValue(name).trim();
@@ -284,7 +207,7 @@ __REPUTATION_ROWS__
   var RULER_NAMES = ['Hill, Tim', 'Rogers, Tyler', 'Duran, Jhoan', 'Ohtani, Shohei', 'Skubal, Tarik'];
   function drawRuler() {
     var host = document.getElementById('rulerSvg');
-    var scores = POINTS.filter(function(p) { return p[11] && p[8] !== null; }).map(function(p) { return p[8]; });
+    var scores = POINTS.map(function(p) { return p[3]; });
     if (!host || scores.length === 0) return;
     document.getElementById('rulerN').textContent = scores.length.toLocaleString('en-US');
     var inCore = scores.filter(function(v) { return v >= 90 && v < 110; }).length;
@@ -350,43 +273,20 @@ __REPUTATION_ROWS__
     });
   }
 
-  function addRow(body, cells) {
-    var tr = document.createElement('tr');
-    cells.forEach(function(text, j) {
-      var cell = document.createElement(j === 0 ? 'th' : 'td');
-      if (j === 0) cell.scope = 'row';
-      cell.textContent = text;
-      tr.appendChild(cell);
-    });
-    body.appendChild(tr);
-  }
+  // the stats key is collapsed; a link or an address ending in #stats-key opens it
+  var keyBox = document.getElementById('stats-key');
+  function openKey() { if (keyBox) keyBox.open = true; }
+  document.querySelectorAll('a[href="#stats-key"]').forEach(function(a) { a.addEventListener('click', openKey); });
+  if (location.hash === '#stats-key') openKey();
 
   if (typeof Chart === 'undefined') {
-    // the Chart.js library is blocked, offline, or failed its integrity check: say so instead of leaving empty charts
+    // the Chart.js library is blocked, offline, or failed its integrity check: say so instead of leaving an empty chart
     document.querySelector('.dx-wrap').insertAdjacentHTML('afterbegin',
-      '<p class="dx-section-note dx-wide" role="alert">The charts did not load because the Chart.js library was blocked or unavailable. The text and tables on this page still apply.</p>');
+      '<p class="dx-section-note dx-wide" role="alert">The chart did not load because the Chart.js library was blocked or unavailable. The text and tables on this page, including the table view under the chart, still apply.</p>');
     return;
   }
   Chart.defaults.font.family = cssVar('--font-body');
   Chart.defaults.animation = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? false : { duration: 350 };
-
-  function bindToggle(id, onPick) {
-    var group = document.getElementById(id);
-    group.setAttribute('role', 'group');
-    group.querySelectorAll('button').forEach(function(b) { b.setAttribute('aria-pressed', b.classList.contains('active') ? 'true' : 'false'); });
-    group.addEventListener('click', function(e) {
-      var btn = e.target.closest('button');
-      if (!btn) return;
-      group.querySelectorAll('button').forEach(function(b) {
-        b.classList.toggle('active', b === btn);
-        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
-      });
-      onPick(btn.dataset.metric);
-    });
-  }
-
-  var METRIC_IDX = { composite: 8, whiff: 3, chase: 4, gb: 5, weak: 6, timing: 7, whiffmiss: 12 };
-  var METRIC_LABEL = { composite: 'Deception+', whiff: 'Whiff', chase: 'Chase', gb: 'Ground ball', weak: 'Weak contact', timing: 'Timing', whiffmiss: 'Whiff miss distance' };
 
   function alpha(color, a) {
     var h = color.replace('#', '');
@@ -423,64 +323,48 @@ __REPUTATION_ROWS__
     }
   };
 
-  // name the highest and lowest of the highlighted pitchers so the scatter can be read without hovering
-  var pointLabels = {
-    id: 'pointLabels',
+  // name the highest and lowest of the highlighted pitchers, and print the correlation on the chart
+  var annotations = {
+    id: 'annotations',
     afterDatasetsDraw: function(chart) {
-      var ctx = chart.ctx, meta = chart.getDatasetMeta(1);
+      var ctx = chart.ctx, meta = chart.getDatasetMeta(1), area = chart.chartArea;
       ctx.save();
-      ctx.font = '600 11px ' + cssVar('--font-body');
-      ctx.fillStyle = cssVar('--text-primary');
+      ctx.lineJoin = 'round';
       ctx.strokeStyle = cssVar('--surface');
       ctx.lineWidth = 3;
-      ctx.lineJoin = 'round';
+      ctx.font = '600 11px ' + cssVar('--font-body');
+      ctx.fillStyle = cssVar('--text-primary');
       chart.data.datasets[1].data.forEach(function(row, i) {
         var point = meta.data[i];
         if (!row.label || !point) return;
-        var flip = point.x > chart.chartArea.right - 80;
+        var flip = point.x > area.right - 80;
         ctx.textAlign = flip ? 'right' : 'left';
         ctx.strokeText(row.label, point.x + (flip ? -9 : 9), point.y + 4);
         ctx.fillText(row.label, point.x + (flip ? -9 : 9), point.y + 4);
       });
+      ctx.font = '600 15px ' + cssVar('--font-body');
+      ctx.textAlign = 'left';
+      ctx.lineWidth = 4;
+      ctx.strokeText('r = ' + chart.canvas.dataset.r, area.left + 10, area.top + 20);
+      ctx.fillText('r = ' + chart.canvas.dataset.r, area.left + 10, area.top + 20);
       ctx.restore();
     }
   };
 
-  // mean of y with its 95% interval for each of `groups` equal-sized slices of the points ordered by x
-  function binnedMeans(rows, groups) {
-    var sorted = rows.slice().sort(function(a, b) { return a.x - b.x; }), size = Math.ceil(sorted.length / groups), out = [];
-    for (var i = 0; i < sorted.length; i += size) {
-      var chunk = sorted.slice(i, i + size), n = chunk.length, mx = 0, my = 0, ss = 0, k;
-      if (n < 20) continue;
-      for (k = 0; k < n; k++) { mx += chunk[k].x; my += chunk[k].y; }
-      mx /= n; my /= n;
-      for (k = 0; k < n; k++) ss += Math.pow(chunk[k].y - my, 2);
-      var half = 1.96 * Math.sqrt(ss / (n - 1) / n);
-      out.push({ x: mx, y: my, lo: my - half, hi: my + half, n: n });
-    }
-    return out;
-  }
+  var league = [], marked = [];
+  POINTS.forEach(function(p) {
+    var row = { x: p[2], y: p[3], name: p[0], season: p[1], n: p[4] };
+    (p[5] ? marked : league).push(row);
+  });
+  var byScore = marked.slice().sort(function(a, b) { return b.y - a.y; });
+  byScore.slice(0, 4).concat(byScore.slice(-2)).forEach(function(r) { r.label = r.name.split(', ')[0] + " '" + String(r.season).slice(2); });
 
-  function buildScatterData(metric) {
-    var idx = METRIC_IDX[metric];
-    var ctx = [], hi = [];
-    POINTS.forEach(function(p) {
-      var y = p[idx];
-      if (y === null || y === undefined) return;
-      var row = { x: p[2], y: y, name: p[0], season: p[1], n: p[9] };
-      (p[10] ? hi : ctx).push(row);
-    });
-    var byScore = hi.slice().sort(function(a, b) { return b.y - a.y; });
-    byScore.slice(0, 4).concat(byScore.slice(-2)).forEach(function(r) { r.label = r.name.split(', ')[0] + " '" + String(r.season).slice(2); });
-    return { ctx: ctx, hi: hi, bins: binnedMeans(ctx.concat(hi), 10) };
-  }
-
-  var scatterChart = new Chart(document.getElementById('scatterChart'), {
+  new Chart(document.getElementById('scatterChart'), {
     type: 'scatter',
     data: { datasets: [
-      { label: 'Pitcher-season', data: [], backgroundColor: alpha(cssVar('--chart-muted'), 0.35), borderWidth: 0, pointRadius: 2.6, pointHoverRadius: 5 },
-      { label: 'Reputation for an unusual delivery', data: [], backgroundColor: cssVar('--chart-highlight'), borderColor: cssVar('--surface'), borderWidth: 1.5, pointRadius: 5, pointHoverRadius: 7 },
-      { label: 'Average by Stuff+ tenth', data: [], showLine: true, whisker: true, tension: 0, order: 0, borderColor: cssVar('--text-primary'), backgroundColor: cssVar('--text-primary'),
+      { label: 'Pitcher-season', data: league, backgroundColor: alpha(cssVar('--chart-muted'), 0.35), borderWidth: 0, pointRadius: 2.6, pointHoverRadius: 5 },
+      { label: 'Reputation for an unusual delivery', data: marked, backgroundColor: cssVar('--chart-highlight'), borderColor: cssVar('--surface'), borderWidth: 1.5, pointRadius: 5, pointHoverRadius: 7 },
+      { label: 'Average by Stuff+ group', data: BINS, showLine: true, whisker: true, tension: 0, order: 0, borderColor: cssVar('--text-primary'), backgroundColor: cssVar('--text-primary'),
         borderWidth: 2, pointRadius: 4, pointHoverRadius: 6, pointBorderColor: cssVar('--surface'), pointBorderWidth: 1.5 }
     ]},
     options: {
@@ -499,106 +383,11 @@ __REPUTATION_ROWS__
           if (c.datasetIndex === 2) {
             return 'Stuff+ near ' + d.x.toFixed(0) + ': average ' + d.y.toFixed(1) + ' (95% interval ' + d.lo.toFixed(1) + ' to ' + d.hi.toFixed(1) + '), ' + d.n + ' pitcher-seasons';
           }
-          return d.name + ' (' + d.season + '): Stuff+ ' + d.x.toFixed(0) + ', index ' + d.y.toFixed(1) + ', n=' + d.n;
+          return d.name + ' (' + d.season + '): Stuff+ ' + d.x.toFixed(0) + ', Deception+ ' + d.y.toFixed(1) + ', n=' + d.n;
         }}}
       }
     },
-    plugins: [whiskers, pointLabels]
+    plugins: [whiskers, annotations]
   });
-
-  function fitLine(rows) {
-    var n = rows.length, sx = 0, sy = 0, i;
-    for (i = 0; i < n; i++) { sx += rows[i].x; sy += rows[i].y; }
-    var mx = sx / n, my = sy / n, sxx = 0, syy = 0, sxy = 0;
-    for (i = 0; i < n; i++) {
-      var dx = rows[i].x - mx, dy = rows[i].y - my;
-      sxx += dx * dx; syy += dy * dy; sxy += dx * dy;
-    }
-    return { n: n, slope: sxy / sxx, r: sxy / Math.sqrt(sxx * syy) };
-  }
-
-  function setScatterMetric(metric) {
-    var built = buildScatterData(metric);
-    scatterChart.data.datasets[0].data = built.ctx;
-    scatterChart.data.datasets[1].data = built.hi;
-    scatterChart.data.datasets[2].data = built.bins;
-    var fit = fitLine(built.ctx.concat(built.hi));
-    document.getElementById('scatterTrendNote').textContent = (metric === 'composite' ? 'Deception+' : METRIC_LABEL[metric] + ' index') +
-      (fit.slope >= 0 ? ' rises ' : ' falls ') + Math.abs(fit.slope * 10).toFixed(1) + ' points per 10 Stuff+ points (r = ' +
-      fit.r.toFixed(2) + ', ' + fit.n.toLocaleString('en-US') + ' pitcher-seasons).';
-    scatterChart.options.scales.y.title.text = (metric === 'composite' ? 'Deception+' : METRIC_LABEL[metric] + ' index') + ' (100 = average)';
-    scatterChart.update();
-  }
-  setScatterMetric('composite');
-  bindToggle('scatterToggle', setScatterMetric);
-
-  var FIFTH_LABELS = ['Lowest', '2nd', '3rd', '4th', 'Highest'];
-  var UNIT_WORDS = { pp: 'percentage points', 'in': 'inches', log: 'log units' };
-  var UNIT_DIGITS = { pp: 1, 'in': 2, log: 3 };
-  var fifthsMetric = 'whiff';
-
-  function signed(v, digits) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(digits); }
-
-  var fifthsChart = new Chart(document.getElementById('fifthsChart'), {
-    type: 'scatter',
-    data: { datasets: [
-      { label: 'Fastballs', data: [], showLine: true, whisker: true, tension: 0, borderColor: cssVar('--series-1'), backgroundColor: cssVar('--series-1'),
-        borderWidth: 1.5, pointRadius: 4.5, pointHoverRadius: 6, pointBorderColor: cssVar('--surface'), pointBorderWidth: 1.5 },
-      { label: 'Other pitches', data: [], showLine: true, whisker: true, tension: 0, borderColor: cssVar('--series-2'), backgroundColor: cssVar('--series-2'),
-        borderWidth: 1.5, pointRadius: 4.5, pointHoverRadius: 6, pointBorderColor: cssVar('--surface'), pointBorderWidth: 1.5 }
-    ]},
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      layout: { padding: { top: 6, right: 10 } },
-      scales: {
-        x: { type: 'linear', min: 0.5, max: 5.5, title: { display: true, text: 'Stuff+ fifth within pitch type', color: cssVar('--text-secondary') },
-             afterBuildTicks: function(scale) { scale.ticks = [1, 2, 3, 4, 5].map(function(v) { return { value: v }; }); },
-             ticks: { color: cssVar('--text-muted'), callback: function(v) { return FIFTH_LABELS[v - 1] || ''; } }, grid: { display: false } },
-        y: { title: { display: true, text: '', color: cssVar('--text-secondary') },
-             ticks: { color: cssVar('--text-muted') }, grid: { color: gridColor(0) } }
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: {
-          title: function(items) { return 'Stuff+ fifth: ' + FIFTH_LABELS[Math.round(items[0].raw.x) - 1].toLowerCase(); },
-          label: function(c) {
-            var p = c.raw, d = UNIT_DIGITS[STUFFPLUS[fifthsMetric].unit] + 1;
-            return c.dataset.label + ': ' + signed(p.y, d) + ' (95% interval ' + signed(p.lo, d) + ' to ' + signed(p.hi, d) + '), mean Stuff+ ' + p.mean.toFixed(0) + ', ' + p.cells + ' samples';
-          }
-        }}
-      }
-    },
-    plugins: [whiskers]
-  });
-
-  var fifthsUnitNote = document.getElementById('fifthsUnitNote');
-  var fifthsBody = document.querySelector('#fifthsTable tbody');
-  function fifthPoints(rows, dx) {
-    return rows.map(function(r, i) {
-      return { x: i + 1 + dx, y: r.resid, lo: r.resid - 1.96 * r.se, hi: r.resid + 1.96 * r.se, mean: r.mean_stuff, cells: r.cells };
-    });
-  }
-  function setFifthsMetric(metric) {
-    fifthsMetric = metric;
-    var o = STUFFPLUS[metric], digits = UNIT_DIGITS[o.unit];
-    var fast = fifthPoints(o.fastball, -0.1), other = fifthPoints(o.nonfastball, 0.1);
-    var all = fast.concat(other), lo = Math.min.apply(null, all.map(function(p) { return Math.min(p.lo, 0); })), hi = Math.max.apply(null, all.map(function(p) { return Math.max(p.hi, 0); }));
-    var pad = (hi - lo) * 0.08;
-    fifthsChart.data.datasets[0].data = fast;
-    fifthsChart.data.datasets[1].data = other;
-    fifthsChart.options.scales.y.min = lo - pad;
-    fifthsChart.options.scales.y.max = hi + pad;
-    fifthsChart.options.scales.y.title.text = METRIC_LABEL[metric] + ': actual minus expected (' + UNIT_WORDS[o.unit] + ')';
-    fifthsChart.update();
-    fifthsUnitNote.textContent = 'The unit is ' + UNIT_WORDS[o.unit] + '.';
-    fifthsBody.textContent = '';
-    FIFTH_LABELS.forEach(function(label, i) {
-      var f = o.fastball[i], n = o.nonfastball[i];
-      addRow(fifthsBody, [label, f.mean_stuff.toFixed(0), signed(f.resid, digits + 1) + ' (se ' + f.se.toFixed(digits + 1) + ')',
-                          n.mean_stuff.toFixed(0), signed(n.resid, digits + 1) + ' (se ' + n.se.toFixed(digits + 1) + ')']);
-    });
-  }
-  setFifthsMetric('whiff');
-  bindToggle('fifthsToggle', setFifthsMetric);
 })();
 </script>

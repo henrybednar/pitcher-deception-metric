@@ -15,7 +15,7 @@ from site_common import LEADERBOARD_FILE, json_for_script, load_stats, page_link
 TITLE = "Deception+ Leaderboard"
 DESCRIPTION = (
     "Sortable Deception+ scores and six component indexes for every scored pitcher-season, "
-    "with 95% intervals and a starter or reliever filter. Statcast 2024-26."
+    "with 95% intervals and a starter or reliever filter. Statcast {span}."
 )
 
 
@@ -32,7 +32,7 @@ def main() -> None:
     page = render_page(
         "templates/leaderboard.html",
         title=TITLE,
-        description=DESCRIPTION,
+        description=DESCRIPTION.format(span=stats["text"]["SEASON_SPAN"].replace(" to ", "-")),
         artifact_mode=args.artifact,
         text=stats["text"],
         page_file=LEADERBOARD_FILE,
