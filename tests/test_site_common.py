@@ -260,12 +260,28 @@ def test_the_dashboard_explains_each_statistic_it_shows_and_every_in_page_link_r
     assert {a for a in re.findall(r'href="#([\w-]+)"', text)} <= ids
 
 
-def test_the_percentage_phrasings_of_the_model_fit_ranges_are_published_keys():
-    import json
+def test_the_model_fit_ranges_are_also_published_as_percentages_for_the_plain_language_lines():
+    from export_site_stats import validation_text
 
-    stats = json.load(open("output/site_stats.json", encoding="utf-8"))["text"]
+    def outcome(key, metric, values):
+        return key, {"by_pitch_type": [{metric: v} for v in values], "calibration": {"slope": 1.0}}
 
-    for key in ("VAL_AUC_WHIFF_PCT", "VAL_AUC_CHASE_PCT", "VAL_R2_TIMING_PCT", "VAL_R2_WHIFFMISS_PCT", "DELTA_TIMING_PCT", "STUFF_R2_PCT",
-                "DRIVER_R2_MAX_PCT", "OV_EXAMPLE"):
-        assert stats[key].strip(), key
-    assert stats["VAL_AUC_WHIFF_PCT"].count("%") == 2 and " to " in stats["VAL_AUC_WHIFF_PCT"]
+    validation = {"outcomes": dict([
+        outcome("gb", "auc", [0.62, 0.67]), outcome("calledstrike", "auc", [0.98, 0.99]),
+        outcome("timing", "r2", [0.054, 0.206]), outcome("whiffmiss", "r2", [0.061, 0.394]),
+        outcome("whiff", "auc", [0.757, 0.862]), outcome("chase", "auc", [0.81, 0.884]), outcome("weak", "auc", [0.68, 0.75])])}
+
+    text = validation_text(validation)
+
+    assert text["VAL_AUC_WHIFF_PCT"] == "76% to 86%" and text["VAL_AUC_CHASE_PCT"] == "81% to 88%"
+    assert text["VAL_R2_TIMING_PCT"] == "5% to 21%" and text["VAL_R2_WHIFFMISS_PCT"] == "6% to 39%"
+
+
+def test_the_on_field_example_reads_the_first_row_in_words():
+    from export_site_stats import ov_example
+
+    first = {"label": "Strikeout rate", "r2": {"stuff_location": 0.233, "stuff_location_deception": 0.304},
+             "deception_over_stuff_location": {"gain": 0.071, "lo": 0.032, "hi": 0.110}}
+
+    assert ov_example(first) == ("strikeout rate goes from 23% explained to 30% with Deception+ added, "
+                                 "a gain of 7.1 points (95% interval 3.2 to 11.0)")

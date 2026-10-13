@@ -253,6 +253,14 @@ def join_labels(labels: list[str], none: str = "no outcome") -> str:
     return join_words(labels) if labels else none
 
 
+def ov_example(first: dict) -> str:
+    """One row of the on-field table in words: the share of next season explained without and with Deception+, and the gain."""
+    r2, gain = first["r2"], first["deception_over_stuff_location"]
+    return (f"{first['label'].lower()} goes from {r2['stuff_location']:.0%} explained to {r2['stuff_location_deception']:.0%} "
+            f"with Deception+ added, a gain of {gain['gain'] * 100:.1f} points "
+            f"(95% interval {gain['lo'] * 100:.1f} to {gain['hi'] * 100:.1f})")
+
+
 def outcome_text(validation: dict) -> dict:
     """Page-text figures from outcome_validation.json: the sample, which outcomes Deception+ adds to (an interval
     above zero) beyond Stuff+ and Location+ and beyond last season's own result, the stability of each metric, and the
@@ -285,12 +293,8 @@ def outcome_text(validation: dict) -> dict:
                   f"{per_sd('xwoba', 'whiff_index')} for whiff. The rule written down for timing is to demote it from the score if, on both outcomes, the upper end of its "
                   f"interval is under {rule['share']:.0%} of whiff's effect. That rule is not met "
                   f"(ratios {rule['outcomes']['k_pct']['ratio']:+.2f} for strikeout rate and {rule['outcomes']['xwoba']['ratio']:+.2f} for xwOBA), so it stays in.")
-    k_r2, k_gain = first["r2"], first["deception_over_stuff_location"]
-    example = (f"{first['label'].lower()} goes from {k_r2['stuff_location']:.0%} explained to {k_r2['stuff_location_deception']:.0%} "
-               f"with Deception+ added, a gain of {k_gain['gain'] * 100:.1f} points "
-               f"(95% interval {k_gain['lo'] * 100:.1f} to {k_gain['hi'] * 100:.1f})")
     return {
-        "OV_EXAMPLE": example,
+        "OV_EXAMPLE": ov_example(first),
         "OV_PAIRS": f"{first['n']:,}", "OV_PITCHERS": f"{first['pitchers']:,}", "OV_MIN_PA": str(validation["min_next_pa"]),
         "OV_SUMMARY": (f"Beyond Stuff+ and Location+, Deception+ adds clearly (95% interval above zero) for {join_labels(clear('deception_over_stuff_location'))}. "
                        f"Beyond last season's own result as well, it adds clearly for {join_labels(clear('deception_over_own_stuff_location'))}."),
