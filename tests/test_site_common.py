@@ -464,3 +464,13 @@ def test_the_leaderboard_links_the_csv_the_ruler_names_come_from_one_list_and_th
 
     step = next(s for s in run_pipeline.STEPS if s.name == "build_pages")
     assert "build_scores_csv.py" in step.scripts and "deception_scores.csv" in step.outputs
+
+
+def test_the_csv_link_downloads_on_the_standalone_page_and_opens_in_a_new_tab_inside_the_artifact():
+    import build_leaderboard
+
+    template = open("templates/leaderboard.html", encoding="utf-8").read()
+    source = open(build_leaderboard.__file__, encoding="utf-8").read()
+
+    assert 'href="__CSV_URL__"__CSV_ATTRS__' in template
+    assert '" target=\"_blank\" rel=\"noopener\"' not in template and "if args.artifact else \" download\"" in source
