@@ -17,15 +17,19 @@ import re
 from pathlib import Path
 from urllib.parse import quote
 
+PAGES_BASE = "https://henrybednar.github.io/pitcher-deception-metric/"
 DASHBOARD_FILE = "deception_dashboard.html"
 LEADERBOARD_FILE = "deception_leaderboard.html"
 METHODOLOGY_FILE = "deception_methodology.html"
+INDEX_FILE = "index.html"          # a copy of the dashboard, so the bare Pages address opens it
+SHARE_IMAGE_FILE = "share_image.png"
+SHARE_IMAGE_ALT = "Histogram of qualified pitcher-season Deception+ scores centered on 100, with five pitchers marked"
 STYLE_FILE = "templates/style.css"
 ARTIFACT_URLS = {
     "dashboard": "https://claude.ai/artifact/8Tv4rsUay43bAfsr8A6aSJ",
     "leaderboard": "https://claude.ai/artifact/X1byK2MquLxXN44J9DrYwa",
     # no artifact for this page: the fragment links to the GitHub Pages copy
-    "methodology": "https://henrybednar.github.io/pitcher-deception-metric/" + METHODOLOGY_FILE,
+    "methodology": PAGES_BASE + METHODOLOGY_FILE,
 }
 FONT_LINKS = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
@@ -81,25 +85,38 @@ def shared_head() -> str:
     return FONT_LINKS + "<style>\n" + Path(STYLE_FILE).read_text(encoding="utf-8").rstrip() + "\n</style>"
 
 
-def head_block(title: str, description: str, artifact_mode: bool = False) -> str:
+def head_block(title: str, description: str, artifact_mode: bool = False, page_file: str | None = None) -> str:
     if artifact_mode:
         # the artifact host supplies charset, viewport and the document skeleton; the body ground is still ours to set
         return f"<title>{html.escape(title)}</title>\n{BODY_STYLE}\n"
     desc = html.escape(description, quote=True)
+    name = html.escape(title, quote=True)
+    image = PAGES_BASE + SHARE_IMAGE_FILE
+    url = f'<meta property="og:url" content="{PAGES_BASE}{page_file}">\n<link rel="canonical" href="{PAGES_BASE}{page_file}">\n' if page_file else ""
     return (
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f"<title>{html.escape(title)}</title>\n"
         f'<meta name="description" content="{desc}">\n'
-        f'<meta property="og:title" content="{html.escape(title, quote=True)}">\n'
+        f'<meta property="og:title" content="{name}">\n'
         f'<meta property="og:description" content="{desc}">\n'
         '<meta property="og:type" content="website">\n'
+        '<meta property="og:site_name" content="Deception+">\n'
+        + url +
+        f'<meta property="og:image" content="{image}">\n'
+        '<meta property="og:image:width" content="1200">\n'
+        '<meta property="og:image:height" content="630">\n'
+        f'<meta property="og:image:alt" content="{html.escape(SHARE_IMAGE_ALT, quote=True)}">\n'
+        '<meta name="twitter:card" content="summary_large_image">\n'
+        f'<meta name="twitter:title" content="{name}">\n'
+        f'<meta name="twitter:description" content="{desc}">\n'
+        f'<meta name="twitter:image" content="{image}">\n'
         f'<link rel="icon" href="{FAVICON}">\n'
     )
 
 
 def render_page(template_path: str, *, title: str, description: str, artifact_mode: bool,
-                replacements: dict, text: dict) -> str:
+                replacements: dict, text: dict, page_file: str | None = None) -> str:
     """Load a template, fill payload tokens and stats, and wrap for the chosen mode."""
     template = Path(template_path).read_text(encoding="utf-8")
     if "__HEAD__" not in template:
@@ -113,7 +130,7 @@ def render_page(template_path: str, *, title: str, description: str, artifact_mo
         raise ValueError(f"{template_path} has tokens with no replacement: {unsupplied}")
     # one pass, so a payload that happens to contain another token's text is never expanded
     body = PAYLOAD_PATTERN.sub(lambda m: replacements.get(m.group(0), m.group(0)), body)
-    head = head_block(title, description, artifact_mode)
+    head = head_block(title, description, artifact_mode, page_file)
     if artifact_mode:
         return head + body
     return (

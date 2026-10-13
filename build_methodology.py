@@ -42,6 +42,7 @@ def main() -> None:
         description=DESCRIPTION,
         artifact_mode=args.artifact,
         text=stats["text"],
+        page_file=METHODOLOGY_FILE,
         replacements={
             "__SHARED_HEAD__": shared_head(),
             "__DRIVERS_JSON__": json_for_script(driver_data),

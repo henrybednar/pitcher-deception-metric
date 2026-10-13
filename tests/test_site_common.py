@@ -285,3 +285,60 @@ def test_the_on_field_example_reads_the_first_row_in_words():
 
     assert ov_example(first) == ("strikeout rate goes from 23% explained to 30% with Deception+ added, "
                                  "a gain of 7.1 points (95% interval 3.2 to 11.0)")
+
+
+def test_a_standalone_page_head_carries_the_tags_a_shared_link_preview_needs():
+    head = sc.head_block("Deception+", "A description", artifact_mode=False, page_file=sc.DASHBOARD_FILE)
+
+    image = sc.PAGES_BASE + sc.SHARE_IMAGE_FILE
+    assert f'<meta property="og:image" content="{image}">' in head                     # absolute, because the crawler fetches it from elsewhere
+    assert '<meta property="og:image:width" content="1200">' in head and '<meta property="og:image:height" content="630">' in head
+    assert '<meta name="twitter:card" content="summary_large_image">' in head
+    assert f'<link rel="canonical" href="{sc.PAGES_BASE}{sc.DASHBOARD_FILE}">' in head
+    assert f'<meta property="og:url" content="{sc.PAGES_BASE}{sc.DASHBOARD_FILE}">' in head
+
+
+def test_the_head_skips_the_page_address_when_no_page_is_named_and_the_artifact_head_stays_minimal():
+    plain = sc.head_block("Deception+", "d", artifact_mode=False)
+    artifact = sc.head_block("Deception+", "d", artifact_mode=True)
+
+    assert "og:url" not in plain and "canonical" not in plain and "og:image" in plain
+    assert "og:image" not in artifact and artifact.startswith("<title>")
+
+
+def test_the_dashboard_build_also_writes_the_index_copy_and_every_builder_names_its_page():
+    import build_artifact
+    import build_leaderboard
+    import build_methodology
+
+    source = open(build_artifact.__file__, encoding="utf-8").read()
+    assert "INDEX_FILE" in source and "if not args.artifact and not args.out" in source
+    for module, constant in ((build_artifact, "DASHBOARD_FILE"), (build_leaderboard, "LEADERBOARD_FILE"), (build_methodology, "METHODOLOGY_FILE")):
+        assert f"page_file={constant}" in open(module.__file__, encoding="utf-8").read(), module.__name__
+
+
+def test_the_share_image_is_1200_by_630_and_marks_only_the_pitchers_it_has(tmp_path):
+    import numpy as np
+    from PIL import Image
+
+    import build_share_image
+
+    rng = np.random.default_rng(0)
+    points = [[f"P{i}", 2025, 100, 100, 100, 100, 100, 100, float(s), 500, False, True, 100] for i, s in enumerate(rng.normal(100, 10, 300))]
+    lore = [{"name": "Skubal, Tarik", "deception_plus": 145.3}, {"name": "Hill, Tim", "deception_plus": 90.0}, {"name": "Nobody, Else", "deception_plus": 120.0}]
+    out = tmp_path / "card.png"
+
+    n_scores, n_marked = build_share_image.draw({"points": points, "lore": lore}, str(out))
+
+    assert (n_scores, n_marked) == (300, 2)                                            # the unlisted name is not drawn
+    assert Image.open(out).size == (1200, 630)
+
+
+def test_the_pipeline_page_step_builds_the_index_copy_and_the_share_image_and_the_readme_leads_with_the_live_links():
+    import run_pipeline
+
+    step = next(s for s in run_pipeline.STEPS if s.name == "build_pages")
+    readme = open("README.md", encoding="utf-8").read()[:1500]
+
+    assert "build_share_image.py" in step.scripts and {"index.html", "share_image.png"} <= set(step.outputs)
+    assert sc.PAGES_BASE in readme and "share_image.png" in readme

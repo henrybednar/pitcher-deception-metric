@@ -35,6 +35,7 @@ def main() -> None:
         description=DESCRIPTION,
         artifact_mode=args.artifact,
         text=stats["text"],
+        page_file=LEADERBOARD_FILE,
         replacements={
             "__SHARED_HEAD__": shared_head(),
             "__ROWS_JSON__": json_for_script(rows),

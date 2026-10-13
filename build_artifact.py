@@ -13,6 +13,7 @@ import json
 
 from site_common import (
     DASHBOARD_FILE,
+    INDEX_FILE,
     component_table_rows,
     json_for_script,
     load_stats,
@@ -52,6 +53,7 @@ def main() -> None:
         description=DESCRIPTION,
         artifact_mode=args.artifact,
         text=stats["text"],
+        page_file=DASHBOARD_FILE,
         replacements={
             "__SHARED_HEAD__": shared_head(),
             "__POINTS_JSON__": json_for_script(artifact_data["points"]),
@@ -69,6 +71,11 @@ def main() -> None:
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(page)
     print(f"wrote {out_path} ({'artifact' if args.artifact else 'standalone'}), {len(page):,} chars")
+    if not args.artifact and not args.out:
+        # the bare Pages address has no page of its own, so it serves a copy of the dashboard (its canonical link names the real one)
+        with open(INDEX_FILE, "w", encoding="utf-8") as f:
+            f.write(page)
+        print(f"wrote {INDEX_FILE} (copy of the dashboard)")
 
 
 if __name__ == "__main__":

@@ -2,6 +2,10 @@
 
 Pitcher results beyond what the pitch's measured traits predict.
 
+**[Live dashboard](https://henrybednar.github.io/pitcher-deception-metric/)** &middot; [Leaderboard](https://henrybednar.github.io/pitcher-deception-metric/deception_leaderboard.html) &middot; [Methodology](https://henrybednar.github.io/pitcher-deception-metric/deception_methodology.html)
+
+![Where qualified pitcher-seasons land on the Deception+ scale](share_image.png)
+
 [![Tests](https://github.com/henrybednar/pitcher-deception-metric/actions/workflows/tests.yml/badge.svg)](https://github.com/henrybednar/pitcher-deception-metric/actions/workflows/tests.yml)
 
 Deception+ is a pitcher metric built from scratch on Statcast pitch-level data for 2024, 2025 and 2026. It compares what happened on each pitch with what a model expects from the pitch's measured traits, the batter, the catcher, the count, the park, and pitcher-batter handedness. A pitcher's score is how far their results land above or below that expectation. 100 is the qualified-pitcher average and 10 points is one standard deviation, the same scale as Stuff+.
@@ -13,6 +17,8 @@ The gap between result and expectation is not proven to be deception. It is what
 - `deception_dashboard.html` is the short version: how to read the score, the comparison with Stuff+, reliability and forecast, on-field results, a table of pitchers with a deception reputation, and the main cautions.
 - `deception_methodology.html` has everything behind those checks: the pitch-model validation (AUC, log loss, calibration), how a score is built, which components are in it and why, the interval check, the trait regression, the known limits, and an audit log of the leaks and bugs found along the way.
 - `deception_leaderboard.html` is a sortable table of every scored pitcher-season with 95% intervals and a starter or reliever filter.
+
+`index.html` is a copy of the dashboard, so the bare GitHub Pages address opens it, and `share_image.png` is the preview image link shares show (`build_share_image.py`).
 
 Open the pages from the same folder so their links work. The pages are built from `templates/` (all three share `templates/style.css`), and every figure in their text comes from `site_stats.json`, so a pipeline rerun cannot leave them out of date.
 
@@ -62,7 +68,7 @@ The driver report (`report.pdf`) is built after the pipeline: `python driver_ols
 | `stuffplus_relationship` | Average result by Stuff+ fifth within pitch type, and the Stuff+ slope for each pitch type alone and on first pitches only |
 | `model_validation` | Out-of-fold AUC, log loss, calibration and R-squared for every pitch model |
 | `pitch_type_scores` | Whiff and chase scored within each pitch type (a pitcher's slider against every other slider) with the same shrinkage, scale and intervals as the season scores, and the split-half reliability of each, which feeds the leaderboard's by-pitch-type row detail and the methodology page's "Where does a score come from?" section |
-| `export_data`, `build_pages` | JSON, text figures and the three HTML pages |
+| `export_data`, `build_pages` | JSON, text figures, the three HTML pages, the `index.html` copy and the share image |
 | `check_readme_claims` | Do the README's headline numbers match this run's outputs? Last, so a stale README never blocks the pages; `python check_readme_claims.py --fix` rewrites the figures that drifted |
 
 ## Components
