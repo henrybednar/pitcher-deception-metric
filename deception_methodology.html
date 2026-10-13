@@ -387,12 +387,17 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
 .dx-gain-stack { flex-direction: row; align-items: baseline; gap: 8px; }
 .dx-gain-stack .dx-ci { white-space: nowrap; }
 .dx-pcell { flex-direction: row; align-items: center; gap: 10px; }
-.dx-pbar { width: 64px; }
+.dx-pbar { width: 52px; }
 @media (max-width: 860px) {
   .dx-trust-grid, .dx-split { grid-template-columns: minmax(0, 1fr); }
   .dx-tiles-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 480px) { .dx-gain-stack { flex-direction: column; gap: 0; } }
+
+/* ruler interval bars, interval cell, read-first lists */
+.dx-ruler .ci { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
+.dx-intcell { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.25; white-space: nowrap; }
+.dx-read ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; color: var(--text-secondary); line-height: 1.5; }
 </style>
 <div class="dxroot" id="top">
 <a class="dx-skip" href="#main">Skip to the content</a>
@@ -415,6 +420,31 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
       <p class="dx-hero-sub">The dashboard has the headline checks. This page has what sits behind them: the pitch models and their validation, how a score is built, which components are in it and why, the season-level traits tested as explanations, the known limits, and an audit log of the leaks and bugs found along the way.</p>
       <p class="dx-meta">Data through September 27, 2026.</p>
     </div>
+  </div>
+
+  <div class="dx-section" id="read-first">
+    <h2>Read this first</h2>
+    <div class="dx-read-grid">
+      <div class="dx-read">
+        <h3>What was checked and held</h3>
+        <ul>
+          <li>The pitch models rank whiffs and chases well (AUC 0.76 to 0.86 and 0.82 to 0.89), scored on pitchers they never trained on.</li>
+          <li>Interval check (split-half, out of sample). They held: the standardized errors have a standard deviation of 1.00 to 1.03 (the target is 1).</li>
+          <li>Scores are steady within a season (r=0.741) and carry to the next (r=0.611).</li>
+          <li>5 of 5 pieces in the score pass the forecast test (p below 0.01).</li>
+        </ul>
+      </div>
+      <div class="dx-read">
+        <h3>What did not hold, or is limited</h3>
+        <ul>
+          <li>It is not independent of pitch quality: r=0.386 with Stuff+, and no tested explanation (sequencing, tunneling, spin mirroring, tempo, arm slot) accounts for the gap.</li>
+          <li>Only xwOBA allowed still clears zero once last season&#x27;s own result is in the model.</li>
+          <li>Only 288 of 1,291 qualified scores (22%) are clearly different from 100.</li>
+          <li>3 seasons means no aging curves and 2 season-to-season pairs.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="dx-section-note dx-wide">Bugs found and fixed along the way, including two kinds of leakage, are in the <a href="#audit" class="dx-link">audit log</a>.</p>
   </div>
 
   <nav class="dx-toc" aria-label="On this page">

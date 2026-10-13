@@ -358,9 +358,14 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
 .dx-gain-stack { flex-direction: row; align-items: baseline; gap: 8px; }
 .dx-gain-stack .dx-ci { white-space: nowrap; }
 .dx-pcell { flex-direction: row; align-items: center; gap: 10px; }
-.dx-pbar { width: 64px; }
+.dx-pbar { width: 52px; }
 @media (max-width: 860px) {
   .dx-trust-grid, .dx-split { grid-template-columns: minmax(0, 1fr); }
   .dx-tiles-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 480px) { .dx-gain-stack { flex-direction: column; gap: 0; } }
+
+/* ruler interval bars, interval cell, read-first lists */
+.dx-ruler .ci { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
+.dx-intcell { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.25; white-space: nowrap; }
+.dx-read ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; color: var(--text-secondary); line-height: 1.5; }

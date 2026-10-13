@@ -23,6 +23,31 @@ __SHARED_HEAD__
     </div>
   </div>
 
+  <div class="dx-section" id="read-first">
+    <h2>Read this first</h2>
+    <div class="dx-read-grid">
+      <div class="dx-read">
+        <h3>What was checked and held</h3>
+        <ul>
+          <li>The pitch models rank whiffs and chases well (AUC {{VAL_AUC_WHIFF}} and {{VAL_AUC_CHASE}}), scored on pitchers they never trained on.</li>
+          <li>Interval check (split-half, out of sample). {{COV_VERDICT}}: the standardized errors have a standard deviation of {{COV_SD_RANGE}} (the target is 1).</li>
+          <li>Scores are steady within a season (r={{COMPOSITE_R}}) and carry to the next (r={{YOY_R}}).</li>
+          <li>{{N_PASS}} of {{N_COMPOSITE}} pieces in the score pass the forecast test (p below {{P_GATE}}).</li>
+        </ul>
+      </div>
+      <div class="dx-read">
+        <h3>What did not hold, or is limited</h3>
+        <ul>
+          <li>It is not independent of pitch quality: r={{STUFF_R}} with Stuff+, and no tested explanation (sequencing, tunneling, spin mirroring, tempo, arm slot) accounts for the gap.</li>
+          <li>{{OV_TITLE}}.</li>
+          <li>Only {{DP_CLEAR}} of {{N_QUALIFIED}} qualified scores ({{DP_CLEAR_PCT}}) are clearly different from 100.</li>
+          <li>{{N_SEASONS}} seasons means no aging curves and {{N_SEASON_PAIRS}} season-to-season pairs.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="dx-section-note dx-wide">Bugs found and fixed along the way, including two kinds of leakage, are in the <a href="#audit" class="dx-link">audit log</a>.</p>
+  </div>
+
   <nav class="dx-toc" aria-label="On this page">
     <a href="#pitch-models">Pitch models</a>
     <a href="#score">How a score is built</a>

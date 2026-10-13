@@ -62,6 +62,7 @@ for name, season in LORE_PICKS:
         "whiff_index": num(r["whiff_index"]), "pctile": round(r["whiff_pctile"]),
         "gb_index": num(r["gb_index"]), "gb_pctile": round(r["gb_pctile"]),
         "deception_plus": num(r["deception_plus"]), "dp_pctile": round(r["dp_pctile"]),
+        "dp_lo": num(r["deception_plus_ci_lo"]), "dp_hi": num(r["deception_plus_ci_hi"]),
         "n": int(r["whiff_n"]), "qualified": bool(r["qualified"]),
     })
 

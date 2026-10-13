@@ -23,6 +23,8 @@ DASHBOARD_FILE = "deception_dashboard.html"
 LEADERBOARD_FILE = "deception_leaderboard.html"
 METHODOLOGY_FILE = "deception_methodology.html"
 INDEX_FILE = "index.html"          # a copy of the dashboard, so the bare Pages address opens it
+SCORES_CSV_FILE = "deception_scores.csv"
+RULER_PICKS = ["Hill, Tim", "Rogers, Tyler", "Duran, Jhoan", "Ohtani, Shohei", "Skubal, Tarik"]   # the pitchers marked on the score ruler
 SHARE_IMAGE_FILE = "share_image.png"
 SHARE_IMAGE_ALT = "Histogram of qualified pitcher-season Deception+ scores centered on 100, with five pitchers marked"
 STYLE_FILE = "templates/style.css"
@@ -77,8 +79,8 @@ def fill_stats(template: str, text: dict) -> str:
 
 def page_links(artifact_mode: bool) -> dict:
     if artifact_mode:
-        return dict(ARTIFACT_URLS)
-    return {"dashboard": DASHBOARD_FILE, "leaderboard": LEADERBOARD_FILE, "methodology": METHODOLOGY_FILE}
+        return {**ARTIFACT_URLS, "csv": PAGES_BASE + SCORES_CSV_FILE}      # a download cannot start inside the artifact frame
+    return {"dashboard": DASHBOARD_FILE, "leaderboard": LEADERBOARD_FILE, "methodology": METHODOLOGY_FILE, "csv": SCORES_CSV_FILE}
 
 
 def shared_head() -> str:
@@ -329,6 +331,37 @@ def percentile_cell(value, pct) -> str:
             f'<span class="dx-pbar" aria-hidden="true"><i style="--p:{int(pct)}"></i></span></span></td>')
 
 
+def join_and(words: list) -> str:
+    if len(words) <= 2:
+        return " and ".join(words)
+    return ", ".join(words[:-1]) + ", and " + words[-1]
+
+
+def ruler_note(lore: list) -> str:
+    """The sentence under the score ruler: each marked pitcher's 95% interval is drawn, and which of them include 100."""
+    picks = [p for name in RULER_PICKS for p in lore if p["name"] == name and p.get("dp_lo") is not None and p.get("dp_hi") is not None]
+    if not picks:
+        return ""
+    last = lambda p: p["name"].split(", ")[0]
+    inside = [last(p) for p in picks if p["dp_lo"] <= 100 <= p["dp_hi"]]
+    outside = [last(p) for p in picks if not p["dp_lo"] <= 100 <= p["dp_hi"]]
+    parts = ["Bars show each marked pitcher's 95% interval."]
+    if inside:
+        one = len(inside) == 1
+        parts.append(f"{join_and(inside)} {'includes' if one else 'include'} 100, so {'is' if one else 'are'} not clearly different from average.")
+    if outside:
+        parts.append(f"{join_and(outside)} {'clears' if len(outside) == 1 else 'clear'} it.")
+    return " ".join(parts)
+
+
+def interval_cell(lo, hi) -> str:
+    """A 95% interval as a table cell; a note says when it includes 100 (not clearly different from average)."""
+    if lo is None or hi is None:
+        return "<td>n/a</td>"
+    note = '<span class="dx-ci">includes 100</span>' if lo <= 100 <= hi else ""
+    return f'<td><span class="dx-intcell">[{lo:.1f}, {hi:.1f}]{note}</span></td>'
+
+
 def reputation_rows(lore: list, leaderboard_url: str) -> str:
     """Rows of the reputation table. Each name links to the leaderboard already searching for that pitcher, so the
     table needs no script and the reader can go from a name to every season of it."""
@@ -339,8 +372,9 @@ def reputation_rows(lore: list, leaderboard_url: str) -> str:
         href = f"{leaderboard_url}#q={quote(p['name'])}"
         rows.append(
             f'<tr><th scope="row"><a class="dx-link" href="{esc(href)}">{esc(f"{first} {last}".strip())}</a></th>'
-            f'<td>{esc(p["season"])}</td><td>{esc(p["n"])}</td>'
-            + percentile_cell(p["deception_plus"], p["dp_pctile"]) + percentile_cell(p["whiff_index"], p["pctile"])
+            f'<td>{esc(p["season"])}</td>'
+            + percentile_cell(p["deception_plus"], p["dp_pctile"]) + interval_cell(p.get("dp_lo"), p.get("dp_hi"))
+            + percentile_cell(p["whiff_index"], p["pctile"])
             + percentile_cell(p["gb_index"], p["gb_pctile"]) + "</tr>")
     return "\n".join(rows)
 

@@ -37,7 +37,7 @@ __SHARED_HEAD__
     </div>
     <figure class="dx-ruler" id="ruler">
       <div id="rulerSvg" role="img" aria-label="Histogram of qualified Deception+ scores, centered on 100"></div>
-      <figcaption><span id="rulerCore">__RULER_CORE_PCT__</span> of <span id="rulerN">{{N_QUALIFIED}}</span> qualified pitcher-seasons land within one step of average (90 to 110). Highest: {{TOP1_NAME}}, {{TOP1_SEASON}} ({{TOP1_SCORE}}).</figcaption>
+      <figcaption><span id="rulerCore">__RULER_CORE_PCT__</span> of <span id="rulerN">{{N_QUALIFIED}}</span> qualified pitcher-seasons land within one step of average (90 to 110). Highest: {{TOP1_NAME}}, {{TOP1_SEASON}} ({{TOP1_SCORE}}). __RULER_NOTE__</figcaption>
     </figure>
   </div>
 
@@ -147,7 +147,7 @@ __OUTCOME_FOREST_ROWS__
     <p class="dx-section-note dx-wide">Tyler Rogers's value is ground balls (whiff {{ROGERS_WHIFF}}, ground ball {{ROGERS_GB}}), which Deception+ leaves out, so his score is {{ROGERS_DP}}.</p>
     <div class="dx-card dx-table-card">
       <table class="dx-table dx-narrow" id="loreTable">
-        <thead><tr><th scope="col">Pitcher</th><th scope="col">Season</th><th scope="col">Swings</th><th scope="col">Deception+ (percentile)</th><th scope="col">Whiff (percentile)</th><th scope="col">Ground ball (percentile)</th></tr></thead>
+        <thead><tr><th scope="col">Pitcher</th><th scope="col">Season</th><th scope="col">Deception+ (percentile)</th><th scope="col">95% interval</th><th scope="col">Whiff (percentile)</th><th scope="col">Ground ball (percentile)</th></tr></thead>
         <tbody>
 __REPUTATION_ROWS__
         </tbody>
@@ -204,7 +204,7 @@ __REPUTATION_ROWS__
     return node;
   }
   // the score ruler in the hero: where qualified pitcher-seasons land, with a few pitchers marked
-  var RULER_NAMES = ['Hill, Tim', 'Rogers, Tyler', 'Duran, Jhoan', 'Ohtani, Shohei', 'Skubal, Tarik'];
+  var RULER_NAMES = __RULER_NAMES_JSON__;
   function drawRuler() {
     var host = document.getElementById('rulerSvg');
     var scores = POINTS.map(function(p) { return p[3]; });
@@ -212,7 +212,7 @@ __REPUTATION_ROWS__
     document.getElementById('rulerN').textContent = scores.length.toLocaleString('en-US');
     var inCore = scores.filter(function(v) { return v >= 90 && v < 110; }).length;
     document.getElementById('rulerCore').textContent = Math.round(100 * inCore / scores.length) + '%';
-    var W = Math.max(300, Math.round(host.clientWidth)), H = 196, LO = 60, HI = 150, BIN = 5, PAD = 8, BASE = 140, MAXBAR = 72;
+    var W = Math.max(300, Math.round(host.clientWidth)), H = 208, LO = 60, HI = 150, BIN = 5, PAD = 8, BASE = 160, MAXBAR = 72;
     var span = W - 2 * PAD, nb = (HI - LO) / BIN, counts = [], i;
     for (i = 0; i < nb; i++) counts.push(0);
     scores.forEach(function(s) { counts[Math.min(nb - 1, Math.max(0, Math.floor((s - LO) / BIN)))]++; });
@@ -226,7 +226,7 @@ __REPUTATION_ROWS__
       svg.appendChild(el('rect', { 'class': core ? 'bar bar-core' : 'bar', x: x0, y: BASE - h, width: Math.max(1, x1 - x0), height: h, rx: 2 }));
     });
     svg.appendChild(el('line', { 'class': 'axis', x1: PAD, x2: W - PAD, y1: BASE, y2: BASE }));
-    svg.appendChild(el('line', { 'class': 'avg', x1: x(100), x2: x(100), y1: BASE, y2: BASE - MAXBAR - 6 }));
+    svg.appendChild(el('line', { 'class': 'avg', x1: x(100), x2: x(100), y1: BASE, y2: 8 }));   // runs up through every interval bar
     var tickStep = W < 440 ? 20 : 10;   // fewer ticks on a phone so the labels never touch
     for (var t = LO; t <= HI; t += tickStep) {
       if (t === 100) continue;
@@ -239,10 +239,16 @@ __REPUTATION_ROWS__
     }).filter(function(p) { return p && p.deception_plus !== null; })
       .sort(function(a, b) { return a.deception_plus - b.deception_plus; });
     picks.forEach(function(p, k) {
-      var px = x(p.deception_plus), ly = 16 + (k % 3) * 18;
+      var px = x(p.deception_plus), ly = 14 + (k % 3) * 24;
       var label = p.name.split(', ')[0] + ' ' + Math.round(p.deception_plus);
       var anchor = px > W - 60 ? 'end' : (px < 50 ? 'start' : 'middle');
-      svg.appendChild(el('line', { 'class': 'mark', x1: px, x2: px, y1: ly + 5, y2: BASE }));
+      var wy = ly + 9;   // the 95% interval sits under the label, so a bar that crosses the dashed 100 line is not clearly above average
+      if (p.dp_lo !== null && p.dp_lo !== undefined && p.dp_hi !== null && p.dp_hi !== undefined) {
+        svg.appendChild(el('line', { 'class': 'ci', x1: x(p.dp_lo), x2: x(p.dp_hi), y1: wy, y2: wy }));
+        svg.appendChild(el('line', { 'class': 'ci', x1: x(p.dp_lo), x2: x(p.dp_lo), y1: wy - 4, y2: wy + 4 }));
+        svg.appendChild(el('line', { 'class': 'ci', x1: x(p.dp_hi), x2: x(p.dp_hi), y1: wy - 4, y2: wy + 4 }));
+      }
+      svg.appendChild(el('line', { 'class': 'mark', x1: px, x2: px, y1: wy, y2: BASE }));
       svg.appendChild(el('circle', { 'class': 'dot', cx: px, cy: BASE, r: 4.5 }));
       svg.appendChild(el('text', { 'class': 'lbl', x: px, y: ly, 'text-anchor': anchor }, label));
     });

@@ -393,6 +393,11 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
   .dx-tiles-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 480px) { .dx-gain-stack { flex-direction: column; gap: 0; } }
+
+/* ruler interval bars, interval cell, read-first lists */
+.dx-ruler .ci { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
+.dx-intcell { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.25; white-space: nowrap; }
+.dx-read ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; color: var(--text-secondary); line-height: 1.5; }
 </style>
 <style>
 /* the leaderboard table only; tokens, type, buttons, pills and notes come from the shared stylesheet */
@@ -406,7 +411,7 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
 .lb-group-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
 .lb-check { display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--text-secondary); cursor: pointer; user-select: none; }
 .lb-check input { width: 16px; height: 16px; cursor: pointer; }
-.lb-reset { padding: 6px 12px; font-size: 13.5px; }
+.lb-reset, .lb-csv { padding: 6px 12px; font-size: 13.5px; }
 .lb-count { font-size: 13.5px; color: var(--text-secondary); margin-left: auto; font-variant-numeric: tabular-nums; }
 .lb-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--text-secondary); align-items: center; }
 .lb-legend .swatch { display: inline-flex; align-items: center; gap: 6px; }
@@ -533,6 +538,7 @@ tr.detail td { text-align: left; white-space: normal; padding: 6px 16px 12px; co
     </div>
     <label class="lb-check"><input type="checkbox" id="qualifiedOnly" checked> Qualified only</label>
     <button type="button" class="dx-btn lb-reset" id="resetFilters" hidden>Reset filters</button>
+    <a class="dx-btn lb-csv" href="deception_scores.csv" download>Download CSV</a>
     <span class="lb-count" id="rowCount" aria-live="polite"></span>
   </div>
 

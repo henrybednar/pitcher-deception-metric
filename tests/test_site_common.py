@@ -101,7 +101,8 @@ def test_the_artifact_fragment_of_the_methodology_page_does_not_default_to_the_p
 def test_page_links_name_all_three_pages_in_both_modes():
     standalone, artifact = sc.page_links(False), sc.page_links(True)
 
-    assert set(standalone) == set(artifact) == {"dashboard", "leaderboard", "methodology"}
+    assert set(standalone) == set(artifact) == {"dashboard", "leaderboard", "methodology", "csv"}
+    assert standalone["csv"] == sc.SCORES_CSV_FILE and artifact["csv"] == sc.PAGES_BASE + sc.SCORES_CSV_FILE      # a download cannot start inside the artifact frame
     assert standalone["methodology"] == sc.METHODOLOGY_FILE
     assert artifact["methodology"].endswith(sc.METHODOLOGY_FILE) and artifact["methodology"].startswith("https://")
 
@@ -403,3 +404,63 @@ def test_the_dashboard_hero_carries_the_caveat_and_no_figure_or_name_count_is_ty
     assert "It does not prove deception" in text[:text.index('id="overview"')]                # visible before the first section
     for typed in ("Eight pitchers", "Three seasons", "at least 100 swings", "ten equal", "five groups"):
         assert typed not in text, typed
+
+
+def test_the_ruler_note_says_which_marked_pitchers_include_100_in_their_interval():
+    lore = [{"name": "Rogers, Tyler", "dp_lo": 87.9, "dp_hi": 115.6}, {"name": "Skubal, Tarik", "dp_lo": 136.0, "dp_hi": 154.5},
+            {"name": "Hill, Tim", "dp_lo": 76.3, "dp_hi": 103.6}, {"name": "Someone, Else", "dp_lo": 120.0, "dp_hi": 130.0}]
+
+    note = sc.ruler_note(lore)
+
+    assert note == ("Bars show each marked pitcher's 95% interval. Hill and Rogers include 100, so are not clearly different from average. "
+                    "Skubal clears it.")                                            # only the named picks, in the ruler's order
+    assert sc.ruler_note([{"name": "Skubal, Tarik", "dp_lo": 136.0, "dp_hi": 154.5}]).endswith("Skubal clears it.")
+    assert sc.ruler_note([{"name": "Skubal, Tarik", "dp_lo": None, "dp_hi": None}]) == ""
+
+
+def test_reputation_rows_show_the_95_interval_and_flag_the_ones_that_include_100():
+    base = {"name": "Rogers, Tyler", "season": 2025, "n": 530, "deception_plus": 101.7, "dp_pctile": 64, "whiff_index": 67.3, "pctile": 0,
+            "gb_index": 129.7, "gb_pctile": 100}
+
+    inside = sc.reputation_rows([{**base, "dp_lo": 87.9, "dp_hi": 115.6}], "lb.html")
+    clear = sc.reputation_rows([{**base, "dp_lo": 136.0, "dp_hi": 154.5}], "lb.html")
+    missing = sc.reputation_rows([base], "lb.html")
+
+    assert "[87.9, 115.6]" in inside and "includes 100" in inside
+    assert "[136.0, 154.5]" in clear and "includes 100" not in clear
+    assert missing.count("<td>n/a</td>") == 1 and inside.count("<td>") == 5                 # season, score, interval, whiff and ground ball (the name is a th)
+
+
+def test_the_scores_csv_has_one_row_per_pitcher_season_without_stuff_plus_and_with_blanks_for_missing_values():
+    import csv
+    import io
+
+    import build_scores_csv as bsc
+
+    rows = [{"name": "Hill, Tim", "season": 2025, "role": "RP", "qualified": True, "deception_plus": 90.0, "deception_plus_ci_lo": 76.3, "deception_plus_ci_hi": 103.6,
+             "proj": None, "proj_lo": None, "proj_hi": None, "proj_basis": None, "stuff_plus": 98.0, "whiff_index": 92.2, "whiff_n": 481.0, "whiff_ci_lo": 80.0, "whiff_ci_hi": 104.0},
+            {"name": "Skubal, Tarik", "season": 2025, "role": "SP", "qualified": True, "deception_plus": 145.3, "deception_plus_ci_lo": 136.0, "deception_plus_ci_hi": 154.5,
+             "proj": 128.4, "proj_lo": 119.7, "proj_hi": 137.2, "proj_basis": 2.0, "stuff_plus": 120.0, "whiff_index": 138.5, "whiff_n": 1552.0},
+            {"name": "Nobody, No", "season": 2024, "role": "RP", "qualified": False, "deception_plus": None}]
+
+    parsed = list(csv.DictReader(io.StringIO(bsc.rows_to_csv(rows))))
+
+    assert [r["player"] for r in parsed] == ["Skubal, Tarik", "Hill, Tim", "Nobody, No"]      # highest score first, unscored last; the comma in a name is quoted
+    assert "stuff_plus" not in parsed[0] and "types" not in parsed[0] and len(parsed[0]) == len(bsc.COLUMNS)
+    assert parsed[0]["whiff_n"] == "1552" and parsed[0]["projection_seasons_used"] == "2"        # counts are whole numbers
+    assert parsed[1]["next_season_projection"] == "" and parsed[2]["deception_plus"] == ""
+
+
+def test_the_leaderboard_links_the_csv_the_ruler_names_come_from_one_list_and_the_methodology_page_leads_with_what_held_and_what_did_not():
+    leaderboard = open("templates/leaderboard.html", encoding="utf-8").read()
+    dashboard = open("templates/dashboard.html", encoding="utf-8").read()
+    methodology = open("templates/methodology.html", encoding="utf-8").read()
+
+    assert 'href="__CSV_URL__"' in leaderboard
+    assert "__RULER_NAMES_JSON__" in dashboard and "__RULER_NOTE__" in dashboard and "'Hill, Tim'" not in dashboard
+    assert methodology.index('id="read-first"') < methodology.index('class="dx-toc"')
+    assert "What was checked and held" in methodology and "What did not hold, or is limited" in methodology
+    import run_pipeline
+
+    step = next(s for s in run_pipeline.STEPS if s.name == "build_pages")
+    assert "build_scores_csv.py" in step.scripts and "deception_scores.csv" in step.outputs
