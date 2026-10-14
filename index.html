@@ -314,6 +314,11 @@
 .dx-glossary dt { font-size: 15px; font-weight: 600; color: var(--text-primary); }
 .dx-glossary dd { margin: 2px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--text-secondary); }
 .dx-glossary small { display: block; margin-top: 4px; font-size: 12.5px; color: var(--text-muted); }
+.dx-glossary .dx-here { margin-top: 5px; font-size: 14px; color: var(--text-primary); }
+.dx-here span { margin-right: 6px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
+.dx-key-intro { margin: 0 0 0.8rem; font-size: 14.5px; color: var(--text-secondary); max-width: 70ch; }
+.dx-key-h { font-size: 17px; margin: 1.6rem 0 0.2rem; }
+details.dx-keybox h3[id] { scroll-margin-top: 66px; }
 
 /* how a score is built: five steps with one real pitcher carried through them */
 .dx-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 0; padding: 0; list-style: none; }
@@ -577,13 +582,67 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
 
   <details class="dx-keybox" id="stats-key">
     <summary>Stats key</summary>
+    <p class="dx-key-intro">Every statistic on this page in plain terms. Each entry gives the idea, a number from this project, and the technical version.</p>
+    <nav class="dx-toc" aria-label="Stats key groups">
+      <a href="#key-score">Reading a score</a>
+      <a href="#key-build">Where a score comes from</a>
+      <a href="#key-trust">How much to trust it</a>
+      <a href="#key-models">Whether the models are sound</a>
+      <a href="#key-field">Predicting results</a>
+    </nav>
+
+    <h3 class="dx-key-h" id="key-score">Reading a score</h3>
     <dl class="dx-glossary">
-      <div><dt>r (correlation)</dt><dd>How closely two numbers move together: 0 is no link, 1 is a perfect match.<small>Pearson r.</small></dd></div>
-      <div><dt>Reliability</dt><dd>Odd and even games scored separately, then compared. High means skill, low means luck.<small>Split-half r, Spearman-Brown corrected.</small></dd></div>
-      <div><dt>R&sup2;</dt><dd>The share of differences a model explains. 0.23 means 23%.<small>Cross-validated, grouped by pitcher.</small></dd></div>
-      <div><dt>Forecast gain (&Delta;R&sup2;)</dt><dd>Extra share of next season a piece explains once added. It passes when p, the chance of a gain this big if the piece added nothing, is below 0.01.<small>Change in cross-validated R&sup2;, errors clustered on pitcher.</small></dd></div>
-      <div><dt>95% interval</dt><dd>The range likely to hold the true value. If it clears zero (a gain) or 100 (a score), the result is clear.<small>Scores: wider of bootstrap and analytic.</small></dd></div>
-      <div><dt>Percentile</dt><dd>The share of pitchers a score beats.<small>Among scored pitcher-seasons.</small></dd></div>
+      <div><dt>Deception+</dt><dd>A pitcher's results minus what the model predicted for their pitches, scaled so 100 is average. Above 100 means results beat the prediction.</dd><dd class="dx-here"><span>Here</span> The highest score is 145.3, Tarik Skubal in 2025.</dd><small>A weighted average of the pieces, each scored as actual minus expected.</small></div>
+      <div><dt>Standard deviation (a step)</dt><dd>The typical distance between a pitcher and the average. A step is 10 points, so 120 is two steps above average.</dd><dd class="dx-here"><span>Here</span> Tarik Skubal's whiff piece in 2025 is 3.8 steps above average, so 138.</dd><small>Standardized on qualified pitcher-seasons: mean 100, standard deviation 10 (a z-score times 10, plus 100).</small></div>
+      <div><dt>Percentile</dt><dd>The share of pitchers a score beats. The 90th percentile beats 90 of every 100.</dd><small>Among scored pitcher-seasons.</small></div>
+      <div><dt>Qualified pitcher-season</dt><dd>A season with enough pitches to score fairly. The scale is set on these, and the counts of clear scores use them.</dd><dd class="dx-here"><span>Here</span> 1,291 of 2,252 scored pitcher-seasons qualify.</dd><small>Qualified means at least 150 in the whiff and chase samples and at least 110 in the timing samples and at least 60 in the weak contact and whiff miss distance samples.</small></div>
+    </dl>
+
+    <h3 class="dx-key-h" id="key-build">Where a score comes from</h3>
+    <dl class="dx-glossary">
+      <div><dt>Expected value</dt><dd>What the model predicts for a pitch from its speed, spin, movement and location, plus the batter, catcher, count and park. What the pitcher gets beyond that is the score.</dd><small>Gradient-boosted models by pitch type, averaged over several random splits of pitchers.</small></div>
+      <div><dt>Shrinkage</dt><dd>Pulling a small-sample result toward average. The fewer the pitches, the stronger the pull, so a hot month is not mistaken for skill.</dd><dd class="dx-here"><span>Here</span> Tarik Skubal's whiff piece starts at +6.7 points over 1,552 swings and ends at +5.3.</dd><small>Empirical Bayes. The spread between pitchers is estimated with the Paule-Mandel method.</small></div>
+      <div><dt>Whiff</dt><dd>Swings that miss, as a share of swings.</dd></div>
+      <div><dt>Chase</dt><dd>Swings at pitches outside the zone, as a share of those pitches.</dd></div>
+      <div><dt>Weak contact</dt><dd>Balls in play hit under 85 mph, as a share of balls in play.</dd></div>
+      <div><dt>Timing</dt><dd>How far from the hitter's ideal contact depth the bat meets the ball, early or late, on swings that connect.</dd></div>
+      <div><dt>Whiff miss distance</dt><dd>On a swing and miss, how far the ball passed the barrel. A bigger miss scores higher.</dd><small>Log scale, from Statcast bat tracking.</small></div>
+      <div><dt>Blend</dt><dd>A weighted average of the pieces a pitcher has data for. Steadier pieces and bigger samples count more.</dd><small>Each weight is the piece's league-wide split-half reliability times the pitcher's sample size, relative to the median.</small></div>
+      <div><dt>Left out of the score</dt><dd>Ground ball, called strike, and horizontal alignment also pass the forecast test but stay out, because adding any of them does not raise the score&#x27;s year-over-year r.</dd><small>Ground ball is still shown on the leaderboard as its own readout.</small></div>
+    </dl>
+
+    <h3 class="dx-key-h" id="key-trust">How much to trust it</h3>
+    <dl class="dx-glossary">
+      <div><dt>r (correlation)</dt><dd>How closely two numbers move together. 0 is no link, 1 is a perfect match, and a minus sign means one falls as the other rises. Squaring r gives the share of differences one number explains.</dd><dd class="dx-here"><span>Here</span> Deception+ and Stuff+ have r=0.386, so Stuff+ explains about 15%.</dd><small>Pearson r. This page's wording: under 0.2 barely linked, 0.2 to 0.5 loosely linked, 0.5 to 0.8 closely linked, above 0.8 almost the same measure. Interval for the Stuff+ r: 0.32 to 0.45.</small></div>
+      <div><dt>Reliability</dt><dd>Score odd and even games separately, then compare the two sets. High means the score reflects something repeatable. Low means luck.</dd><dd class="dx-here"><span>Here</span> Deception+ overall is 0.741. The steadiest piece is timing (0.631) and the noisiest is weak contact (0.288).</dd><small>Split-half r with the Spearman-Brown correction, which projects half a season up to a full one.</small></div>
+      <div><dt>Year-over-year r</dt><dd>The same pitchers' scores in one season against the next. It runs lower than reliability because skill, role and health also change.</dd><dd class="dx-here"><span>Here</span> 0.611 over 1,089 season pairs, and 0.682 over the 580 pairs where the pitcher qualified both years.</dd><small>Consecutive seasons pooled. Interval for the qualified pairs: 0.62 to 0.73, resampling pitchers.</small></div>
+      <div><dt>95% interval</dt><dd>A range built so that 95 of every 100 like it hold the true value. If it clears zero (a gain) or 100 (a score), the result is clear. If it covers that mark, the data cannot separate the two.</dd><dd class="dx-here"><span>Here</span> The typical score is good to &plusmn;13 points, so 288 of 1,291 qualified scores (22%) clearly differ from 100.</dd><small>Scores use the wider of a game bootstrap and an analytic interval. The leaderboard marks a score whose interval covers 100 with a hollow circle.</small></div>
+      <div><dt>Bootstrap</dt><dd>Re-score a pitcher many times, each time on a random redraw of their games, and see how far the answer moves.</dd><small>Resamples whole games with replacement, because pitches within a game are not independent.</small></div>
+      <div><dt>Design effect</dt><dd>Pitches in one game share conditions, so they tell you less than the same number of independent pitches. Intervals are widened to match.</dd><dd class="dx-here"><span>Here</span> It runs 1.00 to 1.22 across outcomes, and 1.00 means no widening.</dd><small>A variance multiplier estimated from the game bootstrap. Starters carry more of it than relievers.</small></div>
+      <div><dt>Interval check</dt><dd>A test of whether the intervals are honest. Build the score and interval from half of a pitcher's games, then compare them with the other half's result.</dd><dd class="dx-here"><span>Here</span> The standardized misses have a standard deviation of 1.00 to 1.03 (1 is exact), and 94.4% to 94.7% fall inside the 95% line.</dd><small>It tests noise within a season, not the distance between a score and a pitcher's lasting skill.</small></div>
+    </dl>
+
+    <h3 class="dx-key-h" id="key-models">Whether the models are sound</h3>
+    <dl class="dx-glossary">
+      <div><dt>Out of fold</dt><dd>Predictions from a model that never saw that pitcher. Pitchers are split into groups, the model trains on all but one group and predicts the one left out, and each group takes a turn.</dd><small>Folds are grouped by pitcher, so a pitcher's own pitches never help predict their own results.</small></div>
+      <div><dt>AUC</dt><dd>Take one pitch that drew a whiff and one that did not. AUC is how often the model rated the whiff higher: 0.5 is a coin flip and 1.0 is perfect.</dd><dd class="dx-here"><span>Here</span> Whiff 0.76 to 0.86 and chase 0.82 to 0.89, across pitch types.</dd><small>Area under the ROC curve, scored out of fold.</small></div>
+      <div><dt>Calibration slope</dt><dd>Whether a stated chance means what it says. When the model says 30%, does it happen about 30% of the time? A slope of 1.0 means yes, and a little above 1.0 means predictions sit slightly too close to average.</dd><dd class="dx-here"><span>Here</span> The scored pieces run 1.00 to 1.09.</dd><small>Slope of actual on predicted, out of fold.</small></div>
+    </dl>
+    <p class="dx-section-note dx-wide">Log loss, R&sup2; by pitch type and the charts for every model: <a href="deception_methodology.html#pitch-models" class="dx-link">methodology page</a>.</p>
+
+    <h3 class="dx-key-h" id="key-field">Predicting results</h3>
+    <dl class="dx-glossary">
+      <div><dt>R&sup2;</dt><dd>The share of differences between pitchers that a model explains. 0.23 means 23%. It is scored on pitchers the model did not train on, so memorizing cannot inflate it.</dd><dd class="dx-here"><span>Here</span> In the first row of the on-field table, strikeout rate goes from 23% explained to 30% with Deception+ added, a gain of 7.1 points (95% interval 3.2 to 11.0).</dd><small>Cross-validated, with folds grouped by pitcher.</small></div>
+      <div><dt>Forecast gain (&Delta;R&sup2;)</dt><dd>Next season's actual rate, such as whiff rate, is first predicted from what that season's pitches would predict. The gain is the extra share explained once this season's score for the piece is added. Zero means it added nothing.</dd><dd class="dx-here"><span>Here</span> Timing's gain is +0.088 of R&sup2;.</dd><small>Change in cross-validated R&sup2;, with errors clustered on pitcher.</small></div>
+      <div><dt>Beyond Stuff+ and Location+</dt><dd>The on-field test first fits a model with those two ratings, then adds Deception+. A gain is information the ratings lack. The stricter column also holds last season's own result for the same stat.</dd><small>Both models are scored on held-out pitchers.</small></div>
+      <div><dt>p-value (p)</dt><dd>The chance of a result this large if the piece truly added nothing. Smaller means it is harder to blame on luck. It does not say how big the effect is.</dd><dd class="dx-here"><span>Here</span> A piece passes the forecast test when p is below 0.01.</dd><small>Errors clustered on pitcher.</small></div>
+      <div><dt>Clustered on pitcher</dt><dd>One pitcher's seasons resemble each other, so they are not independent rows. Intervals and p-values count each pitcher as one unit, which keeps them from looking more certain than they are.</dd><small>Cluster-robust standard errors. Correlation intervals resample pitchers.</small></div>
+      <div><dt>Season pair</dt><dd>One pitcher's season and the season after it. Forecasts and on-field gains are measured on these.</dd><dd class="dx-here"><span>Here</span> 671 pairs from 452 pitchers, each with at least 150 batters faced in the second season.</dd></div>
+      <div><dt>Stuff+ and Location+</dt><dd>FanGraphs ratings of a pitcher's pitch quality (Stuff+, from the pitch's physical traits) and placement (Location+). 100 is average.</dd><small>Entered by hand. Stuff+ is never a model input.</small></div>
+      <div><dt>xwOBA and wOBA allowed</dt><dd>Weighted on-base average counts each way of reaching base by what it is worth. xwOBA swaps what happened on balls in play for what that exit speed and launch angle usually produce, which strips out some luck and defense. Lower is better for a pitcher.</dd><small>xwOBA keeps the actual values for strikeouts and walks.</small></div>
+      <div><dt>Strikeout rate and walk rate</dt><dd>The share of batters faced who strike out or walk.</dd></div>
+      <div><dt>Run value per 100 pitches</dt><dd>Statcast's estimate of how many runs each pitch result changed the game by, totaled per 100 pitches.</dd><small>Pitcher run expectancy change.</small></div>
     </dl>
   </details>
 

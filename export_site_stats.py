@@ -49,6 +49,16 @@ def link_phrase(r: float) -> str:
     return next((words for ceiling, words in LINK_WORDS if abs(r) < ceiling), "almost the same measure")
 
 
+def link_guide() -> str:
+    """The cut-offs link_phrase uses, written out for the stats key so the guide cannot drift from the chart titles."""
+    parts, floor = [], 0.0
+    for ceiling, words in LINK_WORDS:
+        parts.append(f"{'under ' + format(ceiling, 'g') if floor == 0 else format(floor, 'g') + ' to ' + format(ceiling, 'g')} {words}")
+        floor = ceiling
+    parts.append(f"above {floor:g} almost the same measure")
+    return ", ".join(parts)
+
+
 def fmt_r(x: float) -> str:
     return f"{x:.3f}"
 
@@ -703,6 +713,7 @@ def main() -> None:
         "SEQ_R2_RANGE": f"{min(seq_r2):.4f} to {max(seq_r2):.4f}",
         "STUFF_R": fmt_r(stuff["composite"]),
         "STUFF_R_PHRASE": link_phrase(stuff["composite"]),
+        "R_GUIDE": link_guide(),
         "STUFF_BIN_GROUPS": str(BIN_GROUPS),
         "N_SEASONS": str(int(ps["season"].nunique())),
         "SEASON_SPAN": f"{int(ps['season'].min())} to {int(ps['season'].max())}",

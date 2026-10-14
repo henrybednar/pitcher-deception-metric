@@ -253,11 +253,15 @@ def test_the_dashboard_explains_each_statistic_it_shows_and_every_in_page_link_r
     import re
 
     text = open("templates/dashboard.html", encoding="utf-8").read()
-    key = text[text.index('<dl class="dx-glossary">'):text.index("</dl>")]
+    key = text[text.index('id="stats-key"'):text.index("</details>", text.index('id="stats-key"'))]
+    terms = re.findall(r"<dt>(.*?)</dt>", key)
 
-    for term in ("r (correlation)", "Reliability", "R&sup2;", "Forecast gain", "95% interval", "Percentile"):
-        assert term in key, term
-    assert key.count("<dt>") == 6
+    for term in ("r (correlation)", "Reliability", "R&sup2;", "Forecast gain", "95% interval", "Percentile", "AUC", "Calibration slope", "Shrinkage",
+                 "Bootstrap", "Design effect", "Out of fold", "p-value", "Clustered on pitcher", "Qualified pitcher-season", "Standard deviation"):
+        assert any(term in t for t in terms), term
+    assert len(terms) == len(set(terms))                                      # no term is defined twice
+    assert all(text.count(f'href="#{g}"') == 1 and f'id="{g}"' in key for g in re.findall(r'href="#(key-[\w-]+)"', key))     # each group has a jump link and a heading
+    assert not re.search(r"[–—]", key)                              # public copy uses no dashes
     ids = set(re.findall(r'\bid="([^"]+)"', text))
     assert {a for a in re.findall(r'href="#([\w-]+)"', text)} <= ids
 

@@ -375,3 +375,13 @@ def test_the_stuff_link_is_described_in_words_that_match_its_strength():
     from export_site_stats import link_phrase
 
     assert [link_phrase(r) for r in (0.1, 0.386, -0.6, 0.9)] == ["barely linked", "loosely linked", "closely linked", "almost the same measure"]
+
+
+def test_the_stats_key_guide_to_r_is_written_from_the_same_cut_offs_as_the_chart_titles():
+    import export_site_stats as ess
+
+    guide = ess.link_guide()
+
+    assert guide == "under 0.2 barely linked, 0.2 to 0.5 loosely linked, 0.5 to 0.8 closely linked, above 0.8 almost the same measure"
+    for ceiling, words in ess.LINK_WORDS:
+        assert str(ceiling) in guide and words in guide                      # a cut-off changed in one place shows up in the other
