@@ -41,9 +41,14 @@ __SHARED_HEAD__
     </figure>
   </div>
 
+  <div class="dx-expandbar"><button type="button" class="dx-btn dx-btn-small" id="toggleAll" hidden>Expand all sections</button></div>
+
   <div class="dx-section" id="overview">
     <h2>How a score is built</h2>
     <p class="dx-answer">A score is a pitcher's results minus what a model predicted, set so 100 is average and 10 points is one step (a standard deviation, the typical distance from average).</p>
+    <details class="dx-drop" open>
+      <summary>The five steps, with a worked example</summary>
+      <div class="dx-drop-body">
     <ol class="dx-steps">
       <li class="dx-step"><h3>Predict</h3><p>A model predicts how likely each swing is to miss, from the pitch's speed, spin, movement and location, the batter, catcher, count and park.</p><div class="dx-step-val">{{EX_N}} swings</div></li>
       <li class="dx-step"><h3>Compare</h3><p>Actual results minus the prediction, averaged over the pitcher's pitches.</p><div class="dx-step-val">+{{EX_RAW}} points</div></li>
@@ -53,6 +58,8 @@ __SHARED_HEAD__
     </ol>
     <p class="dx-example-note">Worked example: {{TOP1_NAME}}, {{TOP1_SEASON}}, whiff area. Here a point is a percentage point of whiff rate per swing, so +{{EX_RAW}} means {{EX_RAW}} more misses per 100 swings than predicted.</p>
     <p class="dx-section-note dx-wide">The areas: whiff (swings that miss), chase (swings at pitches outside the zone), weak contact (balls in play hit under 85 mph), timing (how early or late the bat meets the ball) and whiff miss distance (how far the bat misses by).</p>
+      </div>
+    </details>
     <div class="dx-read-grid">
       <div class="dx-read">
         <h3>How to read a number</h3>
@@ -68,8 +75,7 @@ __SHARED_HEAD__
   <div class="dx-section" id="trust">
     <h2>Can you trust a score?</h2>
     <p class="dx-answer">Yes on average, less so for any one pitcher. Scores carry over from one season to the next, but each has a wide margin of error.</p>
-    <div class="dx-trust-grid">
-    <div class="dx-tiles dx-tiles-stack">
+    <div class="dx-tiles dx-tiles-3">
       <div class="dx-tile">
         <div class="dx-tile-label">Steady within a season</div>
         <div class="dx-tile-val">r={{COMPOSITE_R}}</div>
@@ -88,29 +94,32 @@ __SHARED_HEAD__
         <div class="dx-tile-note">Points. The range the true score probably falls in (a 95% interval). Only {{DP_CLEAR}} of {{N_QUALIFIED}} qualified scores ({{DP_CLEAR_PCT}}) clearly differ from 100.</div>
       </div>
     </div>
+    <details class="dx-drop">
+      <summary>The checks behind it</summary>
+      <div class="dx-drop-body">
     <div class="dx-card">
       <h3 class="dx-chart-h">Steadiest piece is {{MOST_LABEL}} ({{MOST_R}}), noisiest is {{LEAST_LABEL}} ({{LEAST_R}})</h3>
       __PIECE_DOTS__
       <p class="dx-chart-title">Correlation (r) of each piece with itself within a season (filled) and with the next season (open), sorted by steadiness. {{N_PASS}} of {{N_COMPOSITE}} pieces also pass the forecast test: each adds to predicting next season's results (p below {{P_GATE}}, so such a gain would rarely appear by luck alone).</p>
     </div>
-    </div>
     <p class="dx-section-note dx-wide">{{OUT_SENTENCE}} <a href="__METHODOLOGY_URL__#membership" class="dx-link">Full table</a>. The pitch models are scored on pitchers they never trained on (whiff AUC {{VAL_AUC_WHIFF}}, chase {{VAL_AUC_CHASE}}, where 0.5 is a coin flip and 1.0 is perfect). <a href="__METHODOLOGY_URL__#pitch-models" class="dx-link">Validation</a>.</p>
+      </div>
+    </details>
   </div>
 
   <div class="dx-section" id="stuff">
     <h2>Is it just Stuff+?</h2>
-    <div class="dx-split">
-    <div class="dx-split-text">
-      <p class="dx-answer">Mostly not. Better stuff tends to score higher, but Stuff+ explains only about {{STUFF_R2_PCT}} of the differences in Deception+.</p>
+    <p class="dx-answer">Mostly not. Better stuff tends to score higher, but Stuff+ explains only about {{STUFF_R2_PCT}} of the differences in Deception+.</p>
       <p class="dx-section-note">Stuff+ is FanGraphs' rating of raw pitch quality (100 is average). The model never sees it, but it does see each pitch's measured traits, so ideally the two would barely overlap. The overlap may be information Stuff+ has that the model lacks: Stuff+ also compares each pitch with the pitcher's fastball. Adding those fastball gaps to the model lowered the overlap but also lowered the score's stability, so they were not adopted.</p>
-    </div>
+    <details class="dx-drop">
+      <summary>The scatter plot and its table</summary>
+      <div class="dx-drop-body">
     <div class="dx-card">
       <h3 class="dx-chart-h">Stuff+ and Deception+ are {{STUFF_R_PHRASE}} (r = {{STUFF_R}})</h3>
       <div style="position:relative; height:320px;">
         <canvas id="scatterChart" data-r="{{STUFF_R}}" role="img" aria-label="Scatter plot of FanGraphs Stuff+ against Deception+ for {{STUFF_N}} qualified pitcher-seasons, with the average Deception+ for each of {{STUFF_BIN_GROUPS}} equal Stuff+ groups"></canvas>
       </div>
       <p class="dx-chart-title">Each dot is one of {{STUFF_N}} qualified pitcher-seasons. The dark line averages {{STUFF_BIN_GROUPS}} equal Stuff+ groups, with 95% intervals. Orange dots are pitchers with a reputation for an unusual delivery.</p>
-    </div>
     </div>
     <details class="dx-tableview">
       <summary>Table view of the groups</summary>
@@ -124,12 +133,17 @@ __BIN_ROWS__
       </div>
     </details>
     <p class="dx-section-note dx-wide">By season, by piece and by pitch type: <a href="__METHODOLOGY_URL__#stuff-detail" class="dx-link">Stuff+ in detail</a>.</p>
+      </div>
+    </details>
   </div>
 
   <div class="dx-section" id="field">
     <h2>Does it predict anything on the field?</h2>
     <p class="dx-answer">A little. Beyond Stuff+ and Location+ (FanGraphs ratings of pitch quality and placement), it adds clearly for {{OV_CLEAR}}.</p>
     <p class="dx-note dx-reality"><strong>Reality check.</strong> {{OV_REALITY}} (Figures are gains in R&sup2; with 95% intervals in brackets. To clear zero, the interval must stay above 0.)</p>
+    <details class="dx-drop">
+      <summary>The table by outcome</summary>
+      <div class="dx-drop-body">
     <h3 class="dx-chart-h">{{OV_TITLE}}</h3>
     <div class="dx-card dx-table-card">
       <table class="dx-table">
@@ -140,12 +154,17 @@ __OUTCOME_FOREST_ROWS__
       </table>
     </div>
     <p class="dx-section-note dx-wide">Dot: gain in R&sup2; from adding Deception+ (R&sup2; is the share of next season's differences between pitchers that a model explains). Line: 95% interval. A solid green dot clears zero: its interval stays above 0, so the gain is unlikely to be luck. xwOBA allowed estimates the damage of the contact a pitcher gave up from exit speed and launch angle (lower is better). {{OV_NULL}} The sample is {{OV_PAIRS}} season pairs. <a href="__METHODOLOGY_URL__#field" class="dx-link">R&sup2; values and effect sizes</a>.</p>
+      </div>
+    </details>
   </div>
 
   <div class="dx-section" id="pitchers">
     <h2>Who scores well, and why?</h2>
     <p class="dx-answer">Tarik Skubal's {{SKUBAL_DP}} comes from whiffs (whiff {{SKUBAL_WHIFF}}, ground ball {{SKUBAL_GB}}).</p>
     <p class="dx-section-note dx-wide">Tyler Rogers's value is ground balls (whiff {{ROGERS_WHIFF}}, ground ball {{ROGERS_GB}}), which Deception+ leaves out, so his score is {{ROGERS_DP}}.</p>
+    <details class="dx-drop">
+      <summary>The pitcher table</summary>
+      <div class="dx-drop-body">
     <div class="dx-card dx-table-card">
       <table class="dx-table dx-narrow" id="loreTable">
         <thead><tr><th scope="col">Pitcher</th><th scope="col">Season</th><th scope="col">Deception+ (percentile)</th><th scope="col">95% interval</th><th scope="col">Whiff (percentile)</th><th scope="col">Ground ball (percentile)</th></tr></thead>
@@ -155,6 +174,8 @@ __REPUTATION_ROWS__
       </table>
     </div>
     <p class="dx-section-note dx-wide">Percentile is the share of pitchers a score beats. Whiff and ground ball are on the same scale, where 100 is average. Names link to the leaderboard.</p>
+      </div>
+    </details>
   </div>
 
   <details class="dx-keybox" id="stats-key">
@@ -305,6 +326,23 @@ __REPUTATION_ROWS__
   document.querySelectorAll('a[href="#stats-key"]').forEach(function(a) { a.addEventListener('click', openKey); });
   if (location.hash === '#stats-key') openKey();
 
+  // one button opens or closes every section's dropdown
+  var dropdowns = Array.prototype.slice.call(document.querySelectorAll('details.dx-drop'));
+  var toggleAll = document.getElementById('toggleAll');
+  function syncToggle() {
+    toggleAll.textContent = dropdowns.every(function(d) { return d.open; }) ? 'Collapse all sections' : 'Expand all sections';
+  }
+  if (toggleAll && dropdowns.length) {
+    toggleAll.hidden = false;
+    toggleAll.addEventListener('click', function() {
+      var open = !dropdowns.every(function(d) { return d.open; });
+      dropdowns.forEach(function(d) { d.open = open; });
+      syncToggle();
+    });
+    dropdowns.forEach(function(d) { d.addEventListener('toggle', syncToggle); });
+    syncToggle();
+  }
+
   if (typeof Chart === 'undefined') {
     // the Chart.js library is blocked, offline, or failed its integrity check: say so instead of leaving an empty chart
     document.querySelector('.dx-wrap').insertAdjacentHTML('afterbegin',
@@ -385,7 +423,7 @@ __REPUTATION_ROWS__
   var byScore = marked.slice().sort(function(a, b) { return b.y - a.y; });
   byScore.slice(0, 4).concat(byScore.slice(-2)).forEach(function(r) { r.label = r.name.split(', ')[0] + " '" + String(r.season).slice(2); });
 
-  new Chart(document.getElementById('scatterChart'), {
+  var scatter = new Chart(document.getElementById('scatterChart'), {
     type: 'scatter',
     data: { datasets: [
       { label: 'Pitcher-season', data: league, backgroundColor: alpha(cssVar('--chart-muted'), 0.35), borderWidth: 0, pointRadius: 2.6, pointHoverRadius: 5 },
@@ -415,5 +453,8 @@ __REPUTATION_ROWS__
     },
     plugins: [whiskers, annotations]
   });
+
+  // a chart drawn inside a closed dropdown has no size, so redraw it when the dropdown opens
+  dropdowns.forEach(function(d) { d.addEventListener('toggle', function() { if (d.open) scatter.resize(); }); });
 })();
 </script>

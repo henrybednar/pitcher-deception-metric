@@ -315,6 +315,20 @@
 .dx-glossary dd { margin: 2px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--text-secondary); }
 .dx-glossary small { display: block; margin-top: 4px; font-size: 12.5px; color: var(--text-muted); }
 .dx-glossary .dx-here { margin-top: 5px; font-size: 14px; color: var(--text-primary); }
+/* section dropdowns: the answer stays visible and the evidence opens on demand */
+.dx-expandbar { display: flex; justify-content: flex-end; }
+button.dx-btn { font-family: inherit; cursor: pointer; }
+.dx-btn-small { padding: 6px 12px; font-size: 13.5px; }
+.dx-drop-body { display: flex; flex-direction: column; gap: 1rem; }
+.dx-section > details.dx-drop > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text-primary); font-size: 15px; font-weight: 600; list-style: none; transition: border-color 150ms ease; }
+.dx-section > details.dx-drop > summary::-webkit-details-marker { display: none; }
+.dx-section > details.dx-drop > summary::after { content: ""; flex-shrink: 0; width: 8px; height: 8px; margin-top: -3px; border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); transform: rotate(45deg); transition: transform 150ms ease; }
+.dx-section > details.dx-drop[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.dx-section > details.dx-drop > summary:hover { border-color: var(--accent); }
+.dx-section > details.dx-drop[open] > summary { margin-bottom: 1rem; }
+.dx-tiles-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#trust .dx-drop-body { display: grid; grid-template-columns: minmax(0, 460px) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+@media (max-width: 860px) { .dx-tiles-3, #trust .dx-drop-body { grid-template-columns: minmax(0, 1fr); } }
 .dx-short { margin: 0 0 10px; font-size: 16px; line-height: 1.5; color: var(--text-primary); max-width: 70ch; }
 .dx-audit .dx-short { font-size: 15px; margin: 0 0 6px; }
 .dx-here span, .dx-short span { margin-right: 6px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }

@@ -513,3 +513,22 @@ def test_the_dashboard_defines_stuff_plus_xwoba_auc_and_the_five_areas_where_a_n
     assert "The areas: whiff (swings that miss)" in body
     assert "one step (a standard deviation" in body
     assert not re.search(r"\bclears zero\b", text[text.index('id="trust"'):text.index('id="field"')])   # the term is explained where it first appears
+
+
+def test_each_dashboard_section_keeps_its_answer_visible_and_puts_the_evidence_in_a_dropdown():
+    import re
+
+    text = open("templates/dashboard.html", encoding="utf-8").read()
+    sections = dict(re.findall(r'<div class="dx-section" id="([\w-]+)">(.*?)(?=<div class="dx-section" id=|<details class="dx-keybox")', text, flags=re.S))
+
+    for name in ("overview", "trust", "stuff", "field", "pitchers"):
+        part = sections[name]
+        drop = part.index('<details class="dx-drop"')
+        assert "<summary>" in part[drop:drop + 120], name                              # the dropdown has a label
+        assert '<p class="dx-answer">' in part[:drop], name                            # the answer reads without opening anything
+    assert '<details class="dx-drop" open>' in sections["overview"]                    # the five steps are open to start
+    assert all('<details class="dx-drop" open>' not in sections[n] for n in ("trust", "stuff", "field", "pitchers"))
+    assert sections["stuff"].index("<canvas") > sections["stuff"].index('<details class="dx-drop"')      # the scatter plot waits inside its dropdown
+    assert "scatter.resize()" in text                                                  # and is redrawn when the dropdown opens
+    assert re.search(r'<button[^>]*id="toggleAll"[^>]*hidden', text)                  # expand all stays hidden until the script that powers it runs
+    assert "dx-tiles-3" in sections["trust"] and sections["trust"].index("dx-tiles-3") < sections["trust"].index('<details class="dx-drop"')

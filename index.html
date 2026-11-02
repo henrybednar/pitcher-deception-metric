@@ -315,6 +315,20 @@
 .dx-glossary dd { margin: 2px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--text-secondary); }
 .dx-glossary small { display: block; margin-top: 4px; font-size: 12.5px; color: var(--text-muted); }
 .dx-glossary .dx-here { margin-top: 5px; font-size: 14px; color: var(--text-primary); }
+/* section dropdowns: the answer stays visible and the evidence opens on demand */
+.dx-expandbar { display: flex; justify-content: flex-end; }
+button.dx-btn { font-family: inherit; cursor: pointer; }
+.dx-btn-small { padding: 6px 12px; font-size: 13.5px; }
+.dx-drop-body { display: flex; flex-direction: column; gap: 1rem; }
+.dx-section > details.dx-drop > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text-primary); font-size: 15px; font-weight: 600; list-style: none; transition: border-color 150ms ease; }
+.dx-section > details.dx-drop > summary::-webkit-details-marker { display: none; }
+.dx-section > details.dx-drop > summary::after { content: ""; flex-shrink: 0; width: 8px; height: 8px; margin-top: -3px; border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); transform: rotate(45deg); transition: transform 150ms ease; }
+.dx-section > details.dx-drop[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.dx-section > details.dx-drop > summary:hover { border-color: var(--accent); }
+.dx-section > details.dx-drop[open] > summary { margin-bottom: 1rem; }
+.dx-tiles-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#trust .dx-drop-body { display: grid; grid-template-columns: minmax(0, 460px) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+@media (max-width: 860px) { .dx-tiles-3, #trust .dx-drop-body { grid-template-columns: minmax(0, 1fr); } }
 .dx-short { margin: 0 0 10px; font-size: 16px; line-height: 1.5; color: var(--text-primary); max-width: 70ch; }
 .dx-audit .dx-short { font-size: 15px; margin: 0 0 6px; }
 .dx-here span, .dx-short span { margin-right: 6px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
@@ -447,9 +461,14 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
     </figure>
   </div>
 
+  <div class="dx-expandbar"><button type="button" class="dx-btn dx-btn-small" id="toggleAll" hidden>Expand all sections</button></div>
+
   <div class="dx-section" id="overview">
     <h2>How a score is built</h2>
     <p class="dx-answer">A score is a pitcher's results minus what a model predicted, set so 100 is average and 10 points is one step (a standard deviation, the typical distance from average).</p>
+    <details class="dx-drop" open>
+      <summary>The five steps, with a worked example</summary>
+      <div class="dx-drop-body">
     <ol class="dx-steps">
       <li class="dx-step"><h3>Predict</h3><p>A model predicts how likely each swing is to miss, from the pitch's speed, spin, movement and location, the batter, catcher, count and park.</p><div class="dx-step-val">1,552 swings</div></li>
       <li class="dx-step"><h3>Compare</h3><p>Actual results minus the prediction, averaged over the pitcher's pitches.</p><div class="dx-step-val">+6.7 points</div></li>
@@ -459,6 +478,8 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
     </ol>
     <p class="dx-example-note">Worked example: Tarik Skubal, 2025, whiff area. Here a point is a percentage point of whiff rate per swing, so +6.7 means 6.7 more misses per 100 swings than predicted.</p>
     <p class="dx-section-note dx-wide">The areas: whiff (swings that miss), chase (swings at pitches outside the zone), weak contact (balls in play hit under 85 mph), timing (how early or late the bat meets the ball) and whiff miss distance (how far the bat misses by).</p>
+      </div>
+    </details>
     <div class="dx-read-grid">
       <div class="dx-read">
         <h3>How to read a number</h3>
@@ -474,8 +495,7 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
   <div class="dx-section" id="trust">
     <h2>Can you trust a score?</h2>
     <p class="dx-answer">Yes on average, less so for any one pitcher. Scores carry over from one season to the next, but each has a wide margin of error.</p>
-    <div class="dx-trust-grid">
-    <div class="dx-tiles dx-tiles-stack">
+    <div class="dx-tiles dx-tiles-3">
       <div class="dx-tile">
         <div class="dx-tile-label">Steady within a season</div>
         <div class="dx-tile-val">r=0.741</div>
@@ -494,29 +514,32 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
         <div class="dx-tile-note">Points. The range the true score probably falls in (a 95% interval). Only 288 of 1,291 qualified scores (22%) clearly differ from 100.</div>
       </div>
     </div>
+    <details class="dx-drop">
+      <summary>The checks behind it</summary>
+      <div class="dx-drop-body">
     <div class="dx-card">
       <h3 class="dx-chart-h">Steadiest piece is timing (0.631), noisiest is weak contact (0.288)</h3>
       <svg class="dx-dots" viewBox="0 0 352 232" role="img" aria-label="Correlation within a season and with the next season, by piece: Timing 0.631 and 0.513; Whiff 0.614 and 0.515; Whiff miss distance 0.597 and 0.538; Chase 0.533 and 0.459; Weak contact 0.288 and 0.270; Deception+ 0.741 and 0.611"><circle class="a" cx="6" cy="10" r="5"/><text class="hdr" x="16" y="14">within season</text><circle class="b" cx="106" cy="10" r="5"/><text class="hdr" x="116" y="14">next season</text><text class="hdr" x="288" y="14" text-anchor="end">within</text><text class="hdr" x="342" y="14" text-anchor="end">next</text><line class="grid" x1="128.0" x2="128.0" y1="32" y2="200"/><text class="tick" x="128.0" y="216" text-anchor="middle">0</text><line class="grid" x1="182.0" x2="182.0" y1="32" y2="200"/><text class="tick" x="182.0" y="216" text-anchor="middle">0.5</text><line class="grid" x1="236.0" x2="236.0" y1="32" y2="200"/><text class="tick" x="236.0" y="216" text-anchor="middle">1</text><text class="lbl" x="0" y="50">Timing</text><line class="gap" x1="183.4" x2="196.1" y1="46" y2="46"/><circle class="a" cx="196.1" cy="46" r="5.5"/><circle class="b" cx="183.4" cy="46" r="5"/><text class="val" x="288" y="50" text-anchor="end">0.631</text><text class="val" x="342" y="50" text-anchor="end">0.513</text><text class="lbl" x="0" y="78">Whiff</text><line class="gap" x1="183.6" x2="194.3" y1="74" y2="74"/><circle class="a" cx="194.3" cy="74" r="5.5"/><circle class="b" cx="183.6" cy="74" r="5"/><text class="val" x="288" y="78" text-anchor="end">0.614</text><text class="val" x="342" y="78" text-anchor="end">0.515</text><text class="lbl" x="0" y="106">Whiff miss distance</text><line class="gap" x1="186.1" x2="192.5" y1="102" y2="102"/><circle class="a" cx="192.5" cy="102" r="5.5"/><circle class="b" cx="186.1" cy="102" r="5"/><text class="val" x="288" y="106" text-anchor="end">0.597</text><text class="val" x="342" y="106" text-anchor="end">0.538</text><text class="lbl" x="0" y="134">Chase</text><line class="gap" x1="177.6" x2="185.6" y1="130" y2="130"/><circle class="a" cx="185.6" cy="130" r="5.5"/><circle class="b" cx="177.6" cy="130" r="5"/><text class="val" x="288" y="134" text-anchor="end">0.533</text><text class="val" x="342" y="134" text-anchor="end">0.459</text><text class="lbl" x="0" y="162">Weak contact</text><line class="gap" x1="157.2" x2="159.1" y1="158" y2="158"/><circle class="a" cx="159.1" cy="158" r="5.5"/><circle class="b" cx="157.2" cy="158" r="5"/><text class="val" x="288" y="162" text-anchor="end">0.288</text><text class="val" x="342" y="162" text-anchor="end">0.270</text><line class="sep" x1="0" x2="352" y1="172" y2="172"/><text class="lbl tot" x="0" y="190">Deception+</text><line class="gap" x1="194.0" x2="208.0" y1="186" y2="186"/><circle class="a" cx="208.0" cy="186" r="5.5"/><circle class="b" cx="194.0" cy="186" r="5"/><text class="val tot" x="288" y="190" text-anchor="end">0.741</text><text class="val tot" x="342" y="190" text-anchor="end">0.611</text></svg>
       <p class="dx-chart-title">Correlation (r) of each piece with itself within a season (filled) and with the next season (open), sorted by steadiness. 5 of 5 pieces also pass the forecast test: each adds to predicting next season's results (p below 0.01, so such a gain would rarely appear by luck alone).</p>
     </div>
-    </div>
     <p class="dx-section-note dx-wide">Ground ball, called strike, and horizontal alignment also pass the forecast test but stay out, because adding any of them does not raise the score&#x27;s year-over-year r. <a href="deception_methodology.html#membership" class="dx-link">Full table</a>. The pitch models are scored on pitchers they never trained on (whiff AUC 0.76 to 0.86, chase 0.82 to 0.89, where 0.5 is a coin flip and 1.0 is perfect). <a href="deception_methodology.html#pitch-models" class="dx-link">Validation</a>.</p>
+      </div>
+    </details>
   </div>
 
   <div class="dx-section" id="stuff">
     <h2>Is it just Stuff+?</h2>
-    <div class="dx-split">
-    <div class="dx-split-text">
-      <p class="dx-answer">Mostly not. Better stuff tends to score higher, but Stuff+ explains only about 15% of the differences in Deception+.</p>
+    <p class="dx-answer">Mostly not. Better stuff tends to score higher, but Stuff+ explains only about 15% of the differences in Deception+.</p>
       <p class="dx-section-note">Stuff+ is FanGraphs' rating of raw pitch quality (100 is average). The model never sees it, but it does see each pitch's measured traits, so ideally the two would barely overlap. The overlap may be information Stuff+ has that the model lacks: Stuff+ also compares each pitch with the pitcher's fastball. Adding those fastball gaps to the model lowered the overlap but also lowered the score's stability, so they were not adopted.</p>
-    </div>
+    <details class="dx-drop">
+      <summary>The scatter plot and its table</summary>
+      <div class="dx-drop-body">
     <div class="dx-card">
       <h3 class="dx-chart-h">Stuff+ and Deception+ are loosely linked (r = 0.386)</h3>
       <div style="position:relative; height:320px;">
         <canvas id="scatterChart" data-r="0.386" role="img" aria-label="Scatter plot of FanGraphs Stuff+ against Deception+ for 1,291 qualified pitcher-seasons, with the average Deception+ for each of 10 equal Stuff+ groups"></canvas>
       </div>
       <p class="dx-chart-title">Each dot is one of 1,291 qualified pitcher-seasons. The dark line averages 10 equal Stuff+ groups, with 95% intervals. Orange dots are pitchers with a reputation for an unusual delivery.</p>
-    </div>
     </div>
     <details class="dx-tableview">
       <summary>Table view of the groups</summary>
@@ -539,12 +562,17 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
       </div>
     </details>
     <p class="dx-section-note dx-wide">By season, by piece and by pitch type: <a href="deception_methodology.html#stuff-detail" class="dx-link">Stuff+ in detail</a>.</p>
+      </div>
+    </details>
   </div>
 
   <div class="dx-section" id="field">
     <h2>Does it predict anything on the field?</h2>
     <p class="dx-answer">A little. Beyond Stuff+ and Location+ (FanGraphs ratings of pitch quality and placement), it adds clearly for strikeout rate and xwOBA allowed.</p>
     <p class="dx-note dx-reality"><strong>Reality check.</strong> Once last season&#x27;s own result is in the model, strikeout rate (+0.003 [-0.005, +0.010]) no longer clears zero. Still clears zero: xwOBA allowed (+0.020 [+0.003, +0.038]). (Figures are gains in R&sup2; with 95% intervals in brackets. To clear zero, the interval must stay above 0.)</p>
+    <details class="dx-drop">
+      <summary>The table by outcome</summary>
+      <div class="dx-drop-body">
     <h3 class="dx-chart-h">Only xwOBA allowed still clears zero once last season&#x27;s own result is in the model</h3>
     <div class="dx-card dx-table-card">
       <table class="dx-table">
@@ -559,12 +587,17 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
       </table>
     </div>
     <p class="dx-section-note dx-wide">Dot: gain in R&sup2; from adding Deception+ (R&sup2; is the share of next season's differences between pitchers that a model explains). Line: 95% interval. A solid green dot clears zero: its interval stays above 0, so the gain is unlikely to be luck. xwOBA allowed estimates the damage of the contact a pitcher gave up from exit speed and launch angle (lower is better). Walk rate, wOBA allowed, and run value per 100 pitches do not clear zero in either test. The sample is 671 season pairs. <a href="deception_methodology.html#field" class="dx-link">R&sup2; values and effect sizes</a>.</p>
+      </div>
+    </details>
   </div>
 
   <div class="dx-section" id="pitchers">
     <h2>Who scores well, and why?</h2>
     <p class="dx-answer">Tarik Skubal's 145 comes from whiffs (whiff 138, ground ball 82).</p>
     <p class="dx-section-note dx-wide">Tyler Rogers's value is ground balls (whiff 67, ground ball 130), which Deception+ leaves out, so his score is 102.</p>
+    <details class="dx-drop">
+      <summary>The pitcher table</summary>
+      <div class="dx-drop-body">
     <div class="dx-card dx-table-card">
       <table class="dx-table dx-narrow" id="loreTable">
         <thead><tr><th scope="col">Pitcher</th><th scope="col">Season</th><th scope="col">Deception+ (percentile)</th><th scope="col">95% interval</th><th scope="col">Whiff (percentile)</th><th scope="col">Ground ball (percentile)</th></tr></thead>
@@ -581,6 +614,8 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
       </table>
     </div>
     <p class="dx-section-note dx-wide">Percentile is the share of pitchers a score beats. Whiff and ground ball are on the same scale, where 100 is average. Names link to the leaderboard.</p>
+      </div>
+    </details>
   </div>
 
   <details class="dx-keybox" id="stats-key">
@@ -731,6 +766,23 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
   document.querySelectorAll('a[href="#stats-key"]').forEach(function(a) { a.addEventListener('click', openKey); });
   if (location.hash === '#stats-key') openKey();
 
+  // one button opens or closes every section's dropdown
+  var dropdowns = Array.prototype.slice.call(document.querySelectorAll('details.dx-drop'));
+  var toggleAll = document.getElementById('toggleAll');
+  function syncToggle() {
+    toggleAll.textContent = dropdowns.every(function(d) { return d.open; }) ? 'Collapse all sections' : 'Expand all sections';
+  }
+  if (toggleAll && dropdowns.length) {
+    toggleAll.hidden = false;
+    toggleAll.addEventListener('click', function() {
+      var open = !dropdowns.every(function(d) { return d.open; });
+      dropdowns.forEach(function(d) { d.open = open; });
+      syncToggle();
+    });
+    dropdowns.forEach(function(d) { d.addEventListener('toggle', syncToggle); });
+    syncToggle();
+  }
+
   if (typeof Chart === 'undefined') {
     // the Chart.js library is blocked, offline, or failed its integrity check: say so instead of leaving an empty chart
     document.querySelector('.dx-wrap').insertAdjacentHTML('afterbegin',
@@ -811,7 +863,7 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
   var byScore = marked.slice().sort(function(a, b) { return b.y - a.y; });
   byScore.slice(0, 4).concat(byScore.slice(-2)).forEach(function(r) { r.label = r.name.split(', ')[0] + " '" + String(r.season).slice(2); });
 
-  new Chart(document.getElementById('scatterChart'), {
+  var scatter = new Chart(document.getElementById('scatterChart'), {
     type: 'scatter',
     data: { datasets: [
       { label: 'Pitcher-season', data: league, backgroundColor: alpha(cssVar('--chart-muted'), 0.35), borderWidth: 0, pointRadius: 2.6, pointHoverRadius: 5 },
@@ -841,6 +893,9 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
     },
     plugins: [whiskers, annotations]
   });
+
+  // a chart drawn inside a closed dropdown has no size, so redraw it when the dropdown opens
+  dropdowns.forEach(function(d) { d.addEventListener('toggle', function() { if (d.open) scatter.resize(); }); });
 })();
 </script>
 
