@@ -22,6 +22,7 @@ Live: [dashboard](https://henrybednar.github.io/pitcher-deception-metric/) · [l
 ## Known limits
 
 - It is whatever the model cannot explain, not proof of deception.
+- Beyond last season's own result, only xwOBA allowed still clears zero; strikeout rate does not.
 - Three seasons of data: no aging curves, and two season-to-season pairs.
 - The typical 95% interval is about 13 points, so only 22% of qualified scores are clearly different from 100.
 
