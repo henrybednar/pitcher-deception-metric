@@ -10,7 +10,7 @@ Live: [dashboard](https://henrybednar.github.io/pitcher-deception-metric/) · [l
 - A dashboard that walks one pitcher-season through the method, a stats key, and the validation (reliability, forecasts, on-field results).
 - A sortable leaderboard of every scored pitcher-season, with pitch-type scores and 95% intervals.
 - A methodology page with the model validation, the known limits and an audit log of the leaks and bugs found along the way.
-- 340 tests, run on every push.
+- 358 tests, run on every push.
 
 ## Results at release
 
