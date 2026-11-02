@@ -256,11 +256,12 @@ def test_the_dashboard_explains_each_statistic_it_shows_and_every_in_page_link_r
     key = text[text.index('id="stats-key"'):text.index("</details>", text.index('id="stats-key"'))]
     terms = re.findall(r"<dt>(.*?)</dt>", key)
 
-    for term in ("r (correlation)", "Reliability", "R&sup2;", "Forecast gain", "95% interval", "Percentile", "AUC", "Calibration slope", "Shrinkage",
-                 "Bootstrap", "Design effect", "Out of fold", "p-value", "Clustered on pitcher", "Qualified pitcher-season", "Standard deviation"):
+    for term in ("r (correlation)", "Reliability", "Year-over-year r", "R&sup2;", "Forecast gain", "95% interval", "AUC", "p-value", "Qualified pitcher-season",
+                 "Standard deviation", "Beyond Stuff+ and Location+", "Stuff+ and Location+", "xwOBA"):
         assert any(term in t for t in terms), term
     assert len(terms) == len(set(terms))                                      # no term is defined twice
-    assert all(text.count(f'href="#{g}"') == 1 and f'id="{g}"' in key for g in re.findall(r'href="#(key-[\w-]+)"', key))     # each group has a jump link and a heading
+    assert len(terms) <= 16                                                   # a reference for the statistics, not a second copy of the page
+    assert not {"Whiff", "Chase", "Timing", "Blend", "Shrinkage", "Percentile"} & set(terms)       # the page explains these where they appear
     assert not re.search(r"[–—]", key)                              # public copy uses no dashes
     ids = set(re.findall(r'\bid="([^"]+)"', text))
     assert {a for a in re.findall(r'href="#([\w-]+)"', text)} <= ids
