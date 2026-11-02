@@ -344,13 +344,15 @@ def ruler_note(lore: list) -> str:
         return ""
     last = lambda p: p["name"].split(", ")[0]
     inside = [last(p) for p in picks if p["dp_lo"] <= 100 <= p["dp_hi"]]
-    outside = [last(p) for p in picks if not p["dp_lo"] <= 100 <= p["dp_hi"]]
-    parts = ["Bars show each marked pitcher's 95% interval."]
+    above = [last(p) for p in picks if p["dp_lo"] > 100]
+    below = [last(p) for p in picks if p["dp_hi"] < 100]
+    parts = ["Bars show each marked pitcher's margin of error (a 95% interval)."]
     if inside:
         one = len(inside) == 1
         parts.append(f"{join_and(inside)} {'includes' if one else 'include'} 100, so {'is' if one else 'are'} not clearly different from average.")
-    if outside:
-        parts.append(f"{join_and(outside)} {'clears' if len(outside) == 1 else 'clear'} it.")
+    for names, word in ((above, "above"), (below, "below")):
+        if names:
+            parts.append(f"{join_and(names)} {'is' if len(names) == 1 else 'are'} clearly {word} average.")
     return " ".join(parts)
 
 

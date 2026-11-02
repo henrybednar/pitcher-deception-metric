@@ -385,3 +385,12 @@ def test_the_stats_key_guide_to_r_is_written_from_the_same_cut_offs_as_the_chart
     assert guide == "under 0.2 barely linked, 0.2 to 0.5 loosely linked, 0.5 to 0.8 closely linked, above 0.8 almost the same measure"
     for ceiling, words in ess.LINK_WORDS:
         assert str(ceiling) in guide and words in guide                      # a cut-off changed in one place shows up in the other
+
+
+def test_the_left_handed_gap_is_read_from_its_p_value_and_never_called_real_when_chance_could_explain_it():
+    from export_site_stats import handedness_read
+
+    weak, strong = handedness_read(0.10), handedness_read(0.01)
+
+    assert "weak evidence" in weak and "chance" in weak
+    assert "unlikely by chance" in strong and "weak evidence" not in strong

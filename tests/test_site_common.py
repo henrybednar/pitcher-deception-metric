@@ -416,9 +416,11 @@ def test_the_ruler_note_says_which_marked_pitchers_include_100_in_their_interval
 
     note = sc.ruler_note(lore)
 
-    assert note == ("Bars show each marked pitcher's 95% interval. Hill and Rogers include 100, so are not clearly different from average. "
-                    "Skubal clears it.")                                            # only the named picks, in the ruler's order
-    assert sc.ruler_note([{"name": "Skubal, Tarik", "dp_lo": 136.0, "dp_hi": 154.5}]).endswith("Skubal clears it.")
+    assert note == ("Bars show each marked pitcher's margin of error (a 95% interval). Hill and Rogers include 100, so are not clearly different from average. "
+                    "Skubal is clearly above average.")                              # only the named picks, in the ruler's order
+    assert sc.ruler_note([{"name": "Skubal, Tarik", "dp_lo": 136.0, "dp_hi": 154.5}]).endswith("Skubal is clearly above average.")
+    assert sc.ruler_note([{"name": "Hill, Tim", "dp_lo": 70.0, "dp_hi": 90.0}, {"name": "Duran, Jhoan", "dp_lo": 101.0, "dp_hi": 120.0},
+                          {"name": "Skubal, Tarik", "dp_lo": 136.0, "dp_hi": 154.5}]).endswith("Duran and Skubal are clearly above average. Hill is clearly below average.")
     assert sc.ruler_note([{"name": "Skubal, Tarik", "dp_lo": None, "dp_hi": None}]) == ""
 
 
@@ -478,3 +480,35 @@ def test_the_csv_link_downloads_on_the_standalone_page_and_opens_in_a_new_tab_in
 
     assert 'href="__CSV_URL__"__CSV_ATTRS__' in template
     assert '" target=\"_blank\" rel=\"noopener\"' not in template and "if args.artifact else \" download\"" in source
+
+
+def test_every_methodology_section_and_audit_entry_opens_with_a_plain_in_short_line_and_the_pages_define_their_own_terms():
+    import re
+
+    methodology = open("templates/methodology.html", encoding="utf-8").read()
+    dashboard = open("templates/dashboard.html", encoding="utf-8").read()
+    leaderboard = open("templates/leaderboard.html", encoding="utf-8").read()
+
+    for part in re.split(r'<div class="dx-section[\w -]*" id="', methodology)[1:]:
+        name = part.split('"', 1)[0]
+        if name not in ("read-first", "stuff-detail"):                              # those two open with their own answer line
+            assert '<p class="dx-short">' in part, name
+    audit = methodology[methodology.index('<details class="dx-audit">'):]
+    assert audit.count("<h3>") == audit.count('<p class="dx-short">') - 1               # one lead for the log, one for each entry
+    assert "__DASHBOARD_URL__#stats-key" in methodology and 'href="#stats-key"' in dashboard   # newcomers are pointed at the definitions
+    for term in ("Whiff is the share", "Chase is the share", "Weak contact is the share", "Stuff+ is FanGraphs"):
+        assert term in leaderboard, term                                                  # every column has a plain definition
+    assert "{{LHP_READ}}" in dashboard and "{{LHP_READ}}" in methodology
+
+
+def test_the_dashboard_defines_stuff_plus_xwoba_auc_and_the_five_areas_where_a_newcomer_first_meets_them():
+    import re
+
+    text = open("templates/dashboard.html", encoding="utf-8").read()
+    body = text[:text.index('id="stats-key"')]
+
+    assert "FanGraphs' rating of raw pitch quality" in body[:body.index('id="field"')]    # before the Stuff+ chart, not only in the key
+    assert "xwOBA allowed estimates" in body and "where 0.5 is a coin flip" in body
+    assert "The areas: whiff (swings that miss)" in body
+    assert "one step (a standard deviation" in body
+    assert not re.search(r"\bclears zero\b", text[text.index('id="trust"'):text.index('id="field"')])   # the term is explained where it first appears

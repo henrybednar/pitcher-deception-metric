@@ -1,6 +1,8 @@
 # Deception+
 
-Pitcher results beyond what the pitch's measured traits predict.
+How far a pitcher's results land above or below what their pitches should produce.
+
+New here? Start with the dashboard. Its stats key explains every term in plain language, and the methodology page has the detail for people who want to check the work.
 
 **[Live dashboard](https://henrybednar.github.io/pitcher-deception-metric/)** &middot; [Leaderboard](https://henrybednar.github.io/pitcher-deception-metric/deception_leaderboard.html) &middot; [Methodology](https://henrybednar.github.io/pitcher-deception-metric/deception_methodology.html)
 

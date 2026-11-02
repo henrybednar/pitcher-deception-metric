@@ -315,7 +315,9 @@
 .dx-glossary dd { margin: 2px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--text-secondary); }
 .dx-glossary small { display: block; margin-top: 4px; font-size: 12.5px; color: var(--text-muted); }
 .dx-glossary .dx-here { margin-top: 5px; font-size: 14px; color: var(--text-primary); }
-.dx-here span { margin-right: 6px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
+.dx-short { margin: 0 0 10px; font-size: 16px; line-height: 1.5; color: var(--text-primary); max-width: 70ch; }
+.dx-audit .dx-short { font-size: 15px; margin: 0 0 6px; }
+.dx-here span, .dx-short span { margin-right: 6px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
 .dx-key-intro { margin: 0 0 0.8rem; font-size: 14.5px; color: var(--text-secondary); max-width: 70ch; }
 .dx-key-h { font-size: 17px; margin: 1.6rem 0 0.2rem; }
 details.dx-keybox h3[id] { scroll-margin-top: 66px; }
@@ -423,6 +425,7 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
     <div>
       <h1>How Deception+ is built and checked</h1>
       <p class="dx-hero-sub">The dashboard has the headline checks. This page has what sits behind them: the pitch models and their validation, how a score is built, which components are in it and why, the season-level traits tested as explanations, the known limits, and an audit log of the leaks and bugs found along the way.</p>
+      <p class="dx-hero-sub">Short version: a model predicts what should happen on each pitch from the pitch itself and the situation. The score is how far a pitcher's real results land from those predictions, shrunk for small samples and scaled so 100 is average. New to the terms? <a href="deception_dashboard.html#stats-key" class="dx-link">The dashboard's stats key</a> defines each one.</p>
       <p class="dx-meta">Data through September 27, 2026.</p>
     </div>
   </div>
@@ -433,17 +436,17 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
       <div class="dx-read">
         <h3>What was checked and held</h3>
         <ul>
-          <li>The pitch models rank whiffs and chases well (AUC 0.76 to 0.86 and 0.82 to 0.89), scored on pitchers they never trained on.</li>
-          <li>Interval check (split-half, out of sample). They held: the standardized errors have a standard deviation of 1.00 to 1.03 (the target is 1).</li>
+          <li>The pitch models rank whiffs and chases well (AUC 0.76 to 0.86 and 0.82 to 0.89, where 0.5 is a coin flip and 1.0 is perfect), scored on pitchers they never trained on.</li>
+          <li>Interval check. They held: scoring half a pitcher's games and testing against the other half gave errors with a standard deviation of 1.00 to 1.03 (1 is exact), so the 95% intervals are about the right width for the noise within a season.</li>
           <li>Scores are steady within a season (r=0.741) and carry to the next (r=0.611).</li>
-          <li>5 of 5 pieces in the score pass the forecast test (p below 0.01).</li>
+          <li>5 of 5 pieces in the score pass the forecast test: each adds to predicting next season's results (p below 0.01).</li>
         </ul>
       </div>
       <div class="dx-read">
         <h3>What did not hold, or is limited</h3>
         <ul>
-          <li>It is not independent of pitch quality: r=0.386 with Stuff+, and no tested explanation (sequencing, tunneling, spin mirroring, tempo, arm slot) accounts for the gap.</li>
-          <li>Only xwOBA allowed still clears zero once last season&#x27;s own result is in the model.</li>
+          <li>It is not independent of pitch quality: r=0.386 with Stuff+ (0 is no link, 1 is a perfect match), and no tested explanation (sequencing, tunneling, spin mirroring, tempo, arm slot) accounts for the gap.</li>
+          <li>Only xwOBA allowed still clears zero once last season&#x27;s own result is in the model (clearing zero means a 95% interval that stays above 0).</li>
           <li>Only 288 of 1,291 qualified scores (22%) are clearly different from 100.</li>
           <li>3 seasons means no aging curves and 2 season-to-season pairs.</li>
         </ul>
@@ -468,6 +471,7 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
   <div class="dx-section" id="pitch-models">
     <div>
       <h2>How good are the pitch models?</h2>
+    <p class="dx-short"><span>In short</span> The score is only as fair as its predictions, so this section tests the pitch models on pitchers they never saw.</p>
       <p class="dx-section-note dx-wide">Deception+ is actual minus expected, so the expectation models are the product. Each outcome has gradient-boosted models by pitch type, and where pooling similar pitch types helped on held-out pitchers they share a model with pitch type as a feature (breaking pitches together, changeups with splitters). Every prediction here is out of fold: folds are grouped by pitcher, so a pitcher's own pitches never help predict their own results, and the batter and catcher tendencies are rebuilt inside each fold from the training pitchers only. A last out-of-fold step removes the league-wide level of each pitch type in each season and then of each month (see How a score is built).</p>
     </div>
     <div class="dx-tiles">
@@ -551,6 +555,7 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
 
   <div class="dx-section dx-method" id="score">
     <h2>How a score is built</h2>
+    <p class="dx-short"><span>In short</span> Each piece compares a pitcher's actual rate with the model's prediction, shrinks small samples toward average, and the pieces are blended and scaled so 100 is average.</p>
     <h3>Components</h3>
     <p>Each component starts with a gradient-boosted model per pitch type, with the inputs and validation described under How good are the pitch models? The models predict whiff on swings, swing on pitches outside the zone (chase), ground ball and weak contact (under 85 mph) on balls in play, called strike on takes, and three bat-tracking outcomes on tracked swings, described below. Ground ball is scored and shown but is not part of Deception+. Horizontal alignment and called strike are modeled and tested in the validation table but are not scored or shown elsewhere. Each scored expectation averages the out-of-fold predictions of six random pitcher splits, and a second out-of-fold step then removes the league-wide level of its pitch type in each season and then of its year and month, using other pitchers only, so a pitcher is not credited or charged for which pitches they throw or for when in the season they pitched.</p>
     <p>A component score is a pitcher's actual rate minus the average rate the model predicted for their pitches. Empirical Bayes shrinks small samples toward 100. The sampling variance is the sum of each pitch's own variance (for a binary outcome, the predicted rate times one minus it), inflated by a design effect because pitches within a game are correlated. The design effect grows with the scored pitches per game (starters carry more game-level noise than relievers) and runs from 1.00 to 1.22 across the outcomes. The spread between pitchers is estimated with the Paule-Mandel method, and each pitcher-season's standardized miss is capped at 4 standard deviations, so a few extreme samples cannot loosen the shrinkage for everyone else.</p>
@@ -561,6 +566,7 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
 
   <div class="dx-section" id="membership">
     <h2>Which components are in the score, and are the intervals right?</h2>
+    <p class="dx-short"><span>In short</span> A piece had to repeat from game to game and help predict the next season to stay in the score. This section shows which ones did, and checks that the intervals mean what they say.</p>
     <div class="dx-card dx-table-card">
       <table class="dx-table">
         <thead><tr><th scope="col">Piece of the score</th><th scope="col">Steady within a season (r)</th><th scope="col">Matches next season (r)</th><th scope="col">Forecast gain (&Delta;R&sup2;)</th><th scope="col">Forecast test</th><th scope="col">Status</th></tr></thead>
@@ -618,6 +624,7 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
 
   <div class="dx-section" id="field">
     <h2>More on the field results</h2>
+    <p class="dx-short"><span>In short</span> Beyond Stuff+ and Location+, Deception+ adds clearly (95% interval above zero) for strikeout rate and xwOBA allowed. Beyond last season&#x27;s own result as well, it adds clearly for xwOBA allowed.</p>
     <p class="dx-section-note dx-wide">R&sup2; is the share of next season's differences between pitchers that a model explains. In the first row, strikeout rate goes from 23% explained to 30% with Deception+ added, a gain of 7.1 points (95% interval 3.2 to 11.0). The sample is 671 season pairs (452 pitchers, at least 150 batters faced in the second season). The <a href="deception_dashboard.html" class="dx-link">dashboard</a> shows the gains as a chart.</p>
     <div class="dx-card dx-table-card">
       <table class="dx-table">
@@ -657,6 +664,7 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
 
   <div class="dx-section" id="pitch-types">
     <h2>Where does a score come from?</h2>
+    <p class="dx-short"><span>In short</span> A score can be split by pitch type, but each pitch type has fewer pitches behind it, so those scores are noisier.</p>
     <p class="dx-section-note dx-wide">Deception+ is one number per pitcher-season, and each leaderboard row opens into its whiff and chase scores by pitch type. A pitch type is scored against the same pitch type only (a pitcher's slider against every other slider), with the same shrinkage, 100/10 scale and game-level intervals as the season scores, and the leaderboard shows an index from 50 swings (whiff) or pitches outside the zone (chase). Samples are small, a typical pitcher has about 98 swings against a given pitch type in a season, so these are noisier than the season score. Split-half reliability (Spearman-Brown corrected) runs 0.39 to 0.76 for whiff and 0.40 to 0.71 for chase, and is highest for changeups (0.76) on whiff and lowest for sinkers (0.39). Read a single pitch type's score as a lead on where a pitcher's score comes from, not as a rating of that pitch.</p>
     <div class="dx-card dx-table-card">
       <table class="dx-table">
@@ -680,6 +688,7 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
     <div class="dx-section-head">
       <div>
         <h2>What explains the gap?</h2>
+    <p class="dx-short"><span>In short</span> Tested traits of a pitcher's style, such as tempo and arm slot, explain little of the score (cross-validated R&sup2; -0.01 to 0.06).</p>
         <p class="dx-section-note">A regression of each component's score on 14 season-level pitcher traits, among them tempo, arm slot, extension, release-point consistency, spin mirroring, repertoire size, and a pitch-pair tunnel differential. With 14 tests per component a few would look significant by chance, so a bar is drawn only when its effect is distinguishable from zero after a Benjamini-Hochberg correction (q below 0.05), longest first. Standard errors cluster on pitcher, because most pitchers appear in more than one season and a pitcher's rows are strongly dependent. Savant's season-level leaderboard stats (flailed %, tied-up %, early and late %, miss distance) are left out because they summarize the same swings the components score. Fit is weak for every component (cross-validated R&sup2; -0.01 to 0.06), so even the bars shown explain little. <span id="driverR2Note"></span></p>
       </div>
       <div class="dx-toggle" id="driverToggle" aria-label="Outcome to explain">
@@ -706,11 +715,13 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
 
   <div class="dx-section dx-method" id="projection">
     <h2>Next-season projection</h2>
+    <p class="dx-short"><span>In short</span> Each leaderboard row guesses next season's score, and the guess sits closer to 100 than this season's score does.</p>
     <p>Each leaderboard row also carries a projection of the pitcher's Deception+ for the following season (2027 for the latest rows). A score is one season of results shrunk for its sample, so the best guess for next season sits closer to 100, and it leans on the season before when there is one. With one season the fit is 39.9 + 0.59 × this season, and with two it is 29.4 + 0.48 × this season + 0.21 × the season before, fit by least squares on every pair of consecutive seasons. Each pitcher's projection uses coefficients fit on other pitchers only, so the backtest is honest. Across the 1,089 projections that have an outcome, the typical miss (root mean squared error) is 7.0 points, against 8.0 for using last season's score as the guess and 9.0 for guessing 100, and the 80% range covers 81% of outcomes. Most of that gain is shrinkage toward the average. The earlier season adds a little: among the 402 pitchers with two prior seasons the miss falls from 6.95 to 6.81 (+0.14 points, 95% interval -0.01 to +0.30), and that interval includes zero, so the earlier season is the weaker part of the projection.</p>
   </div>
 
   <div class="dx-section dx-method" id="limits">
     <h2>Known limits</h2>
+    <p class="dx-short"><span>In short</span> The score is a measure of results the model cannot explain, not proof of deception, built on 3 seasons with wide margins of error for most pitchers.</p>
     <ul class="dx-limits">
       <li>The model controls for in-game fatigue (pitch count within the outing) and for times through the order, which closed most of the reliever-vs-starter gap. A smaller gap remains: qualified relievers average 101.2 against 99.6 for starters, and 14 of the 25 highest scores belong to relievers. It may still be partly role, and the leaderboard can filter by starter or reliever.</li>
       <li>Bat tracking is used for contact depth, horizontal reach and whiff miss distance. Savant's vertical alignment (over or under) is not in the pitch-level export, and bat speed, swing length, and attack angle are not scored.</li>
@@ -719,7 +730,7 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
       <li>Three completed regular seasons of data (2024 to 2026), so there are no aging curves and only two year-over-year pairs.</li>
       <li>The noisiest member is weak contact (reliability 0.288). It is a member because it passes the forecast test (p=&lt;0.0001), not because it clears the 0.3 reliability the others do, and the composite is about as stable without it. Composite reliability is 0.741 and the median 95% interval on Deception+ is about &plusmn;13 points, so only 288 of 1,291 qualified scores (22%) are clearly different from 100. Check the interval before ranking two close pitchers.</li>
       <li>Stability depends on how much a pitcher threw. Among the 580 pairs of consecutive seasons in which the pitcher qualified in both, the year-over-year correlation is 0.682 (95% interval 0.62 to 0.73; 0.695 for 2024 to 2025 and 0.669 for 2025 to 2026), 0.74 for the higher-volume half and 0.59 for the lower. The headline figure on the dashboard includes small samples, so it is lower.</li>
-      <li>Left-handed pitchers average +1.4 points against right-handed ones (361 against 930 qualified pitcher-seasons, p=0.10). Handedness is a model input, so the gap is either real or a leftover miscalibration, and these data cannot tell which.</li>
+      <li>Left-handed pitchers average +1.4 points against right-handed ones (361 against 930 qualified pitcher-seasons, p=0.10). That is weak evidence: chance, real skill or leftover model error could each explain it, and these data cannot say which.</li>
       <li>About 1.6% of pitches are not scored: unclassified pitch types, knuckleballs, eephus and other pitch types that share no model, every pitch from a pitcher-season averaging under 75 mph (position players), hit-by-pitches, bunt attempts and pitchouts, and pitches missing core tracking values.</li>
       <li>The composite treats 5 weakly correlated components as one score. The first principal component carries 40.7% of the variance.</li>
     </ul>
@@ -728,28 +739,40 @@ details.dx-keybox[open] > summary { margin-bottom: 0.9rem; }
   <div class="dx-section dx-method" id="audit">
     <details class="dx-audit">
       <summary>Audit log: leaks and bugs found while building this</summary>
+    <p class="dx-short"><span>In short</span> Early versions of the models looked better than they were. Each fix below says what went wrong and what changed.</p>
       <p>These are the results measured at the time of each fix. Later reruns of the pipeline change the current numbers slightly. Smaller fixes, and tests that changed nothing, are listed under Fixes and Decisions in the <a href="https://github.com/henrybednar/pitcher-deception-metric#decisions" class="dx-link">README</a>.</p>
       <h3>Cross-season leakage</h3>
+      <p class="dx-short"><span>In short</span> The model saw a pitcher's own pitches while being tested on them, which made it look better than it was.</p>
       <p>Every model was first fit with a shuffled K-fold split. More than 85% of four-seam fastballs come from pitchers who threw in both seasons, so a pitcher's pitches from one season could sit in the training fold while their other season was scored. That suppresses the measured residual most for pitchers with distinctive, stable stuff, which are the pitchers the metric is meant to find. Refitting with folds grouped by pitcher lowered whiff AUC on four-seamers from 0.708 to 0.705, which confirmed the leak.</p>
       <h3>Tendency leakage</h3>
+      <p class="dx-short"><span>In short</span> Batter and catcher averages included the very pitch being predicted, so the answer leaked into the inputs.</p>
       <p>The batter and catcher tendency features were first per-season averages that included each pitch's own outcome. Leave-one-out encoding made it worse (whiff AUC on a single fold jumped to 0.94), because a catcher sees about 20 pitchers a season and the feature re-encoded the pitcher's identity. Leave-one-pitcher-out encoding brought AUC back to 0.75. The features were still built once over all data, so training rows carried outcomes from held-out pitchers, which made the out-of-fold AUC 0.010 too high on four-seamers (0.7581 against 0.7477). They are now rebuilt inside each fold from the training pitchers only.</p>
       <h3>Variance estimates</h3>
+      <p class="dx-short"><span>In short</span> The estimate of how much luck sits in a score broke on extreme samples, and was rebuilt.</p>
       <p>Pitcher-seasons with a predicted rate of exactly 0 or 1 had a sampling variance of zero, and flooring it at a tiny value gave about 70 of them a weight near a billion in the between-pitcher variance. In one half of the data that estimate came out 24 times too large for whiff and understated whiff's split-half reliability (0.595, now 0.614). Predicted rates are now clipped to 0.01-0.99 before taking the Bernoulli variance. Variance had also been taken from each pitcher-season's average predicted rate, which overstated it by about 1.3 times for whiff, 1.5 times for chase, 1.2 times for weak contact and 4.8 times for called strike. It is now summed pitch by pitch, and the design effect is a game-weighted ratio with the bootstrap's small-sample bias corrected (it had read exactly 1.00 for every binary outcome) and runs from 1.00 to 1.22. The DerSimonian-Laird between-pitcher estimate was fragile too: five saturated 30-pitch samples raised it 16-fold. A Paule-Mandel estimate with standardized misses capped at 4 replaced it. Component indexes for the composite members moved by under 1 point on average and Deception+ by 0.33 (rank correlation 0.999). Called strike changed most, and its year-over-year correlation is now 0.234 where the pinned estimate had shown 0.02.</p>
       <h3>Timing</h3>
+      <p class="dx-short"><span>In short</span> The first timing measure rewarded early contact and mixed whiffs into it, so it was rebuilt around each hitter's ideal contact depth.</p>
       <p>Timing was first described as bat-to-ball miss distance and scored as an unsigned magnitude on all swings. The column is the bat-ball intercept point's depth relative to the batter and is almost always positive, so the absolute value changed nothing and early contact was credited. It is now the gap from each hitter's estimated ideal depth, so early and late both count. When first measured, split-half reliability fell from 0.878 to 0.750 and the forecast &Delta;R&sup2; from +0.216 to +0.152, and the raw depth gap correlates -0.92 with Savant's on-time share against -0.36 for the old measure. On a whiff the intercept is a closest-approach point that sits far from the ideal (14.0 inches against 7.3 on contact), which put whiff rate into the timing score (correlation 0.39). Timing is now scored on contact swings, where the correlation is 0.04, and the correlation between the whiff and timing indexes fell from 0.49 to 0.249. A calibration check by predicted decile then found timing under-predicted by 0.24 inches at the low end, so an out-of-fold isotonic recalibration now runs after the model fits, grouped by pitcher, and the worst decile is 0.02 inches off.</p>
       <h3>Called strike removed</h3>
+      <p class="dx-short"><span>In short</span> Called strikes repeat within a season but not across seasons, which points to catchers or parks and not the pitcher, so they are out of the score.</p>
       <p>Called strike is stable within a season (reliability 0.457) but carries over only partly to the next one (year-over-year 0.234), and on three seasons its forecast gain is +0.004 of R&sup2; (p=&lt;0.0001), a small fraction of a member's (it failed the gate on two seasons). The gap between within-season stability and carryover is what effects that do not travel with the pitcher would produce, such as catcher or park. Adding it back to the composite lowers split-half reliability from 0.741 to 0.708 and year-over-year correlation from 0.611 to 0.574 (measured at the September 27, 2026 cutoff). It stays in the validation table and is no longer part of the score or the metric views.</p>
       <h3>Ground ball removed from the score</h3>
+      <p class="dx-short"><span>In short</span> Ground-ball skill is a different skill from the other pieces, so it is shown on its own.</p>
       <p>Ground-ball talent is nearly uncorrelated with the other members (its index correlates at most 0.191 with them), and the composite says nothing about it: a pitcher's Deception+ correlates -0.019 with their ground-ball index the next season. With it in, split-half reliability is 0.709 and year-over-year correlation 0.591. Without it they are 0.741 and 0.611 (measured at the September 27, 2026 cutoff). Among qualified pitcher-seasons only one moved by more than 10 points: Clayton Kershaw in 2025. Ground ball is still scored and shown as its own readout.</p>
       <h3>Month drift</h3>
+      <p class="dx-short"><span>In short</span> League-wide swings in results from month to month were being credited to pitchers who threw mostly in a hot or cold stretch.</p>
       <p>Actual minus expected ran from -0.3 to +1.3 percentage points between months for whiff, from -0.4 to +1.3 for chase, -1.1 to +1.0 for weak contact, and -0.9 to +3.1 for ground ball, and the 2025 and 2026 averages for whiff, chase and whiff miss sat 2 to 3 index points apart even with season as a feature. No feature could see the date, so a pitcher who threw mostly in one stretch inherited that stretch's gap. For whiff, chase, weak contact and ground ball the month alone moved a qualified pitcher by 2 to 3.5 index points (standard deviation) and by 3 to 6 at the 95th percentile. Adding the game month or the day of the year to the models barely helped (four-seam whiff month gap, standard deviation 0.54 to 0.51 percentage points, and held-out log loss gains were at most 0.0005). A second out-of-fold step now shifts each expectation by the league-wide gap of its year and month, estimated from other pitchers only. It removes the drift (month gap standard deviation 0.46 to 0.004 percentage points for whiff, implied pitcher bias under 0.1 index points) and the season gap, leaves held-out log loss within 0.0003 for every scored outcome, and moves qualified Deception+ by 0.5 points on average (largest change 1.9, top 25 unchanged). Called strike is left out of the step because its month gap is small and the step cost log loss.</p>
       <h3>Driver significance</h3>
+      <p class="dx-short"><span>In short</span> A pitcher's seasons are not independent, and ignoring that overstated how sure the tests were about some traits.</p>
       <p>Most pitchers have more than one season in the driver regression (1,104 pitchers behind 2,224 rows for whiff), and a pitcher's rows are strongly dependent, so classical standard errors overstated the evidence. Errors now cluster on pitcher. With two seasons, vertical-approach-angle consistency sat on the Benjamini-Hochberg threshold and crossed 0.05 between reruns of the scoring model, so it was a lead and not a finding. With three it survives for whiff (q 0.003) and timing (q 0.007), and the spin-axis mirror score survives for whiff (q 0.006), both with the sign the tunneling idea predicts. Pace, velocity gap and repeat rate hold under every method tried.</p>
       <h3>Fold noise</h3>
+      <p class="dx-short"><span>In short</span> Which pitchers shared a fold nudged each score by a couple of points, so predictions are now averaged over several splits.</p>
       <p>Which pitchers share a pitcher's cross-validation fold changes that pitcher's expectation. Two random pitcher-to-fold assignments gave component indexes that differed by a standard deviation of 2.5 to 3.0 index points (correlation 0.96 to 0.97, largest gaps 12 to 32), so a single run carries about 2 points of its own per component. The noise is shared by both seasons of a pitcher and by both halves of a season, so neither the split-half reliability nor the year-over-year correlation can see it, and the intervals do not include it. Each scored expectation now averages the out-of-fold predictions of six random pitcher splits. Three splits cut the whiff index difference between two such runs from 2.8 to 1.6 points (correlation 0.969 to 0.990) and six cut it to 1.1 (correlation 0.995), at six times the single-split fitting time. About 0.75 points per component remains.</p>
       <h3>Stuff+ relationship</h3>
+      <p class="dx-short"><span>In short</span> Four explanations for the link with Stuff+ were tested. Three were ruled out, and the fourth (fastball gaps) explains part of it at the cost of repeatability.</p>
       <p>Deception+ correlates 0.386 with Stuff+ although every model controls for the pitch's own measured traits. Four explanations were tested. Tail compression: the recalibration slope of actual on predicted is 0.998 for whiff, 1.02 for chase, 0.98 for weak contact, 1.00 for timing and 0.995 for whiff miss, so the models are not shrinking their extremes. Repertoire quality: for whiff, +10 points of a pitch type's own Stuff+ goes with +0.83 points of residual, and +0.80 with the rest of the pitcher's Stuff+ held fixed (the rest of the repertoire adds +0.10, p=0.51). Same-season leakage: Stuff+ from the other season predicts the residual at 0.68 to 0.86 of the same-season slope, close to Stuff+'s own year-to-year correlation of 0.81, so the relationship follows a stable property of the pitch. Fastball gaps: adding each pitch's velocity and movement gap to the pitcher's primary fastball raised held-out whiff AUC by 0.0017 to 0.0052 in five of eight pitch-type models and by at most 0.0009 for chase, and cut the off-speed and breaking whiff relationship from +1.56 to +1.01 points per 10 Stuff+ points. In the full pipeline it lowered the correlation with Stuff+ from 0.399 to 0.336 but also lowered split-half reliability from 0.740 to 0.700, year-over-year correlation from 0.598 to 0.563, and the forecast &Delta;R&sup2; from +0.050 to +0.038, and weak contact would fail its forecast gate (p=0.052). The signal moved into the expectation was repeatable, so the features were not adopted. These figures were measured on two seasons and before the month recalibration below, which moved the baselines by at most 0.005; with 2024 added the correlation is 0.386 (0.312 in 2024, 0.454 in 2025, and 0.397 in 2026).</p>
       <h3>Sequencing</h3>
+      <p class="dx-short"><span>In short</span> Neither the pitch before nor how unpredictable a pitch was explains the score.</p>
       <p>The season-level driver check averages away pitch-to-pitch variation, so a pitch-level version asks whether the preceding pitch in the same at-bat (velocity, movement, and location change, pitch-type switch, a pair-level spin-mirror score, and tunnel separation) predicts the current pitch's residual. It uses up to 300,000 pitches per outcome and splits by pitcher. R&sup2; ranged from -0.0003 to 0.0015 across the outcomes. None of these features is in a model's expectation, so any sequencing effect would stay in the residual and show up here. A second check removes sequencing by construction: the first pitch of a plate appearance has no previous pitch. Taking each pitch type's residual against that pitch type's own Stuff+, and pooling within type, the change in result per 10 Stuff+ points was the same on first pitches as on all pitches (whiff +0.78 and +0.78 percentage points, chase +0.62 and +0.48, timing +0.05 and +0.01 inches, whiff miss +0.04 and +0.05 log units). Weak contact, +0.59 against +0.17, is too noisy to tell on first pitches. By pitch type, the whiff link is present for cutters, changeups, curves, splitters and sliders and flat for four-seamers and sinkers. A pitch-unpredictability check found no payoff either: it asked how unlikely each pitch type was given the count, batter side, previous two pitches, outs and runners, and surprising pitches did not consistently beat their expectation (per +1 nat of surprise, whiff +0.21 percentage points with an interval of +0.05 to +0.36, a small gain, and chase -0.42). With Stuff+ and role held fixed, pitchers whose choices follow the situation more scored slightly higher, not lower.</p>
     </details>
   </div>

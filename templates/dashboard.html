@@ -27,13 +27,13 @@ __SHARED_HEAD__
   <div class="dx-hero">
     <div>
       <h1>Deception+</h1>
-      <p class="dx-lede">Deception+ measures how far a pitcher's results land above or below what a model predicts from each pitch's speed, spin, movement and location, plus the batter, catcher, count and park.</p>
+      <p class="dx-lede">Deception+ measures how far a pitcher's results land above or below what their pitches should produce. A model predicts that from each pitch's speed, spin, movement and location, plus the batter, catcher, count and park.</p>
       <p class="dx-caveat">It does not prove deception. It is the part of results the model cannot explain.</p>
       <div class="dx-actions">
         <a class="dx-btn dx-btn-primary" href="__LEADERBOARD_URL__">Browse every pitcher</a>
         <a class="dx-btn" href="__METHODOLOGY_URL__">How it works</a>
       </div>
-      <p class="dx-meta">Statcast pitches, {{SEASON_SPAN}}, through {{DATA_THROUGH}}.</p>
+      <p class="dx-meta">Statcast pitches, {{SEASON_SPAN}}, through {{DATA_THROUGH}}. New to the terms? <a href="#stats-key" class="dx-link">The stats key</a> explains each one.</p>
     </div>
     <figure class="dx-ruler" id="ruler">
       <div id="rulerSvg" role="img" aria-label="Histogram of qualified Deception+ scores, centered on 100"></div>
@@ -43,15 +43,16 @@ __SHARED_HEAD__
 
   <div class="dx-section" id="overview">
     <h2>How a score is built</h2>
-    <p class="dx-answer">A score is a pitcher's results minus what a model predicted, set so 100 is average and 10 points is one step.</p>
+    <p class="dx-answer">A score is a pitcher's results minus what a model predicted, set so 100 is average and 10 points is one step (a standard deviation, the typical distance from average).</p>
     <ol class="dx-steps">
-      <li class="dx-step"><h3>Predict</h3><p>A model rates every pitch from its speed, spin, movement, location, the batter, catcher, count and park.</p><div class="dx-step-val">{{EX_N}} swings</div></li>
+      <li class="dx-step"><h3>Predict</h3><p>A model predicts how likely each swing is to miss, from the pitch's speed, spin, movement and location, the batter, catcher, count and park.</p><div class="dx-step-val">{{EX_N}} swings</div></li>
       <li class="dx-step"><h3>Compare</h3><p>Actual results minus the prediction, averaged over the pitcher's pitches.</p><div class="dx-step-val">+{{EX_RAW}} points</div></li>
       <li class="dx-step"><h3>Shrink</h3><p>Small samples are pulled toward average, so luck does not look like skill.</p><div class="dx-step-val">+{{EX_SHRUNK}} points</div></li>
-      <li class="dx-step"><h3>Scale</h3><p>Counted in standard deviations above average, then set to 100 plus 10 per step.</p><div class="dx-step-val">{{EX_Z}} steps, so {{EX_INDEX}}</div></li>
+      <li class="dx-step"><h3>Scale</h3><p>Converted to steps above average (standard deviations), then set to 100 plus 10 per step.</p><div class="dx-step-val">{{EX_Z}} steps, so {{EX_INDEX}}</div></li>
       <li class="dx-step"><h3>Blend</h3><p>{{N_COMPOSITE}} areas (whiff, chase, weak contact, timing, whiff miss distance) are averaged, steadier ones weighted more.</p><div class="dx-step-val">{{TOP1_SCORE}}</div></li>
     </ol>
-    <p class="dx-example-note">Worked example: {{TOP1_NAME}}, {{TOP1_SEASON}}, whiff area. Points are percentage points of whiff rate per swing.</p>
+    <p class="dx-example-note">Worked example: {{TOP1_NAME}}, {{TOP1_SEASON}}, whiff area. Here a point is a percentage point of whiff rate per swing, so +{{EX_RAW}} means {{EX_RAW}} more misses per 100 swings than predicted.</p>
+    <p class="dx-section-note dx-wide">The areas: whiff (swings that miss), chase (swings at pitches outside the zone), weak contact (balls in play hit under 85 mph), timing (how early or late the bat meets the ball) and whiff miss distance (how far the bat misses by).</p>
     <div class="dx-read-grid">
       <div class="dx-read">
         <h3>How to read a number</h3>
@@ -59,7 +60,7 @@ __SHARED_HEAD__
       </div>
       <div class="dx-read">
         <h3>What it does not prove</h3>
-        <p>It is whatever the model cannot explain, so calling it deception is a hypothesis. It tracks Stuff+ (r={{STUFF_R}}), and sequencing, tunneling, spin mirroring, tempo and arm slot each explain at most {{DRIVER_R2_MAX_PCT}} of it.</p>
+        <p>It is whatever the model cannot explain, so calling it deception is a hypothesis. It overlaps with Stuff+, a public rating of raw pitch quality (r={{STUFF_R}}, where 0 is no link and 1 is a perfect match). Pitch sequencing, tunneling (pitches that look alike early in flight), spin mirroring, tempo and arm slot each explain at most {{DRIVER_R2_MAX_PCT}} of it.</p>
       </div>
     </div>
   </div>
@@ -73,7 +74,7 @@ __SHARED_HEAD__
         <div class="dx-tile-label">Steady within a season</div>
         <div class="dx-tile-val">r={{COMPOSITE_R}}</div>
         <div class="dx-meter" style="--v:{{COMPOSITE_R}}" aria-hidden="true"><i></i></div>
-        <div class="dx-tile-note">Odd games against even games. 0 is luck, 1 is identical.</div>
+        <div class="dx-tile-note">Odd games against even games. r runs from 0 (luck) to 1 (identical).</div>
       </div>
       <div class="dx-tile">
         <div class="dx-tile-label">Carries to next season</div>
@@ -84,16 +85,16 @@ __SHARED_HEAD__
       <div class="dx-tile">
         <div class="dx-tile-label">Typical margin of error</div>
         <div class="dx-tile-val">&plusmn;{{DP_HALF}}</div>
-        <div class="dx-tile-note">Points, 95% interval. Only {{DP_CLEAR}} of {{N_QUALIFIED}} qualified scores ({{DP_CLEAR_PCT}}) clearly differ from 100.</div>
+        <div class="dx-tile-note">Points. The range the true score probably falls in (a 95% interval). Only {{DP_CLEAR}} of {{N_QUALIFIED}} qualified scores ({{DP_CLEAR_PCT}}) clearly differ from 100.</div>
       </div>
     </div>
     <div class="dx-card">
       <h3 class="dx-chart-h">Steadiest piece is {{MOST_LABEL}} ({{MOST_R}}), noisiest is {{LEAST_LABEL}} ({{LEAST_R}})</h3>
       __PIECE_DOTS__
-      <p class="dx-chart-title">Correlation (r) of each piece with itself within a season (filled) and with the next season (open), sorted by steadiness. {{N_PASS}} of {{N_COMPOSITE}} pieces also pass the forecast test (p below {{P_GATE}}).</p>
+      <p class="dx-chart-title">Correlation (r) of each piece with itself within a season (filled) and with the next season (open), sorted by steadiness. {{N_PASS}} of {{N_COMPOSITE}} pieces also pass the forecast test: each adds to predicting next season's results (p below {{P_GATE}}, so such a gain would rarely appear by luck alone).</p>
     </div>
     </div>
-    <p class="dx-section-note dx-wide">{{OUT_SENTENCE}} <a href="__METHODOLOGY_URL__#membership" class="dx-link">Full table</a>. The pitch models are scored on pitchers they never trained on (whiff AUC {{VAL_AUC_WHIFF}}, chase {{VAL_AUC_CHASE}}). <a href="__METHODOLOGY_URL__#pitch-models" class="dx-link">Validation</a>.</p>
+    <p class="dx-section-note dx-wide">{{OUT_SENTENCE}} <a href="__METHODOLOGY_URL__#membership" class="dx-link">Full table</a>. The pitch models are scored on pitchers they never trained on (whiff AUC {{VAL_AUC_WHIFF}}, chase {{VAL_AUC_CHASE}}, where 0.5 is a coin flip and 1.0 is perfect). <a href="__METHODOLOGY_URL__#pitch-models" class="dx-link">Validation</a>.</p>
   </div>
 
   <div class="dx-section" id="stuff">
@@ -101,7 +102,7 @@ __SHARED_HEAD__
     <div class="dx-split">
     <div class="dx-split-text">
       <p class="dx-answer">Partly. Better stuff tends to score higher, but Stuff+ explains only about {{STUFF_R2_PCT}} of the differences in Deception+.</p>
-      <p class="dx-section-note">The model already controls for each pitch's measured traits. The overlap may be information Stuff+ has that the model lacks. Adding fastball gaps to the model lowered it but also lowered the score's stability, so they were not adopted.</p>
+      <p class="dx-section-note">Stuff+ is FanGraphs' rating of raw pitch quality (100 is average). The model never sees it, but it does see each pitch's measured traits, so ideally the two would barely overlap. The overlap may be information Stuff+ has that the model lacks: Stuff+ also compares each pitch with the pitcher's fastball. Adding those fastball gaps to the model lowered the overlap but also lowered the score's stability, so they were not adopted.</p>
     </div>
     <div class="dx-card">
       <h3 class="dx-chart-h">Stuff+ and Deception+ are {{STUFF_R_PHRASE}} (r = {{STUFF_R}})</h3>
@@ -127,8 +128,8 @@ __BIN_ROWS__
 
   <div class="dx-section" id="field">
     <h2>Does it predict anything on the field?</h2>
-    <p class="dx-answer">Partly. Beyond Stuff+ and Location+, it adds clearly for {{OV_CLEAR}}.</p>
-    <p class="dx-note dx-reality"><strong>Reality check.</strong> {{OV_REALITY}}</p>
+    <p class="dx-answer">Partly. Beyond Stuff+ and Location+ (FanGraphs ratings of pitch quality and placement), it adds clearly for {{OV_CLEAR}}.</p>
+    <p class="dx-note dx-reality"><strong>Reality check.</strong> {{OV_REALITY}} (Figures are gains in R&sup2; with 95% intervals in brackets. To clear zero, the interval must stay above 0.)</p>
     <h3 class="dx-chart-h">{{OV_TITLE}}</h3>
     <div class="dx-card dx-table-card">
       <table class="dx-table">
@@ -138,7 +139,7 @@ __OUTCOME_FOREST_ROWS__
         </tbody>
       </table>
     </div>
-    <p class="dx-section-note dx-wide">Dot: gain in R&sup2; from adding Deception+ (R&sup2; is the share of next season's differences between pitchers that a model explains). Line: 95% interval. A solid green dot clears zero. {{OV_NULL}} The sample is {{OV_PAIRS}} season pairs. <a href="__METHODOLOGY_URL__#field" class="dx-link">R&sup2; values and effect sizes</a>.</p>
+    <p class="dx-section-note dx-wide">Dot: gain in R&sup2; from adding Deception+ (R&sup2; is the share of next season's differences between pitchers that a model explains). Line: 95% interval. A solid green dot clears zero: its interval stays above 0, so the gain is unlikely to be luck. xwOBA allowed estimates the damage of the contact a pitcher gave up from exit speed and launch angle (lower is better). {{OV_NULL}} The sample is {{OV_PAIRS}} season pairs. <a href="__METHODOLOGY_URL__#field" class="dx-link">R&sup2; values and effect sizes</a>.</p>
   </div>
 
   <div class="dx-section" id="pitchers">
@@ -153,7 +154,7 @@ __REPUTATION_ROWS__
         </tbody>
       </table>
     </div>
-    <p class="dx-section-note dx-wide">Percentile is the share of pitchers a score beats. Names link to the leaderboard.</p>
+    <p class="dx-section-note dx-wide">Percentile is the share of pitchers a score beats. Whiff and ground ball are on the same scale, where 100 is average. Names link to the leaderboard.</p>
   </div>
 
   <details class="dx-keybox" id="stats-key">
@@ -228,7 +229,7 @@ __REPUTATION_ROWS__
       <ul class="dx-limits">
         <li>Volume matters: year-to-year r is {{YOY_QUAL_R}} when the pitcher qualified both seasons, {{YOY_R}} overall.</li>
         <li>Relievers average {{RP_MEAN}} against {{SP_MEAN}} for starters even after adjusting for fatigue, so part of the gap may be role.</li>
-        <li>Left-handers average {{LHP_GAP}} points against right-handers (p={{LHP_P}}). The gap is real or leftover model error, and these data cannot say which.</li>
+        <li>Left-handers average {{LHP_GAP}} points against right-handers (p={{LHP_P}}). {{LHP_READ}}</li>
         <li>{{N_SEASONS}} seasons means no aging curves and only {{N_SEASON_PAIRS}} season-to-season pairs.</li>
       </ul>
       <p class="dx-section-note dx-wide" style="margin-top:0.9rem">More limits and the audit log: <a href="__METHODOLOGY_URL__#limits" class="dx-link">methodology page</a>.</p>

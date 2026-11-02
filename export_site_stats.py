@@ -169,6 +169,16 @@ def handedness_gap(ps: pd.DataFrame, hands: pd.Series) -> dict:
             "n_left": int((hand == "L").sum()), "n_right": int((hand == "R").sum())}
 
 
+HANDEDNESS_P_GATE = 0.05
+
+
+def handedness_read(p: float) -> str:
+    """What the left-versus-right gap can support, from its p-value, for a reader who has to decide how much to make of it."""
+    if p < HANDEDNESS_P_GATE:
+        return "A gap this size would be unlikely by chance, so it is real skill or leftover model error, and these data cannot say which."
+    return "That is weak evidence: chance, real skill or leftover model error could each explain it, and these data cannot say which."
+
+
 def unscored_pitch_share(predictions_path: str = "output/per_pitch_predictions.csv") -> float:
     """Share of regular-season pitches left unscored: a pitch type with no model, a pitcher-season
     averaging under 75 mph, or missing core tracking all blank the pitch type."""
@@ -740,6 +750,7 @@ def main() -> None:
         "STUFF_R_CI": f"{stuff_lo:.2f} to {stuff_hi:.2f}",
         "LHP_GAP": f"{hand['gap']:+.1f}",
         "LHP_P": fmt_p(hand["p"]),
+        "LHP_READ": handedness_read(hand["p"]),
         "LHP_N": f"{hand['n_left']:,}",
         "RHP_N": f"{hand['n_right']:,}",
         "P_WEAK": fmt_p(float(pv.loc["weak", "p_value"])),

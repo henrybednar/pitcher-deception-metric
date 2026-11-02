@@ -315,7 +315,9 @@
 .dx-glossary dd { margin: 2px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--text-secondary); }
 .dx-glossary small { display: block; margin-top: 4px; font-size: 12.5px; color: var(--text-muted); }
 .dx-glossary .dx-here { margin-top: 5px; font-size: 14px; color: var(--text-primary); }
-.dx-here span { margin-right: 6px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
+.dx-short { margin: 0 0 10px; font-size: 16px; line-height: 1.5; color: var(--text-primary); max-width: 70ch; }
+.dx-audit .dx-short { font-size: 15px; margin: 0 0 6px; }
+.dx-here span, .dx-short span { margin-right: 6px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
 .dx-key-intro { margin: 0 0 0.8rem; font-size: 14.5px; color: var(--text-secondary); max-width: 70ch; }
 .dx-key-h { font-size: 17px; margin: 1.6rem 0 0.2rem; }
 details.dx-keybox h3[id] { scroll-margin-top: 66px; }
@@ -587,14 +589,14 @@ tr.detail td { text-align: left; white-space: normal; padding: 6px 16px 12px; co
     <p>Qualified means at least 150 in the whiff and chase samples and at least 110 in the timing samples and at least 60 in the weak contact and whiff miss distance samples. Other pitchers are still scored, shrunk toward 100, and appear when Qualified only is off.</p>
     <h2>By pitch type</h2>
     <p>Click a row for whiff and chase scores by pitch type (at least 50 swings, or pitches outside the zone for chase). Each type is scored against the same type only. They are noisier than the season score: reliability runs 0.39 to 0.76 for whiff and 0.40 to 0.71 for chase, where 0 is luck and 1 is a perfect match. The <a class="dx-link" href="deception_methodology.html">methodology page</a> has the table.</p>
-    <h2>Timing, whiff miss and ground ball</h2>
-    <p>Timing is how far the bat met the ball from the hitter's ideal contact depth, early or late, on contact swings. Timing dir keeps the sign in inches: positive is early, negative is late, and it is unshaded because it is not on the 100 scale. Whiff miss distance is how far the barrel was from the ball on swings and misses. *Ground ball is shown but is not in Deception+ because it is a different skill (r at most 0.191 with the others).</p>
+    <h2>The columns</h2>
+    <p>Whiff is the share of swings that miss. Chase is the share of pitches outside the zone that draw a swing. Weak contact is the share of balls in play hit under 85 mph. Each is scored against what the model expected, so above 100 means more than expected. Timing is how far the bat met the ball from the hitter's ideal contact depth, early or late, on contact swings. Timing dir keeps the sign in inches: positive is early, negative is late, and it is unshaded because it is not on the 100 scale. Whiff miss distance is how far the barrel was from the ball on swings and misses. *Ground ball is shown but is not in Deception+ because it is a different skill (r at most 0.191 with the others). Stuff+ is FanGraphs' rating of raw pitch quality (100 is average), shown for comparison and never used by the model.</p>
     <h2>Next season</h2>
     <p>A projection of Deception+ for 2027 (latest rows) from this season and the one before, pulled toward 100. It misses by 7.0 points on average, against 8.0 for repeating this season's score. Hover a value for its 80% range.</p>
     <h2>Role</h2>
-    <p>Role comes from the share of a pitcher's appearances that were starts: 80% or more is SP, under 10% is RP, and in between is MR. Without that data it falls back to median pitches per appearance (60 or more is a starter, under 30 a reliever).</p>
+    <p>Role comes from the share of a pitcher's appearances that were starts: 80% or more is SP, under 10% is RP, and in between is MR (the Mixed filter). Without that data it falls back to median pitches per appearance (60 or more is a starter, under 30 a reliever).</p>
     <h2>How far to trust it</h2>
-    <p>Odd games against even games agree at r=0.741, and one season against the next at r=0.611 (0.682 across the 580 pairs where the pitcher qualified both years). timing is the steadiest piece (r=0.631) and weak contact the noisiest (r=0.288). Deception+ correlates r=0.386 with Stuff+, so it is not independent of pitch quality. Called strike was dropped because it does not carry over between seasons (r=0.234). The <a class="dx-link" href="deception_dashboard.html">dashboard</a> has the checks.</p>
+    <p>Odd games against even games agree at r=0.741, and one season against the next at r=0.611 (0.682 across the 580 pairs where the pitcher qualified both years). Here r runs from 0 (luck) to 1 (identical). The steadiest piece is timing (r=0.631) and the noisiest is weak contact (r=0.288). Deception+ correlates r=0.386 with Stuff+, so it is not independent of pitch quality. Called strike was dropped because it does not carry over between seasons (r=0.234). The <a class="dx-link" href="deception_dashboard.html">dashboard</a> has the checks.</p>
   </details>
 
   <footer class="dx-footnote">
