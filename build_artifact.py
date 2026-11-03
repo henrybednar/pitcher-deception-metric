@@ -31,8 +31,8 @@ from site_common import (
 
 TITLE = "Deception+"
 DESCRIPTION = (
-    "Deception+ scores how far a pitcher's whiff, chase, weak contact, swing timing, and whiff miss "
-    "distance results land above what the pitch's measured traits predict. Statcast {span}."
+    "How far a pitcher's results land above or below what their pitches should produce. "
+    "Every pitcher-season scored, Statcast {span}."
 )
 
 

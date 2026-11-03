@@ -48,9 +48,9 @@ def draw(data: dict, path: str) -> tuple[int, int]:
     fig.canvas.draw()
     plus_x = title.get_window_extent().x1 / WIDTH
     fig.text(plus_x, 0.74, "+", fontsize=70, fontweight="bold", color=ACCENT, family=display, va="bottom")
-    fig.text(0.06, 0.70, "Pitcher results beyond what the\npitch's measured traits predict", fontsize=25, color=TEXT_2, family=body, va="top",
+    fig.text(0.06, 0.70, "How far a pitcher's results land\nabove or below what their\npitches should produce", fontsize=25, color=TEXT_2, family=body, va="top",
              linespacing=1.3)
-    fig.text(0.06, 0.30, "Statcast pitch-level model, 2024 to 2026", fontsize=17, color=MUTED, family=body)
+    fig.text(0.06, 0.30, "Statcast pitch data, 2024 to 2026", fontsize=17, color=MUTED, family=body)
     fig.text(0.06, 0.245, f"{len(scores):,} qualified pitcher-seasons", fontsize=17, color=MUTED, family=body)
     fig.text(0.06, 0.09, URL, fontsize=16, color=ACCENT, family=body, fontweight="bold")
 
